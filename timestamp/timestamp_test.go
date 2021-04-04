@@ -2,10 +2,8 @@ package timestamp
 
 import (
 	"fmt"
-	"sort"
 	"testing"
 
-	"github.com/imarsman/datetime/period"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -48,58 +46,58 @@ func checkDate(t *testing.T, input string, compare string) {
 // }
 
 // TestDateRange test the range date function
-func TestRangeDate(t *testing.T) {
+// func TestRangeDate(t *testing.T) {
 
-	d1 := "2019-12-30"
-	d2 := "2020-01-08"
+// 	d1 := "2019-12-30"
+// 	d2 := "2020-01-08"
 
-	t.Log("Dates from", d1, "to", d2)
+// 	t.Log("Dates from", d1, "to", d2)
 
-	start, err := TimeForDate(d1)
-	assert.Nil(t, err)
+// 	start, err := TimeForDate(d1)
+// 	assert.Nil(t, err)
 
-	end, err := TimeForDate(d2)
-	assert.Nil(t, err)
+// 	end, err := TimeForDate(d2)
+// 	assert.Nil(t, err)
 
-	dateMap := make(map[string]string)
+// 	dateMap := make(map[string]string)
 
-	for rd := RangeDate(start, end); ; {
-		date := rd()
-		if date.IsZero() {
-			break
-		}
-		//now let's create & sort an array with our map keys
+// 	for rd := RangeDate(start, end); ; {
+// 		date := rd()
+// 		if date.IsZero() {
+// 			break
+// 		}
+// 		//now let's create & sort an array with our map keys
 
-		dateMap[DateForTime(date)] = ""
-	}
+// 		dateMap[DateForTime(date)] = ""
+// 	}
 
-	dates := make([]string, 0, len(dateMap))
+// 	dates := make([]string, 0, len(dateMap))
 
-	for k := range dateMap {
-		dates = append(dates, k)
-	}
-	sort.Strings(dates)
+// 	for k := range dateMap {
+// 		dates = append(dates, k)
+// 	}
+// 	sort.Strings(dates)
 
-	for _, k := range dates {
-		t.Logf("Date: %s", k)
-	}
-	assert.Equal(t, 10, len(dates))
-	assert.Equal(t, "2019-12-30", dates[0])
-	assert.Equal(t, "2020-01-08", dates[len(dates)-1])
-}
+// 	for _, k := range dates {
+// 		t.Logf("Date: %s", k)
+// 	}
+// 	assert.Equal(t, 10, len(dates))
+// 	assert.Equal(t, "2019-12-30", dates[0])
+// 	assert.Equal(t, "2020-01-08", dates[len(dates)-1])
+// }
 
-func TestDatesInRange(t *testing.T) {
-	d1 := "2019-12-31"
-	d2 := "2020-01-09"
+// func TestDatesInRange(t *testing.T) {
+// 	d1 := "2019-12-31"
+// 	d2 := "2020-01-09"
 
-	dates, err := DatesInRange(d1, d2)
-	assert.Nil(t, err)
+// 	dates, err := DatesInRange(d1, d2)
+// 	assert.Nil(t, err)
 
-	for _, k := range dates {
-		t.Logf("Date: %s", k)
-	}
-	assert.Equal(t, 10, len(dates))
-}
+// 	for _, k := range dates {
+// 		t.Logf("Date: %s", k)
+// 	}
+// 	assert.Equal(t, 10, len(dates))
+// }
 
 // TestDateRangeFromDates test getting a date range and comparing the date range
 // to the similar TimespanForDateRange value. They should be equal in terms of
@@ -133,15 +131,15 @@ func TestDatesInRange(t *testing.T) {
 // 	assert.Equal(t, t2, ts2)
 // }
 
-func TestTimeDateOnly(t *testing.T) {
-	time, err := TimeForDate("2020-01-01")
-	assert.Nil(t, err)
+// func TestTimeDateOnly(t *testing.T) {
+// 	time, err := TimeForDate("2020-01-01")
+// 	assert.Nil(t, err)
 
-	time2 := TimeDateOnly(time)
+// 	time2 := TimeDateOnly(time)
 
-	t.Logf("time for date %v time date only %v", time, time2)
-	assert.Equal(t, time, time2)
-}
+// 	t.Logf("time for date %v time date only %v", time, time2)
+// 	assert.Equal(t, time, time2)
+// }
 
 // TestParse parse all patterns anc compare with expected values
 func TestParse(t *testing.T) {
@@ -238,48 +236,48 @@ func TestParse(t *testing.T) {
 }
 
 // TestIsPeriod check to see if various patterns are valid ISO-8601 periods
-func TestIsPeriod(t *testing.T) {
-	isPeriod := IsPeriod("")
-	assert.False(t, isPeriod)
+// func TestIsPeriod(t *testing.T) {
+// 	isPeriod := IsPeriod("")
+// 	assert.False(t, isPeriod)
 
-	isPeriod = IsPeriod("P3Y4M5DT6H4M3S")
-	assert.True(t, isPeriod)
+// 	isPeriod = IsPeriod("P3Y4M5DT6H4M3S")
+// 	assert.True(t, isPeriod)
 
-	isPeriod = IsPeriod("P3y4m5dT6h4m3s")
-	assert.True(t, isPeriod)
+// 	isPeriod = IsPeriod("P3y4m5dT6h4m3s")
+// 	assert.True(t, isPeriod)
 
-	isPeriod = IsPeriod("P3DDD4m5dT6h4m3s")
-	assert.False(t, isPeriod)
+// 	isPeriod = IsPeriod("P3DDD4m5dT6h4m3s")
+// 	assert.False(t, isPeriod)
 
-	p, err := ParsePeriod("P3Y4M5DT6H4M3S")
-	assert.Nil(t, err)
+// 	p, err := ParsePeriod("P3Y4M5DT6H4M3S")
+// 	assert.Nil(t, err)
 
-	t.Logf("Period %s", p)
-}
+// 	t.Logf("Period %s", p)
+// }
 
 // TestParsePeriod parse a period
-func TestParsePeriod(t *testing.T) {
-	pStr := "PT10M"
-	p, err := ParsePeriod(pStr)
-	assert.Nil(t, err)
-	assert.Equal(t, p, pStr)
-}
+// func TestParsePeriod(t *testing.T) {
+// 	pStr := "PT10M"
+// 	p, err := ParsePeriod(pStr)
+// 	assert.Nil(t, err)
+// 	assert.Equal(t, p, pStr)
+// }
 
 // TestPeriodPositive test whether a priod
-func TestPeriodPositve(t *testing.T) {
-	p, err := ParsePeriod("PT10M")
-	assert.Nil(t, err)
-	t.Logf("Is period %v", IsPeriod(p))
+// func TestPeriodPositve(t *testing.T) {
+// 	p, err := ParsePeriod("PT10M")
+// 	assert.Nil(t, err)
+// 	t.Logf("Is period %v", IsPeriod(p))
 
-	pp, err := PeriodPositive(p)
-	assert.Nil(t, err)
+// 	pp, err := PeriodPositive(p)
+// 	assert.Nil(t, err)
 
-	pn, err := PeriodNegative(p)
-	assert.Nil(t, err)
+// 	pn, err := PeriodNegative(p)
+// 	assert.Nil(t, err)
 
-	assert.Equal(t, pp, p)
-	assert.Equal(t, pn, "-PT10M")
-}
+// 	assert.Equal(t, pp, p)
+// 	assert.Equal(t, pn, "-PT10M")
+// }
 
 // TestOrdering check ordering call
 func TestOrdering(t *testing.T) {
@@ -293,23 +291,23 @@ func TestOrdering(t *testing.T) {
 	assert.False(t, StartTimeIsBeforeEndTime(t2, t1))
 }
 
-func TestDurationToPeriod(t *testing.T) {
-	t1String := "20201210T235959-0500"
-	t1, err := ParseUTC(t1String)
-	assert.Nil(t, err)
+// func TestDurationToPeriod(t *testing.T) {
+// 	t1String := "20201210T235959-0500"
+// 	t1, err := ParseUTC(t1String)
+// 	assert.Nil(t, err)
 
-	t2String := "20211211T000000-0500"
-	t2, err := ParseUTC(t2String)
-	assert.Nil(t, err)
+// 	t2String := "20211211T000000-0500"
+// 	t2, err := ParseUTC(t2String)
+// 	assert.Nil(t, err)
 
-	d := t2.Sub(t1)
+// 	d := t2.Sub(t1)
 
-	pString := DurationToPeriod(d)
-	p2, _ := period.NewOf(d)
-	// Check that period obtained is the same as the one from period library
-	assert.Equal(t, pString, p2.String())
+// 	pString := DurationToPeriod(d)
+// 	p2, _ := period.NewOf(d)
+// 	// Check that period obtained is the same as the one from period library
+// 	assert.Equal(t, pString, p2.String())
 
-	t.Logf("Period for duration between %s and %s %s", t1String, t2String, pString)
-	t.Logf("Period obtained %s and from period library %s", pString, p2.String())
-	assert.Equal(t, "P365DT1S", pString)
-}
+// 	t.Logf("Period for duration between %s and %s %s", t1String, t2String, pString)
+// 	t.Logf("Period obtained %s and from period library %s", pString, p2.String())
+// 	assert.Equal(t, "P365DT1S", pString)
+// }

@@ -1,15 +1,17 @@
+package isodate
+
 // Copyright 2015 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package isodate
-
 import (
 	"math"
+	"sort"
 	"time"
 
 	"github.com/imarsman/datetime/gregorian"
 	"github.com/imarsman/datetime/period"
+	"github.com/imarsman/datetime/timestamp"
 )
 
 // PeriodOfDays describes a period of time measured in whole days. Negative values
@@ -280,4 +282,37 @@ func IsLeap(year int) bool {
 // DaysIn gives the number of days in a given month, according to the Gregorian calendar.
 func DaysIn(year int, month time.Month) int {
 	return gregorian.DaysIn(year, month)
+}
+
+// DatesInRange get dates in range.
+func DatesInRange(d1, d2 Date) ([]string, error) {
+	start := d1.UTC()
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	end := d1.UTC()
+	// end, err := timestamp.TimeForDate(d2)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	dates := make(map[string]string)
+
+	for rd := timestamp.RangeDate(start, end); ; {
+		date := rd()
+		if date.IsZero() {
+			break
+		}
+		dates[NewAt(date).String()] = ""
+	}
+
+	keys := make([]string, 0, len(dates))
+
+	for k := range dates {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	return keys, nil
 }

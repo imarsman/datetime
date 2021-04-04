@@ -130,7 +130,7 @@ func TestTSNotEqual(t *testing.T) {
 	cases := []struct {
 		a, b TimeSpan
 	}{
-		{ZeroTimeSpan(t0), TimeSpanOf(t0, time.Hour)},
+		{ZeroTimeSpan(t0), NewTimeSpanOf(t0, time.Hour)},
 		{ZeroTimeSpan(t0), ZeroTimeSpan(t1)},
 	}
 

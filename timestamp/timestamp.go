@@ -6,15 +6,9 @@ import (
 	"math"
 	"net/http"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/imarsman/datetime/isodate"
-	// "github.com/imarsman/datetime/timespan"
-
-	"github.com/imarsman/datetime/period"
 )
 
 var isoTimeFormats = []string{
@@ -173,58 +167,26 @@ func RangeDate(start, end time.Time) func() time.Time {
 	}
 }
 
-// DatesInRange get dates in range.
-func DatesInRange(d1, d2 string) ([]string, error) {
-	start, err := TimeForDate(d1)
-	if err != nil {
-		return nil, err
-	}
-
-	end, err := TimeForDate(d2)
-	if err != nil {
-		return nil, err
-	}
-
-	dates := make(map[string]string)
-
-	for rd := RangeDate(start, end); ; {
-		date := rd()
-		if date.IsZero() {
-			break
-		}
-		dates[DateForTime(date)] = ""
-	}
-
-	keys := make([]string, 0, len(dates))
-
-	for k := range dates {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	return keys, nil
-}
-
 // DateRangeFromDates get date range between two dates
 //   e.g. 2020-01-01/2021/01/02
 // There is a lot of flexibility in time intevals in ISO-8601. This function
 // only supports two dates. The first value is the start of the range. The
 // second value is the date following the end of the range.
-func DateRangeFromDates(d1, d2 string) (string, error) {
-	if !IsDate(d1) {
-		return "", fmt.Errorf("%s is not a valid date", d1)
-	}
-	if !IsDate(d2) {
-		return "", fmt.Errorf("%s is not a valid date", d2)
-	}
-	if d1 != d2 {
-		if !(d1 < d2) {
-			return "", fmt.Errorf("%s is not >= %s", d1, d2)
-		}
-	}
+// func DateRangeFromDates(d1, d2 string) (string, error) {
+// 	if !IsDate(d1) {
+// 		return "", fmt.Errorf("%s is not a valid date", d1)
+// 	}
+// 	if !IsDate(d2) {
+// 		return "", fmt.Errorf("%s is not a valid date", d2)
+// 	}
+// 	if d1 != d2 {
+// 		if !(d1 < d2) {
+// 			return "", fmt.Errorf("%s is not >= %s", d1, d2)
+// 		}
+// 	}
 
-	return d1 + "/" + d2, nil
-}
+// 	return d1 + "/" + d2, nil
+// }
 
 // TimeDateOnly get date with zero time values
 func TimeDateOnly(t time.Time) time.Time {
@@ -385,96 +347,96 @@ func ISO8601LongMsec(t time.Time) string {
 }
 
 // IsPeriod is input a valid ISO-8601 period format
-func IsPeriod(input string) bool {
-	// Convert to uppercase as this would be an irritating source of errors
-	_, err := period.ParseWithNormalise(strings.ToUpper(input), true)
-	return err == nil
-}
+// func IsPeriod(input string) bool {
+// 	// Convert to uppercase as this would be an irritating source of errors
+// 	_, err := period.ParseWithNormalise(strings.ToUpper(input), true)
+// 	return err == nil
+// }
 
 // ParsePeriod get period string
-func ParsePeriod(input string) (string, error) {
-	if IsPeriod(input) == false {
-		return "", fmt.Errorf("invalid period %s", input)
-	}
-	// Convert to uppercase as this would be an irritating source of errors
-	p, _ := period.ParseWithNormalise(strings.ToUpper(input), true)
+// func ParsePeriod(input string) (string, error) {
+// 	if IsPeriod(input) == false {
+// 		return "", fmt.Errorf("invalid period %s", input)
+// 	}
+// 	// Convert to uppercase as this would be an irritating source of errors
+// 	p, _ := period.ParseWithNormalise(strings.ToUpper(input), true)
 
-	return p.String(), nil
-}
+// 	return p.String(), nil
+// }
 
 // DurationToPeriod get period string from time.Duration
-func DurationToPeriod(d time.Duration) string {
-	p, _ := period.NewOf(d)
-	return p.String()
-}
+// func DurationToPeriod(d time.Duration) string {
+// 	p, _ := period.NewOf(d)
+// 	return p.String()
+// }
 
-// PeriodPositive get positive value of a period
-func PeriodPositive(input string) (string, error) {
-	if IsPeriod(input) == false {
-		return "", fmt.Errorf("invalid period %s", input)
-	}
-	p, _ := period.ParseWithNormalise(strings.ToUpper(input), true)
-	if p.IsNegative() {
-		p = p.Negate()
-	}
+// // PeriodPositive get positive value of a period
+// func PeriodPositive(input string) (string, error) {
+// 	if IsPeriod(input) == false {
+// 		return "", fmt.Errorf("invalid period %s", input)
+// 	}
+// 	p, _ := period.ParseWithNormalise(strings.ToUpper(input), true)
+// 	if p.IsNegative() {
+// 		p = p.Negate()
+// 	}
 
-	return p.String(), nil
-}
+// 	return p.String(), nil
+// }
 
 // PeriodNegative negate a period
-func PeriodNegative(input string) (string, error) {
-	if IsPeriod(input) == false {
-		return "", fmt.Errorf("invalid period %s", input)
-	}
-	p, _ := period.ParseWithNormalise(strings.ToUpper(input), true)
-	if p.IsPositive() {
-		p = p.Negate()
-	}
+// func PeriodNegative(input string) (string, error) {
+// 	if IsPeriod(input) == false {
+// 		return "", fmt.Errorf("invalid period %s", input)
+// 	}
+// 	p, _ := period.ParseWithNormalise(strings.ToUpper(input), true)
+// 	if p.IsPositive() {
+// 		p = p.Negate()
+// 	}
 
-	return p.String(), nil
-}
+// 	return p.String(), nil
+// }
 
-// TimeAddPeriod add a period to a time
-func TimeAddPeriod(t time.Time, input string) (time.Time, error) {
-	t = t.In(time.UTC)
+// // TimeAddPeriod add a period to a time
+// func TimeAddPeriod(t time.Time, input string) (time.Time, error) {
+// 	t = t.In(time.UTC)
 
-	if IsPeriod(input) == false {
-		fmt.Printf("%s is not a valid period\n", input)
-		return time.Time{}, fmt.Errorf("invalid period %s", input)
-	}
+// 	if IsPeriod(input) == false {
+// 		fmt.Printf("%s is not a valid period\n", input)
+// 		return time.Time{}, fmt.Errorf("invalid period %s", input)
+// 	}
 
-	p, err := period.ParseWithNormalise(strings.ToUpper(input), true)
-	if err != nil {
-		fmt.Printf("Got error parsing period %v\n", err)
-		return time.Time{}, err
-	}
+// 	p, err := period.ParseWithNormalise(strings.ToUpper(input), true)
+// 	if err != nil {
+// 		fmt.Printf("Got error parsing period %v\n", err)
+// 		return time.Time{}, err
+// 	}
 
-	newTime, _ := p.AddTo(t)
-	newTime = newTime.In(time.UTC)
+// 	newTime, _ := p.AddTo(t)
+// 	newTime = newTime.In(time.UTC)
 
-	return newTime, nil
-}
+// 	return newTime, nil
+// }
 
 // TimeSubtractPeriod subtract a period from a time. If incoming period is negative
 // it will be handled properly (by making sure it is subtracted.
-func TimeSubtractPeriod(t time.Time, input string) (time.Time, error) {
-	if IsPeriod(input) == false {
-		return time.Time{}, fmt.Errorf("Invalid period %s", input)
-	}
+// func TimeSubtractPeriod(t time.Time, input string) (time.Time, error) {
+// 	if IsPeriod(input) == false {
+// 		return time.Time{}, fmt.Errorf("Invalid period %s", input)
+// 	}
 
-	p, err := period.ParseWithNormalise(strings.ToUpper(input), true)
-	if err != nil {
-		return time.Time{}, err
-	}
+// 	p, err := period.ParseWithNormalise(strings.ToUpper(input), true)
+// 	if err != nil {
+// 		return time.Time{}, err
+// 	}
 
-	newTime, _ := p.Negate().AddTo(t)
-	if p.IsNegative() == true {
-		newTime, _ = p.AddTo(t)
-	}
+// 	newTime, _ := p.Negate().AddTo(t)
+// 	if p.IsNegative() == true {
+// 		newTime, _ = p.AddTo(t)
+// 	}
 
-	newTime = newTime.In(time.UTC)
-	return newTime, nil
-}
+// 	newTime = newTime.In(time.UTC)
+// 	return newTime, nil
+// }
 
 // StartTimeIsBeforeEndTime if time 1 is before time 2 return true, else false
 func StartTimeIsBeforeEndTime(t1 time.Time, t2 time.Time) bool {
@@ -485,120 +447,120 @@ func StartTimeIsBeforeEndTime(t1 time.Time, t2 time.Time) bool {
 }
 
 // StartDateIsBeforeEndDate if date 1 is before date 2 return true, else false
-func StartDateIsBeforeEndDate(d1, d2 string) (bool, error) {
-	if !IsDate(d1) {
-		return false, errors.New(d1 + " is not valid")
-	} else if !IsDate(d2) {
-		return false, errors.New(d2 + " is not valid")
-	}
+// func StartDateIsBeforeEndDate(d1, d2 string) (bool, error) {
+// 	if !IsDate(d1) {
+// 		return false, errors.New(d1 + " is not valid")
+// 	} else if !IsDate(d2) {
+// 		return false, errors.New(d2 + " is not valid")
+// 	}
 
-	return d1 < d2, nil
-}
+// 	return d1 < d2, nil
+// }
 
 // DatesEqual are two dates equal
-func DatesEqual(d1, d2 string) (bool, error) {
-	if !IsDate(d1) {
-		return false, errors.New(d1 + " is not valid")
-	} else if !IsDate(d2) {
-		return false, errors.New(d2 + " is not valid")
-	}
+// func DatesEqual(d1, d2 string) (bool, error) {
+// 	if !IsDate(d1) {
+// 		return false, errors.New(d1 + " is not valid")
+// 	} else if !IsDate(d2) {
+// 		return false, errors.New(d2 + " is not valid")
+// 	}
 
-	return d1 == d2, nil
-}
+// 	return d1 == d2, nil
+// }
 
 // PositivePeriodBetween get a positive period value between two times
 // Can be negated to get negative period.
-func PositivePeriodBetween(t1 time.Time, t2 time.Time) string {
-	t1 = t1.In(time.UTC)
-	t2 = t2.In(time.UTC)
+// func PositivePeriodBetween(t1 time.Time, t2 time.Time) string {
+// 	t1 = t1.In(time.UTC)
+// 	t2 = t2.In(time.UTC)
 
-	p := period.Between(t1, t2)
-	if p.IsNegative() == true {
-		p = p.Negate()
-	}
-	p = period.New(p.Years(), p.Months(), p.Days(), p.Hours(), p.Minutes(), p.Seconds())
+// 	p := period.Between(t1, t2)
+// 	if p.IsNegative() == true {
+// 		p = p.Negate()
+// 	}
+// 	p = period.New(p.Years(), p.Months(), p.Days(), p.Hours(), p.Minutes(), p.Seconds())
 
-	return p.String()
-}
+// 	return p.String()
+// }
 
 // NegativePeriodBetween get a negative period value between two times.
 // Can be negated to get negative period.
-func NegativePeriodBetween(t1 time.Time, t2 time.Time) string {
-	t1 = t1.In(time.UTC)
-	t2 = t2.In(time.UTC)
+// func NegativePeriodBetween(t1 time.Time, t2 time.Time) string {
+// 	t1 = t1.In(time.UTC)
+// 	t2 = t2.In(time.UTC)
 
-	p := period.Between(t1, t2)
-	if p.IsPositive() == true {
-		p = p.Negate()
-	}
-	p = period.New(p.Years(), p.Months(), p.Days(), p.Hours(), p.Minutes(), p.Seconds())
+// 	p := period.Between(t1, t2)
+// 	if p.IsPositive() == true {
+// 		p = p.Negate()
+// 	}
+// 	p = period.New(p.Years(), p.Months(), p.Days(), p.Hours(), p.Minutes(), p.Seconds())
 
-	return p.String()
-}
+// 	return p.String()
+// }
 
 // PeriodBetweenTimes get a period value between two times
-func PeriodBetweenTimes(t1 time.Time, t2 time.Time) string {
-	t1 = t1.In(time.UTC)
-	t2 = t2.In(time.UTC)
+// func PeriodBetweenTimes(t1 time.Time, t2 time.Time) string {
+// 	t1 = t1.In(time.UTC)
+// 	t2 = t2.In(time.UTC)
 
-	p := period.Between(t1, t2)
-	p = period.New(p.Years(), p.Months(), p.Days(), p.Hours(), p.Minutes(), p.Seconds())
+// 	p := period.Between(t1, t2)
+// 	p = period.New(p.Years(), p.Months(), p.Days(), p.Hours(), p.Minutes(), p.Seconds())
 
-	return p.String()
-}
+// 	return p.String()
+// }
 
 // TimeForDate get time for date string.
 // The returned value will have zero values for all time parts
-func TimeForDate(ds string) (time.Time, error) {
-	d, err := isodate.ParseISO(ds)
-	if err != nil {
-		// t := time.Now()
-		// d := date.New(t.Year(), t.Month(), t.Day())
-		// t2 := time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, time.UTC)
-		return time.Time{}, err
-	}
-	t2 := time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, time.UTC)
-	return t2, nil
-}
+// func TimeForDate(ds string) (time.Time, error) {
+// 	d, err := isodate.ParseISO(ds)
+// 	if err != nil {
+// 		// t := time.Now()
+// 		// d := date.New(t.Year(), t.Month(), t.Day())
+// 		// t2 := time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, time.UTC)
+// 		return time.Time{}, err
+// 	}
+// 	t2 := time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, time.UTC)
+// 	return t2, nil
+// }
 
 // IsDate check if a date string is valid
 //   Format 2006-01-02
-func IsDate(ds string) bool {
-	_, err := isodate.Parse("2006-01-02", ds)
-	return err == nil
-}
+// func IsDate(ds string) bool {
+// 	_, err := isodate.Parse("2006-01-02", ds)
+// 	return err == nil
+// }
 
 // DateForTime get date string for time
 //   Format 2006-01-02
-func DateForTime(t time.Time) string {
-	t = t.In(time.UTC)
+// func DateForTime(t time.Time) string {
+// 	t = t.In(time.UTC)
 
-	d := isodate.New(t.Year(), t.Month(), t.Day())
-	return d.Format(isodate.ISO8601)
-}
+// 	d := isodate.New(t.Year(), t.Month(), t.Day())
+// 	return d.Format(isodate.ISO8601)
+// }
 
 // IsSameDate check whether the y, m, and d portions of a timestamp are
 // equivalent to a date string. Time is converted to UTC first.
-func IsSameDate(base string, t time.Time) bool {
-	t = t.In(time.UTC)
+// func IsSameDate(base string, t time.Time) bool {
+// 	t = t.In(time.UTC)
 
-	ds := isodate.New(t.Year(), t.Month(), t.Day()).Format("200")
-	return base == ds
-}
+// 	ds := isodate.New(t.Year(), t.Month(), t.Day()).Format("200")
+// 	return base == ds
+// }
 
 // Period1LessThanPeriod2 check whether p1 is less than p2
 //   e.g. P3D < PT23H
-func Period1LessThanPeriod2(p1S string, p2S string) (bool, error) {
-	p1, err := period.ParseWithNormalise(p1S, true)
-	if err != nil {
-		return false, fmt.Errorf("problem parsing %s %v", p1S, err)
-	}
+// func Period1LessThanPeriod2(p1S string, p2S string) (bool, error) {
+// 	p1, err := period.ParseWithNormalise(p1S, true)
+// 	if err != nil {
+// 		return false, fmt.Errorf("problem parsing %s %v", p1S, err)
+// 	}
 
-	p2, err := period.ParseWithNormalise(p2S, true)
-	if err != nil {
-		return false, fmt.Errorf("problem parsing %s %v", p2S, err)
-	}
-	check := p1.DurationApprox() < p2.DurationApprox()
+// 	p2, err := period.ParseWithNormalise(p2S, true)
+// 	if err != nil {
+// 		return false, fmt.Errorf("problem parsing %s %v", p2S, err)
+// 	}
+// 	check := p1.DurationApprox() < p2.DurationApprox()
 
-	return check, nil
-}
+// 	return check, nil
+// }
