@@ -142,27 +142,6 @@ func RangeDate(start, end time.Time) func() time.Time {
 	}
 }
 
-// DateRangeFromDates get date range between two dates
-//   e.g. 2020-01-01/2021/01/02
-// There is a lot of flexibility in time intevals in ISO-8601. This function
-// only supports two dates. The first value is the start of the range. The
-// second value is the date following the end of the range.
-// func DateRangeFromDates(d1, d2 string) (string, error) {
-// 	if !IsDate(d1) {
-// 		return "", fmt.Errorf("%s is not a valid date", d1)
-// 	}
-// 	if !IsDate(d2) {
-// 		return "", fmt.Errorf("%s is not a valid date", d2)
-// 	}
-// 	if d1 != d2 {
-// 		if !(d1 < d2) {
-// 			return "", fmt.Errorf("%s is not >= %s", d1, d2)
-// 		}
-// 	}
-
-// 	return d1 + "/" + d2, nil
-// }
-
 // TimeDateOnly get date with zero time values
 func TimeDateOnly(t time.Time) time.Time {
 	t = t.In(time.UTC)
