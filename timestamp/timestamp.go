@@ -364,38 +364,6 @@ func ISO8601LongMsec(t time.Time) string {
 // 	return p.String(), nil
 // }
 
-// DurationToPeriod get period string from time.Duration
-// func DurationToPeriod(d time.Duration) string {
-// 	p, _ := period.NewOf(d)
-// 	return p.String()
-// }
-
-// // PeriodPositive get positive value of a period
-// func PeriodPositive(input string) (string, error) {
-// 	if IsPeriod(input) == false {
-// 		return "", fmt.Errorf("invalid period %s", input)
-// 	}
-// 	p, _ := period.ParseWithNormalise(strings.ToUpper(input), true)
-// 	if p.IsNegative() {
-// 		p = p.Negate()
-// 	}
-
-// 	return p.String(), nil
-// }
-
-// PeriodNegative negate a period
-// func PeriodNegative(input string) (string, error) {
-// 	if IsPeriod(input) == false {
-// 		return "", fmt.Errorf("invalid period %s", input)
-// 	}
-// 	p, _ := period.ParseWithNormalise(strings.ToUpper(input), true)
-// 	if p.IsPositive() {
-// 		p = p.Negate()
-// 	}
-
-// 	return p.String(), nil
-// }
-
 // // TimeAddPeriod add a period to a time
 // func TimeAddPeriod(t time.Time, input string) (time.Time, error) {
 // 	t = t.In(time.UTC)

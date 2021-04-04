@@ -254,8 +254,6 @@ func ParseRFC5545InLocation(text string, loc *time.Location) (TimeSpan, error) {
 		return TimeSpan{}, fmt.Errorf("cannot parse start time in %q: %s", text, err.Error())
 	}
 
-	//fmt.Printf("got %20s %s\n", st.Location(), st.Format(RFC5545DateTimeLayout))
-
 	if rest == "" {
 		return TimeSpan{}, fmt.Errorf("cannot parse %q because there is end time or duration", text)
 	}
