@@ -25,6 +25,8 @@ func DaysIn(year int, month time.Month) int {
 	return daysInMonth[month]
 }
 
+// daaysInMonth number of days in each month indexed by month number using zero
+// padding
 var daysInMonth = []int{
 	0,
 	31, // January
