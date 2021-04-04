@@ -285,34 +285,32 @@ func DaysIn(year int, month time.Month) int {
 }
 
 // DatesInRange get dates in range.
-func DatesInRange(d1, d2 Date) ([]string, error) {
+func DatesInRange(d1, d2 Date) ([]Date, error) {
 	start := d1.UTC()
-	// if err != nil {
-	// 	return nil, err
-	// }
+	end := d2.UTC()
 
-	end := d1.UTC()
-	// end, err := timestamp.TimeForDate(d2)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	dates := make(map[string]string)
+	dateMap := make(map[Date]string)
 
 	for rd := timestamp.RangeDate(start, end); ; {
-		date := rd()
-		if date.IsZero() {
+		t := rd()
+
+		if t.IsZero() {
 			break
 		}
-		dates[NewAt(date).String()] = ""
+		dateMap[NewAt(t)] = ""
 	}
 
-	keys := make([]string, 0, len(dates))
+	dates := make([]Date, 0, len(dateMap))
 
-	for k := range dates {
-		keys = append(keys, k)
+	// Build output array
+	for k := range dateMap {
+		dates = append(dates, k)
 	}
-	sort.Strings(keys)
 
-	return keys, nil
+	// Sort output by date
+	sort.Slice(dates[:], func(i, j int) bool {
+		return dates[i].Before(dates[j])
+	})
+
+	return dates, nil
 }

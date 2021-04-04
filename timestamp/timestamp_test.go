@@ -86,19 +86,6 @@ func checkDate(t *testing.T, input string, compare string) {
 // 	assert.Equal(t, "2020-01-08", dates[len(dates)-1])
 // }
 
-// func TestDatesInRange(t *testing.T) {
-// 	d1 := "2019-12-31"
-// 	d2 := "2020-01-09"
-
-// 	dates, err := DatesInRange(d1, d2)
-// 	assert.Nil(t, err)
-
-// 	for _, k := range dates {
-// 		t.Logf("Date: %s", k)
-// 	}
-// 	assert.Equal(t, 10, len(dates))
-// }
-
 // TestDateRangeFromDates test getting a date range and comparing the date range
 // to the similar TimespanForDateRange value. They should be equal in terms of
 // timestamp values.

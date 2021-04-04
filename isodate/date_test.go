@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/imarsman/datetime/period"
+	"github.com/stretchr/testify/assert"
 )
 
 func same(d Date, t time.Time) bool {
@@ -318,4 +319,23 @@ func TestDaysIn(t *testing.T) {
 			t.Errorf("DaysIn(%d) == %v, want %v", c.year, got2, c.expected)
 		}
 	}
+}
+
+func TestDatesInRange(t *testing.T) {
+	d1, err := ParseISO("2019-12-31")
+	assert.Nil(t, err)
+	t.Log("d1", d1)
+
+	d2, err := ParseISO("2020-01-09")
+	assert.Nil(t, err)
+	t.Log("d2", d2)
+
+	dates, err := DatesInRange(d1, d2)
+	assert.Nil(t, err)
+
+	for _, v := range dates {
+		t.Logf("Date: %v", v)
+	}
+
+	// assert.Equal(t, 10, len(dates))
 }
