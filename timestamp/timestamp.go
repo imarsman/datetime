@@ -11,19 +11,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/imarsman/datetime/date"
-	"github.com/imarsman/datetime/timespan"
+	"github.com/imarsman/datetime/isodate"
+	// "github.com/imarsman/datetime/timespan"
 
 	"github.com/imarsman/datetime/period"
 )
 
-// timeFormats a list of Golang time formats to cycle through. The first match
-// will cause the loop through the formats to exit.
-var timeFormats = []string{
-
-	// RFC7232 - used in HTTP protocol
-	"Mon, 02 Jan 2006 15:04:05 GMT",
-
+var isoTimeFormats = []string{
 	// Short ISO-8601 timestamps with numerical zone offsets
 	"20060102T150405-0700",
 	"20060102T150405-07",
@@ -54,6 +48,22 @@ var timeFormats = []string{
 	"2006-01-02T15:04:05.999Z",
 	"2006-01-02T15:04:05.999999Z",
 	"2006-01-02T15:04:05.999999999Z",
+
+	"2006-01-02T15-04-05-07:00",
+	"2006-01-02T15-04-05.999-07:00",
+	"2006-01-02T15-04-05.999-07",
+	"2006-01-02T15-04-05.999999-07:00",
+	"2006-01-02T15-04-05.999999-07",
+	"2006-01-02T15-04-05.999999999-07:00",
+	"2006-01-02T15-04-05.999999999-07",
+}
+
+// timeFormats a list of Golang time formats to cycle through. The first match
+// will cause the loop through the formats to exit.
+var nonISOTimeFormats = []string{
+
+	// RFC7232 - used in HTTP protocol
+	"Mon, 02 Jan 2006 15:04:05 GMT",
 
 	// Just in case
 	"2006-01-02 15-04-05",
@@ -93,16 +103,19 @@ var timeFormats = []string{
 	"2006-01-02T15-04-05.999999999-0700",
 	"2006-01-02T15-04-05.999999999-07",
 
-	"2006-01-02T15-04-05-07:00",
-	"2006-01-02T15-04-05.999-07:00",
-	"2006-01-02T15-04-05.999-07",
-	"2006-01-02T15-04-05.999999-07:00",
-	"2006-01-02T15-04-05.999999-07",
-	"2006-01-02T15-04-05.999999999-07:00",
-	"2006-01-02T15-04-05.999999999-07",
-
 	// time.RFC3339,
 	"2006-01-02T15:04:05Z07:00",
+}
+
+var timeFormats = []string{}
+
+func init() {
+	timeFormats = append(timeFormats, isoTimeFormats...)
+	timeFormats = append(timeFormats, nonISOTimeFormats...)
+	// s2 := make([]int, len(s)+len(vs))
+	// copy(s2, s[:k])
+	// copy(s2[k:], vs)
+	// copy(s2[k+len(vs):], s[k:])
 }
 
 // TimespanForDateRange parse an ISO8601 date range which normally is written like
@@ -110,21 +123,21 @@ var timeFormats = []string{
 //
 // indicating start/end. The returned values will be the first nanosecond of the
 // start date and the first nannosecond following the end of the range.
-func TimespanForDateRange(start, end string) (time.Time, time.Time, error) {
-	d1, err := date.Parse("2006-01-02", start)
-	if err != nil {
-		return time.Time{}, time.Time{}, fmt.Errorf("error when parsing start %v", err)
-	}
-	d2, err := date.Parse("2006-01-02", end)
-	if err != nil {
-		return time.Time{}, time.Time{}, fmt.Errorf("error when parsing end %v", err)
-	}
-	ts := timespan.NewTimeSpan(d1.In(time.UTC), d2.In(time.UTC))
-	s := ts.Start()
-	e := ts.End()
+// func TimespanForDateRange(start, end string) (time.Time, time.Time, error) {
+// 	d1, err := isodate.Parse("2006-01-02", start)
+// 	if err != nil {
+// 		return time.Time{}, time.Time{}, fmt.Errorf("error when parsing start %v", err)
+// 	}
+// 	d2, err := isodate.Parse("2006-01-02", end)
+// 	if err != nil {
+// 		return time.Time{}, time.Time{}, fmt.Errorf("error when parsing end %v", err)
+// 	}
+// 	ts := timespan.NewTimeSpan(d1.In(time.UTC), d2.In(time.UTC))
+// 	s := ts.Start()
+// 	e := ts.End()
 
-	return s, e, nil
-}
+// 	return s, e, nil
+// }
 
 // RangeDate returns a date range function over start date to end date inclusive.
 // After the end of the range, the range function returns a zero date,
@@ -255,18 +268,40 @@ func parseUnixTS(value string) (int64, int64, error) {
 	return s, n, nil
 }
 
-// ParseTimestampInUTC parse time string and return UTC zoned time
-func ParseTimestampInUTC(timeStr string) (time.Time, error) {
-	return ParseTimestampInLocation(timeStr, *time.UTC)
+// ParseUTC parse for all timestamps and return UTC zoned time
+func ParseUTC(timeStr string) (time.Time, error) {
+	return parseTimestampInLocation(timeStr, false, time.UTC)
+}
+
+// ParseISOUTC parse for ISO timestamp formats and return UTC zoned time
+func ParseISOUTC(timeStr string) (time.Time, error) {
+	return parseTimestampInLocation(timeStr, true, time.UTC)
+}
+
+// ParseInLocation parse for all timestamp formats and return time with specific
+// time library location
+func ParseInLocation(timeStr string, loc *time.Location) (time.Time, error) {
+	return parseTimestampInLocation(timeStr, false, loc)
+}
+
+// ParseISOInLocation parse for ISO timestamp formats and return time with
+// UTC zoned time
+func ParseISOInLocation(timeStr string, loc *time.Location) (time.Time, error) {
+	return parseTimestampInLocation(timeStr, true, loc)
 }
 
 // ParseTimestampInLocation and return time with specific time library location
-func ParseTimestampInLocation(timeStr string, loc time.Location) (time.Time, error) {
+func parseTimestampInLocation(timeStr string, iso bool, loc *time.Location) (time.Time, error) {
+	s := timeFormats
+	if iso == true {
+		s = isoTimeFormats
+	}
+
 	// Continue on for non unix timestamp patterns
-	for _, format := range timeFormats {
+	for _, format := range s {
 		t, err := time.Parse(format, timeStr)
 		if err == nil {
-			t = t.In(&loc)
+			t = t.In(loc)
 
 			return t, nil
 		}
@@ -296,7 +331,7 @@ func ParseTimestampInLocation(timeStr string, loc time.Location) (time.Time, err
 		// If it was a unix seconds timestamp n will be zero. If it was a
 		// nanoseconds timestamp there will be a nanoseconds portion that is not
 		// zero.
-		t := time.Unix(s, n).In(&loc)
+		t := time.Unix(s, n).In(loc)
 
 		return t, nil
 	}
@@ -515,7 +550,7 @@ func PeriodBetweenTimes(t1 time.Time, t2 time.Time) string {
 // TimeForDate get time for date string.
 // The returned value will have zero values for all time parts
 func TimeForDate(ds string) (time.Time, error) {
-	d, err := date.Parse(date.ISO8601, ds)
+	d, err := isodate.ParseISO(ds)
 	if err != nil {
 		// t := time.Now()
 		// d := date.New(t.Year(), t.Month(), t.Day())
@@ -529,7 +564,7 @@ func TimeForDate(ds string) (time.Time, error) {
 // IsDate check if a date string is valid
 //   Format 2006-01-02
 func IsDate(ds string) bool {
-	_, err := date.Parse("2006-01-02", ds)
+	_, err := isodate.Parse("2006-01-02", ds)
 	return err == nil
 }
 
@@ -538,8 +573,8 @@ func IsDate(ds string) bool {
 func DateForTime(t time.Time) string {
 	t = t.In(time.UTC)
 
-	d := date.New(t.Year(), t.Month(), t.Day())
-	return d.Format(date.ISO8601)
+	d := isodate.New(t.Year(), t.Month(), t.Day())
+	return d.Format(isodate.ISO8601)
 }
 
 // IsSameDate check whether the y, m, and d portions of a timestamp are
@@ -547,7 +582,7 @@ func DateForTime(t time.Time) string {
 func IsSameDate(base string, t time.Time) bool {
 	t = t.In(time.UTC)
 
-	ds := date.New(t.Year(), t.Month(), t.Day()).Format("200")
+	ds := isodate.New(t.Year(), t.Month(), t.Day()).Format("200")
 	return base == ds
 }
 

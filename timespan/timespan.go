@@ -9,8 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/imarsman/datetime/date"
+	"github.com/imarsman/datetime/isodate"
 	"github.com/imarsman/datetime/period"
+	"github.com/imarsman/datetime/timestamp"
 )
 
 // TimestampFormat is a simple format for date & time, "2006-01-02 15:04:05".
@@ -30,8 +31,8 @@ func ZeroTimeSpan(start time.Time) TimeSpan {
 	return TimeSpan{start, 0}
 }
 
-// TimeSpanOf creates a new time span at a specified time and duration.
-func TimeSpanOf(start time.Time, d time.Duration) TimeSpan {
+// NewTimeSpanOf creates a new time span at a specified time and duration.
+func NewTimeSpanOf(start time.Time, d time.Duration) TimeSpan {
 	return TimeSpan{start, d}
 }
 
@@ -122,8 +123,8 @@ func (ts TimeSpan) In(loc *time.Location) TimeSpan {
 // The result is normalised.
 func (ts TimeSpan) DateRangeIn(loc *time.Location) DateRange {
 	no := ts.Normalise()
-	startDate := date.NewAt(no.mark.In(loc))
-	endDate := date.NewAt(no.End().In(loc))
+	startDate := isodate.NewAt(no.mark.In(loc))
+	endDate := isodate.NewAt(no.End().In(loc))
 	return NewDateRange(startDate, endDate)
 }
 
@@ -157,9 +158,9 @@ func (ts TimeSpan) Merge(other TimeSpan) TimeSpan {
 // that "Z" is to be appended when the time is UTC.
 const RFC5545DateTimeLayout = "20060102T150405"
 
-// RFC5545DateTimeZulu is the UTC format string used by iCalendar (RFC5545). Note
+// RFC5545DateTimeUTC is the UTC format string used by iCalendar (RFC5545). Note
 // that this cannot be used for parsing with time.Parse.
-const RFC5545DateTimeZulu = RFC5545DateTimeLayout + "Z"
+const RFC5545DateTimeUTC = RFC5545DateTimeLayout + "Z"
 
 func layoutHasTimezone(layout string) bool {
 	return strings.IndexByte(layout, 'Z') >= 0 || strings.Contains(layout, "-07")
@@ -177,7 +178,7 @@ func (ts TimeSpan) Equal(us TimeSpan) bool {
 // it returns a string containing the start time and the duration.
 //
 // The layout string is as specified for time.Format. If it doesn't have a timezone element
-// ("07" or "Z") and the times in the timespan are UTC, the "Z" zulu indicator is added.
+// ("07" or "Z") and the times in the timespan are UTC, the "Z" UTC indicator is added.
 // This is as required by iCalendar (RFC5545).
 //
 // Also, if the layout is blank, it defaults to RFC5545DateTimeLayout.
@@ -189,9 +190,9 @@ func (ts TimeSpan) Format(layout, separator string, useDuration bool) string {
 		layout = RFC5545DateTimeLayout
 	}
 
-	// if the time is UTC and the format doesn't contain zulu field ("Z") or timezone field ("07")
+	// if the time is UTC and the format doesn't contain UTC field ("Z") or timezone field ("07")
 	if ts.mark.Location().String() == "UTC" && !layoutHasTimezone(layout) {
-		layout = RFC5545DateTimeZulu
+		layout = RFC5545DateTimeUTC
 	}
 
 	s := ts.Start()
@@ -207,17 +208,28 @@ func (ts TimeSpan) Format(layout, separator string, useDuration bool) string {
 
 // FormatRFC5545 formats the timespan as a string containing the start time and end time, or the
 // start time and duration, if useDuration is true. The two parts are separated by slash.
-// The time(s) is expressed as UTC zulu.
+// The time(s) is expressed as UTC.
 // This is as required by iCalendar (RFC5545).
 func (ts TimeSpan) FormatRFC5545(useDuration bool) string {
-	return ts.Format(RFC5545DateTimeZulu, "/", useDuration)
+	return ts.Format(RFC5545DateTimeUTC, "/", useDuration)
 }
 
 // MarshalText formats the timespan as a string using, using RFC5545 layout.
 // This implements the encoding.TextMarshaler interface.
 func (ts TimeSpan) MarshalText() (text []byte, err error) {
-	s := ts.Format(RFC5545DateTimeZulu, "/", true)
+	s := ts.Format(RFC5545DateTimeUTC, "/", true)
 	return []byte(s), nil
+}
+
+// ParseRFC5545InUTC parses a string as a timespan. The string must contain either of
+//
+//     time "/" time
+//     time "/" period
+//
+// The timestamp package will assume UTC for timestamps lacking a timezone
+// indicator. The timespanreturned will have its tims set to UTC.
+func ParseRFC5545InUTC(text string) (TimeSpan, error) {
+	return ParseRFC5545InLocation(text, time.UTC)
 }
 
 // ParseRFC5545InLocation parses a string as a timespan. The string must contain either of
@@ -225,9 +237,8 @@ func (ts TimeSpan) MarshalText() (text []byte, err error) {
 //     time "/" time
 //     time "/" period
 //
-// If the input time(s) ends in "Z", the location is UTC (as per RFC5545). Otherwise, the
-// specified location will be used for the resulting times; this behaves the same as
-// time.ParseInLocation.
+// The timestamp package will assume UTC for timestamps lacking a timezone
+// indicator. The timespanreturned will have its tims set to the location specified.
 func ParseRFC5545InLocation(text string, loc *time.Location) (TimeSpan, error) {
 	slash := strings.IndexByte(text, '/')
 	if slash < 0 {
@@ -237,7 +248,8 @@ func ParseRFC5545InLocation(text string, loc *time.Location) (TimeSpan, error) {
 	start := text[:slash]
 	rest := text[slash+1:]
 
-	st, err := parseTimeInLocation(start, loc)
+	st, err := timestamp.ParseISOInLocation(start, loc)
+	// st, err := parseTimeInLocation(start, loc)
 	if err != nil {
 		return TimeSpan{}, fmt.Errorf("cannot parse start time in %q: %s", text, err.Error())
 	}
@@ -263,17 +275,19 @@ func ParseRFC5545InLocation(text string, loc *time.Location) (TimeSpan, error) {
 		return NewTimeSpan(st, et), nil
 	}
 
-	et, err := parseTimeInLocation(rest, loc)
+	et, err := timestamp.ParseISOInLocation(rest, loc)
+	// et, err := parseTimeInLocation(rest, loc)
+
 	return NewTimeSpan(st, et), err
 }
 
-func parseTimeInLocation(text string, loc *time.Location) (time.Time, error) {
-	if strings.HasSuffix(text, "Z") {
-		text = text[:len(text)-1]
-		return time.ParseInLocation(RFC5545DateTimeLayout, text, time.UTC)
-	}
-	return time.ParseInLocation(RFC5545DateTimeLayout, text, loc)
-}
+// func parseTimeInLocation(text string, loc *time.Location) (time.Time, error) {
+// 	if strings.HasSuffix(text, "Z") {
+// 		text = text[:len(text)-1]
+// 		return time.ParseInLocation(RFC5545DateTimeLayout, text, time.UTC)
+// 	}
+// 	return time.ParseInLocation(RFC5545DateTimeLayout, text, loc)
+// }
 
 // UnmarshalText parses a string as a timespan. It expects RFC5545 layout.
 //

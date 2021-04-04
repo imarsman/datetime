@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/imarsman/datetime/date"
+	"github.com/imarsman/datetime/isodate"
 )
 
 const zero time.Duration = 0
@@ -345,7 +345,7 @@ func TestConversion1(t *testing.T) {
 	isEq(t, 0, dr.IsEmpty(), true)
 	isEq(t, 0, ts1.Start(), ts1.End())
 	isEq(t, 0, ts1.Duration(), zero)
-	isEq(t, 0, dr.Days(), date.PeriodOfDays(0))
+	isEq(t, 0, dr.Days(), isodate.PeriodOfDays(0))
 	isEq(t, 0, ts2.Duration(), zero)
 	isEq(t, 0, ts1, ts2)
 }
@@ -371,3 +371,14 @@ func TestConversion3(t *testing.T) {
 	isEq(t, 0, ts1, ts2)
 	isEq(t, 0, ts1.Duration(), time.Hour*71)
 }
+
+// func isEq(t *testing.T, i int, a, b interface{}, msg ...interface{}) {
+// 	t.Helper()
+// 	if a != b {
+// 		sa := make([]string, len(msg))
+// 		for i, m := range msg {
+// 			sa[i] = fmt.Sprintf(", %v", m)
+// 		}
+// 		t.Errorf("%d: %+v is not equal to %+v%s", i, a, b, strings.Join(sa, ""))
+// 	}
+// }
