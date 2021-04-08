@@ -339,3 +339,16 @@ func TestDatesInRange(t *testing.T) {
 
 	// assert.Equal(t, 10, len(dates))
 }
+
+func TestTiming(t *testing.T) {
+	start := time.Now()
+	format := "2019-12-31"
+	count := 1000
+	for i := 0; i < count; i++ {
+		// Get a unix timestamp we should not parse
+		_, err := ParseISO(format)
+		assert.Nil(t, err)
+	}
+
+	t.Logf("Took %v to check %s  %d times", time.Since(start), format, count)
+}

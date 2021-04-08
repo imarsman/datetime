@@ -9,47 +9,42 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/imarsman/datetime/timestamp/lex"
 )
 
 var isoTimeFormats = []string{
 	// Short ISO-8601 timestamps with numerical zone offsets
 	"20060102T150405-0700",
-	"20060102T150405-07",
 	"20060102T150405.999-0700",
-	"20060102T150405.999-07",
 	"20060102T150405.999999-0700",
-	"20060102T150405.999999-07",
 	"20060102T150405.999999999-0700",
+
+	"20060102T150405-07",
+	"20060102T150405.999-07",
+	"20060102T150405.999999-07",
 	"20060102T150405.999999999-07",
 
 	// Long ISO-8601 timestamps with numerical zone offsets
-	"2006-01-02T15:04:05-07:00",
-	"2006-01-02T15:04:05.999-07:00",
-	"2006-01-02T15:04:05.999-07",
-	"2006-01-02T15:04:05.999999-07:00",
-	"2006-01-02T15:04:05.999999-07",
-	"2006-01-02T15:04:05.999999999-07:00",
-	"2006-01-02T15:04:05.999999999-07",
+	// "2006-01-02T15:04:05-07:00",
+	// "2006-01-02T15:04:05.999-07:00",
+	// "2006-01-02T15:04:05.999-07",
+	// "2006-01-02T15:04:05.999999-07:00",
+	// "2006-01-02T15:04:05.999999-07",
+	// "2006-01-02T15:04:05.999999999-07:00",
+	// "2006-01-02T15:04:05.999999999-07",
 
-	// Short  ISO-8601 timestamps with zulu zone offsets
+	// Short  ISO-8601 timestamps with UTC zone offsets
 	"20060102T150405Z",
 	"20060102T150405.999Z",
 	"20060102T150405.999Z",
 	"20060102T150405.999999999Z",
 
-	// Long ISO-8601 timestamps with zulu zone offsets
-	"2006-01-02T15:04:05Z",
-	"2006-01-02T15:04:05.999Z",
-	"2006-01-02T15:04:05.999999Z",
-	"2006-01-02T15:04:05.999999999Z",
-
-	"2006-01-02T15-04-05-07:00",
-	"2006-01-02T15-04-05.999-07:00",
-	"2006-01-02T15-04-05.999-07",
-	"2006-01-02T15-04-05.999999-07:00",
-	"2006-01-02T15-04-05.999999-07",
-	"2006-01-02T15-04-05.999999999-07:00",
-	"2006-01-02T15-04-05.999999999-07",
+	// Long ISO-8601 timestamps with UTC zone offsets
+	// "2006-01-02T15:04:05Z",
+	// "2006-01-02T15:04:05.999Z",
+	// "2006-01-02T15:04:05.999999Z",
+	// "2006-01-02T15:04:05.999999999Z",
 }
 
 // timeFormats a list of Golang time formats to cycle through. The first match
@@ -70,9 +65,18 @@ var nonISOTimeFormats = []string{
 	"20060102T150405.999999999",
 
 	// SQL
+	"20060102 150405",
+	"20060102 150405 -07",
+	"20060102 150405 -07:00",
+
 	"2006-01-02 15:04:05",
 	"2006-01-02 15:04:05 -07",
 	"2006-01-02 15:04:05 -07:00",
+
+	"2006-01-02 15:04:05-07",
+	"2006-01-02 15:04:05.000-07",
+	"2006-01-02 15:04:05.000000-07",
+	"2006-01-02 15:04:05.000000000-07",
 
 	// Hopefully less likely to be found. Assume UTC.
 	"20060102",
@@ -97,8 +101,18 @@ var nonISOTimeFormats = []string{
 	"2006-01-02T15-04-05.999999999-0700",
 	"2006-01-02T15-04-05.999999999-07",
 
+	"2006-01-02T15-04-05-07:00",
+	"2006-01-02T15-04-05.999-07:00",
+	"2006-01-02T15-04-05.999-07",
+	"2006-01-02T15-04-05.999999-07:00",
+	"2006-01-02T15-04-05.999999-07",
+	"2006-01-02T15-04-05.999999999-07:00",
+	"2006-01-02T15-04-05.999999999-07",
+
+	// Actually, Golang's parse can't parse the RFC2229 format as defined as a
+	// constant by the Go time library.
 	// time.RFC3339,
-	"2006-01-02T15:04:05Z07:00",
+	// "2006-01-02T15:04:05Z07:00",
 }
 
 var timeFormats = []string{}
@@ -186,36 +200,43 @@ func parseUnixTS(value string) (int64, int64, error) {
 
 // ParseUTC parse for all timestamps and return UTC zoned time
 func ParseUTC(timeStr string) (time.Time, error) {
-	return parseTimestampInLocation(timeStr, false, time.UTC)
+	return parseTimestampInLocation(timeStr, time.UTC)
 }
 
 // ParseISOUTC parse for ISO timestamp formats and return UTC zoned time
 func ParseISOUTC(timeStr string) (time.Time, error) {
-	return parseTimestampInLocation(timeStr, true, time.UTC)
+	return parseTimestampInLocation(timeStr, time.UTC)
 }
 
 // ParseInLocation parse for all timestamp formats and return time with specific
 // time library location
 func ParseInLocation(timeStr string, loc *time.Location) (time.Time, error) {
-	return parseTimestampInLocation(timeStr, false, loc)
+	return parseTimestampInLocation(timeStr, loc)
 }
 
 // ParseISOInLocation parse for ISO timestamp formats and return time with
 // UTC zoned time
 func ParseISOInLocation(timeStr string, loc *time.Location) (time.Time, error) {
-	return parseTimestampInLocation(timeStr, true, loc)
+	return parseTimestampInLocation(timeStr, loc)
 }
 
 // ParseTimestampInLocation and return time with specific time library location
-func parseTimestampInLocation(timeStr string, iso bool, loc *time.Location) (time.Time, error) {
-	s := timeFormats
-	if iso == true {
-		s = isoTimeFormats
+func parseTimestampInLocation(timeStr string, loc *time.Location) (time.Time, error) {
+	original := timeStr
+
+	// Try ISO parsing first
+	t, err := lex.Parse([]byte(timeStr))
+	if err == nil {
+		return t, nil
 	}
 
-	// Continue on for non unix timestamp patterns
+	// if timeStr == "2006-01-02T15:04:05-07:00" {
+	// 	fmt.Println("Got past lex")
+	// }
+
+	s := nonISOTimeFormats
 	for _, format := range s {
-		t, err := time.Parse(format, timeStr)
+		t, err := time.Parse(format, original)
 		if err == nil {
 			t = t.In(loc)
 
@@ -223,11 +244,16 @@ func parseTimestampInLocation(timeStr string, iso bool, loc *time.Location) (tim
 		}
 	}
 
+	// if timeStr == "20060102" {
+	// 	fmt.Println("Passed non-iso ts check")
+	// }
+
 	// Deal with oddball unix timestamp
 	match, err := regexp.MatchString("^\\d+$", timeStr)
 	if err != nil {
 		return time.Time{}, errors.New("Could not parse time")
 	}
+
 	// Don't support timestamps less than 7 characters in length
 	// to avoid strange date formats from being parsed.
 	// Max would be 9999999, or Sun Apr 26 1970 17:46:39 GMT+0000
@@ -251,6 +277,26 @@ func parseTimestampInLocation(timeStr string, iso bool, loc *time.Location) (tim
 
 		return t, nil
 	}
+
+	// timeStr = strings.Replace(timeStr, " ", "T", 1)
+	// // fmt.Println("timeStr pre", timeStr)
+	// timeStr = strings.ReplaceAll(timeStr, ":", "")
+	// re := regexp.MustCompile("(\\d\\d\\d\\d)-(\\d\\d)-(\\d\\d)(.*)")
+	// timeStr = re.ReplaceAllString(timeStr, "$1$2$3$4")
+	// re = regexp.MustCompile("[^\\d](\\d\\d)-(\\d\\d)-(\\d\\d)(.*)")
+	// timeStr = re.ReplaceAllString(timeStr, "$1$2$3$4")
+
+	// s = isoTimeFormats
+
+	// // Continue on for non unix timestamp patterns
+	// for _, format := range s {
+	// 	t, err := time.Parse(format, timeStr)
+	// 	if err == nil {
+	// 		t = t.In(loc)
+
+	// 		return t, nil
+	// 	}
+	// }
 
 	return time.Time{}, fmt.Errorf("Could not parse time %s", timeStr)
 }

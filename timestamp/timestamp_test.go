@@ -3,9 +3,25 @@ package timestamp
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func runningtime(s string) (string, time.Time) {
+	fmt.Println("Start:	", s)
+	return s, time.Now()
+}
+
+func track(s string, startTime time.Time) {
+	endTime := time.Now()
+	fmt.Println("End:	", s, "took", endTime.Sub(startTime))
+}
+
+func execute() {
+	defer track(runningtime("execute"))
+	time.Sleep(3 * time.Second)
+}
 
 // checkDate for use in parse checking
 func checkDate(t *testing.T, input string, compare string) {
@@ -131,6 +147,7 @@ func checkDate(t *testing.T, input string, compare string) {
 // TestParse parse all patterns anc compare with expected values
 func TestParse(t *testing.T) {
 
+	start := time.Now()
 	// It is possible to have a strring which is just digits that will be parsed
 	// as a timestamp, incorrectly.
 	t.Log(ParseUTC("2006010247"))
@@ -171,7 +188,7 @@ func TestParse(t *testing.T) {
 	checkDate(t, "2006-01-02T15:04:05.001000000-07:00", "2006-01-02T22:04:05.001+00:00")
 	checkDate(t, "2006-01-02T15:04:05.999999999-07", "2006-01-02T22:04:05.999+00:00")
 
-	// Short  ISO-8601 timestamps with zulu zone offsets
+	// Short  ISO-8601 timestamps with UTC zone offsets
 	checkDate(t, "20060102T150405Z", "2006-01-02T15:04:05.000+00:00")
 	checkDate(t, "20060102T150405.000Z", "2006-01-02T15:04:05.000+00:00")
 	checkDate(t, "20060102T150405.000000Z", "2006-01-02T15:04:05.000+00:00")
@@ -180,7 +197,7 @@ func TestParse(t *testing.T) {
 	checkDate(t, "20060102T150405.000100000Z", "2006-01-02T15:04:05.000+00:00")
 	checkDate(t, "20060102T150405.999999999Z", "2006-01-02T15:04:05.999+00:00")
 
-	// Long date time with zulu zone offsets
+	// Long date time with UTC zone offsets
 	checkDate(t, "2006-01-02T15:04:05Z", "2006-01-02T15:04:05.000+00:00")
 	checkDate(t, "2006-01-02T15:04:05.000Z", "2006-01-02T15:04:05.000+00:00")
 	checkDate(t, "2006-01-02T15:04:05.000000Z", "2006-01-02T15:04:05.000+00:00")
@@ -220,51 +237,47 @@ func TestParse(t *testing.T) {
 	checkDate(t, "2006-01-02T15-04-05.000-07:00", "2006-01-02T22:04:05.000+00:00")
 	checkDate(t, "2006-01-02T15-04-05.000000-07:00", "2006-01-02T22:04:05.000+00:00")
 	checkDate(t, "2006-01-02T15-04-05.999999999-07:00", "2006-01-02T22:04:05.999+00:00")
+
+	t.Logf("Took %v to check", time.Since(start))
 }
 
-// TestIsPeriod check to see if various patterns are valid ISO-8601 periods
-// func TestIsPeriod(t *testing.T) {
-// 	isPeriod := IsPeriod("")
-// 	assert.False(t, isPeriod)
+func TestISOCompare(t *testing.T) {
+	start := time.Now()
+	// It is possible to have a strring which is just digits that will be parsed
+	// as a timestamp, incorrectly.
 
-// 	isPeriod = IsPeriod("P3Y4M5DT6H4M3S")
-// 	assert.True(t, isPeriod)
+	format := "2006-01-02T15:04:05-07:00"
+	_, err := ParseUTC(format)
+	assert.Nil(t, err)
+	count := 1000
 
-// 	isPeriod = IsPeriod("P3y4m5dT6h4m3s")
-// 	assert.True(t, isPeriod)
+	for i := 0; i < count; i++ {
+		// Get a unix timestamp we should not parse
+		_, err := ParseUTC(format)
+		assert.Nil(t, err)
+	}
 
-// 	isPeriod = IsPeriod("P3DDD4m5dT6h4m3s")
-// 	assert.False(t, isPeriod)
+	t.Logf("Took %v to check %s  %d times", time.Since(start), format, count)
 
-// 	p, err := ParsePeriod("P3Y4M5DT6H4M3S")
-// 	assert.Nil(t, err)
+	start = time.Now()
 
-// 	t.Logf("Period %s", p)
-// }
+	format = "20060102T150405-0700"
+	for i := 0; i < count; i++ {
+		// Get a unix timestamp we should not parse
+		_, err := ParseUTC(format)
+		assert.Nil(t, err)
+	}
+	t.Logf("Took %v to check %s  %d times", time.Since(start), format, count)
 
-// TestParsePeriod parse a period
-// func TestParsePeriod(t *testing.T) {
-// 	pStr := "PT10M"
-// 	p, err := ParsePeriod(pStr)
-// 	assert.Nil(t, err)
-// 	assert.Equal(t, p, pStr)
-// }
-
-// TestPeriodPositive test whether a priod
-// func TestPeriodPositve(t *testing.T) {
-// 	p, err := ParsePeriod("PT10M")
-// 	assert.Nil(t, err)
-// 	t.Logf("Is period %v", IsPeriod(p))
-
-// 	pp, err := PeriodPositive(p)
-// 	assert.Nil(t, err)
-
-// 	pn, err := PeriodNegative(p)
-// 	assert.Nil(t, err)
-
-// 	assert.Equal(t, pp, p)
-// 	assert.Equal(t, pn, "-PT10M")
-// }
+	format = "2006-01-02T15:04:05-07:00"
+	// format = "1/2/2006"
+	for i := 0; i < count; i++ {
+		// Get a unix timestamp we should not parse
+		_, err := ParseUTC(format)
+		assert.Nil(t, err)
+	}
+	t.Logf("Took %v to check %s  %d times", time.Since(start), format, count)
+}
 
 // TestOrdering check ordering call
 func TestOrdering(t *testing.T) {
@@ -277,24 +290,14 @@ func TestOrdering(t *testing.T) {
 	assert.True(t, StartTimeIsBeforeEndTime(t1, t2))
 	assert.False(t, StartTimeIsBeforeEndTime(t2, t1))
 }
-
-// func TestDurationToPeriod(t *testing.T) {
-// 	t1String := "20201210T235959-0500"
-// 	t1, err := ParseUTC(t1String)
-// 	assert.Nil(t, err)
-
-// 	t2String := "20211211T000000-0500"
-// 	t2, err := ParseUTC(t2String)
-// 	assert.Nil(t, err)
-
-// 	d := t2.Sub(t1)
-
-// 	pString := DurationToPeriod(d)
-// 	p2, _ := period.NewOf(d)
-// 	// Check that period obtained is the same as the one from period library
-// 	assert.Equal(t, pString, p2.String())
-
-// 	t.Logf("Period for duration between %s and %s %s", t1String, t2String, pString)
-// 	t.Logf("Period obtained %s and from period library %s", pString, p2.String())
-// 	assert.Equal(t, "P365DT1S", pString)
-// }
+func TestTime(t *testing.T) {
+	var unixBase time.Time
+	var err error
+	count := 1000
+	defer track(runningtime(fmt.Sprintf("Time to parse timestamp %dx", count)))
+	for i := 0; i < count; i++ {
+		unixBase, err = ParseUTC("2006-01-02T15:04:05.000+00:00")
+	}
+	assert.Nil(t, err)
+	t.Logf("Timestamp %s", ISO8601LongMsec(unixBase))
+}
