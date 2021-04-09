@@ -2,6 +2,7 @@ package lex
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -96,7 +97,7 @@ func newLexer() *lexmachine.Lexer {
 	lexer.Add([]byte(`[\-\+]\d\d`), getToken(tokmap["ZONE"]))
 	// Zulu (UTC) indicator
 	lexer.Add([]byte(`Z`), getToken(tokmap["ZONE"]))
-	// Ignore time separator character
+	// Skip date/time separator
 	lexer.Add([]byte(`[tT]`), skip)
 	// Ignore spaces
 	lexer.Add([]byte(` `), skip)
@@ -191,7 +192,15 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 			v := token.Value.(string)
 			tsp.SUBSECOND = v
 		case tokmap["ZONE"]:
+			// Note that RFC3339 requires a zone either as Z or an offset
+			// The pattern 2006-01-02T15:04:05Z0700 is not meant to be a parser
+			// pattern but rather a requirement specification for some kind of
+			// zone to be present. This means that RFC3339 is stringent in that
+			// it requires a zone indicator. Having no zone means that the date
+			// is incorrectly specified.
+			// https://stackoverflow.com/a/63321401/2694971
 			v := token.Value.(string)
+			fmt.Println(v)
 			if len(v) == 3 {
 				v = v + "00"
 			}

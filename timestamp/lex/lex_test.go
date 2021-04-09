@@ -71,6 +71,7 @@ func TestParseFormats(t *testing.T) {
 		"20200102T122436.123-05:00",
 		"20060102T150405.000Z",
 		"20060102",
+		"2006-01-02T15:04:05+0700",
 	}
 	for _, f := range formats {
 		ts, err := Parse([]byte(f))

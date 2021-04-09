@@ -257,7 +257,7 @@ func TestISOCompare(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
-	t.Logf("Took %v to check %s  %d times", time.Since(start), format, count)
+	t.Logf("Took %v to parse %s  %d times", time.Since(start), format, count)
 
 	start = time.Now()
 
@@ -267,7 +267,7 @@ func TestISOCompare(t *testing.T) {
 		_, err := ParseUTC(format)
 		assert.Nil(t, err)
 	}
-	t.Logf("Took %v to check %s  %d times", time.Since(start), format, count)
+	t.Logf("Took %v to parse %s  %d times", time.Since(start), format, count)
 
 	format = "2006-01-02T15:04:05-07:00"
 	// format = "1/2/2006"
