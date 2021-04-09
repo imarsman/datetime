@@ -18,8 +18,6 @@ var tokens = []string{
 	"COLON",
 	"SUBSECOND",
 	"ZONE",
-	// "MINUS",
-	// "SPACE",
 }
 
 var tokenIDs map[string]string // A map from the token names to their string ids
@@ -62,6 +60,7 @@ var lexer *lexmachine.Lexer
 var reYMDDash *regexp.Regexp
 
 func init() {
+	// Only for replacing in date portion
 	reYMDDash = regexp.MustCompile(`^(\d{4})[\-\.\/]?(\d{2})[\-\.\/]?(\d{2})(.*)`)
 
 	tokmap = make(map[string]int)
@@ -82,13 +81,19 @@ func newLexer() *lexmachine.Lexer {
 	lexer.Add([]byte(`\.\d\d\d`), getToken(tokmap["SUBSECOND"]))
 	lexer.Add([]byte(`\.\d\d\d\d\d\d`), getToken(tokmap["SUBSECOND"]))
 	lexer.Add([]byte(`\.\d\d\d\d\d\d\d\d\d`), getToken(tokmap["SUBSECOND"]))
-	lexer.Add([]byte(`([12]\d\d\d\d\d\d\d)`), getToken(tokmap["DATE"]))
-	lexer.Add([]byte(`(\d\d\d\d\d\d)`), getToken(tokmap["TIME"]))
-	lexer.Add([]byte(`[\-\+]\d\d\d\d|\Z`), getToken(tokmap["ZONE"]))
+	// Assumes after first and second millennium
+	lexer.Add([]byte(`[12]\d\d\d\d\d\d\d`), getToken(tokmap["DATE"]))
+	// lexer.Add([]byte(`[\+\-]\d\d\d\d\d\d\d\d\d`), getToken(tokmap["DATE"]))
+	lexer.Add([]byte(`\d\d\d\d\d\d`), getToken(tokmap["TIME"]))
+	// Four digit zone
+	lexer.Add([]byte(`[\-\+]\d\d\d\d`), getToken(tokmap["ZONE"]))
 	// Allow for 2 digit zone
-	lexer.Add([]byte(`[\-\+]\d\d|\Z`), getToken(tokmap["ZONE"]))
+	lexer.Add([]byte(`[\-\+]\d\d`), getToken(tokmap["ZONE"]))
+	// Zulu (UTC) indicator
 	lexer.Add([]byte(`Z`), getToken(tokmap["ZONE"]))
-	lexer.Add([]byte(`:`), skip)
+	// Ignore time separator character
+	lexer.Add([]byte(`[tT]`), skip)
+	// Ignore spaces
 	lexer.Add([]byte(` `), skip)
 
 	err := lexer.Compile()
@@ -123,13 +128,25 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 	tsp.ORIGINAL = timeStr
 
 	timeStr = strings.ToUpper(timeStr)
-	// This will work for just dates
+
+	// Works for dashes in dates and for just dates
+	//   e.g. 2006-01-02
 	if strings.Count(timeStr, "-") > 1 || strings.Count(timeStr, "/") > 1 || strings.Count(timeStr, ".") > 1 {
 		timeStr = reYMDDash.ReplaceAllString(timeStr, "$1$2$3$4")
 	}
+	// If there are 3 dashes left, remove two. The third is assumed to be for zone.
+	if strings.Count(timeStr, "-") == 3 {
+		timeStr = strings.Replace(timeStr, "-", "", 2)
+	}
+	// If there are two dashes assume they are for a bad timestamp with dashes
+	if strings.Count(timeStr, "-") == 2 {
+		timeStr = strings.ReplaceAll(timeStr, "-", "")
+	}
 
+	// Colons are not useful for parsing
 	timeStr = strings.ReplaceAll(timeStr, ":", "")
-	timeStr = strings.Replace(timeStr, "T", "", 1)
+	// Gett rid of t
+	// timeStr = strings.Replace(timeStr, "T", "", 1)
 
 	if lexer == nil {
 		return time.Time{}, TimestampParts{}, errors.New("Lexer is nil. Something went wrong")
@@ -149,6 +166,15 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 
 		switch token.Type {
 		case tokmap["DATE"]:
+			// ISO-8601 allows of a differing number of year digits with a
+			// positive or negative offset (+/-).
+			//   e.g. +20201-01-01T00:00:00Z
+			//
+			// This is not currently handled.
+			// It could likely be handled by setting the year to a set numbr
+			// (e.g. 1000) then computing the offet between that and the years
+			// for the timestamp and following the formatting of the time value
+			// do an addition or subtration of the previous amount calculated.
 			v := token.Value.(string)
 			tsp.YEAR = v[0:4]
 			tsp.MONTH = v[4:6]
