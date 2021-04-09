@@ -18,12 +18,13 @@ var tokens = []string{
 	"COLON",
 	"SUBSECOND",
 	"ZONE",
-	"MINUS",
-	"SPACE",
+	// "MINUS",
+	// "SPACE",
 }
 
 var tokenIDs map[string]string // A map from the token names to their string ids
 
+// TimestampParts the parts used while building a timestamp
 type TimestampParts struct {
 	CALCULATED string
 	ORIGINAL   string
@@ -35,8 +36,8 @@ type TimestampParts struct {
 	SECOND     string
 	SUBSECOND  string
 	ZONE       string
-	PLUSMINUS  string
-	ZONEOFFSET string
+	// PLUSMINUS  string
+	// ZONEOFFSET string
 }
 
 // Timestamp a timestamp representation
@@ -45,11 +46,13 @@ type Timestamp struct {
 	TIME  time.Time
 }
 
-// NewTimestamp make new Timestamp struct
+// NewTimestamp make new Timestamp struct. Can contain the parts for review down
+// the line as well.
 func NewTimestamp() Timestamp {
 	return Timestamp{}
 }
 
+// NewTimestampParts get parts struct used while processing
 func NewTimestampParts() TimestampParts {
 	return TimestampParts{}
 }
@@ -76,7 +79,6 @@ func getToken(tokenType int) lexmachine.Action {
 
 func newLexer() *lexmachine.Lexer {
 	lexer := lexmachine.NewLexer()
-	// lexer.Add([]byte(`(\.\d\d\d)|(\.\d\d\d\d\d\d)|(\.\d\d\d\d\d\d\d\d\d)`), getToken(tokmap["SUBSECOND"]))
 	lexer.Add([]byte(`\.\d\d\d`), getToken(tokmap["SUBSECOND"]))
 	lexer.Add([]byte(`\.\d\d\d\d\d\d`), getToken(tokmap["SUBSECOND"]))
 	lexer.Add([]byte(`\.\d\d\d\d\d\d\d\d\d`), getToken(tokmap["SUBSECOND"]))
@@ -86,7 +88,6 @@ func newLexer() *lexmachine.Lexer {
 	// Allow for 2 digit zone
 	lexer.Add([]byte(`[\-\+]\d\d|\Z`), getToken(tokmap["ZONE"]))
 	lexer.Add([]byte(`Z`), getToken(tokmap["ZONE"]))
-	// lexer.Add([]byte(`T`), skip)
 	lexer.Add([]byte(`:`), skip)
 	lexer.Add([]byte(` `), skip)
 
@@ -118,19 +119,17 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 	tsp := NewTimestampParts()
 
 	timeStr := string(bytes)
-	// fmt.Printf("timeStr ORIGINAL %s\n", timeStr)
 
 	tsp.ORIGINAL = timeStr
 
+	timeStr = strings.ToUpper(timeStr)
 	// This will work for just dates
 	if strings.Count(timeStr, "-") > 1 || strings.Count(timeStr, "/") > 1 || strings.Count(timeStr, ".") > 1 {
 		timeStr = reYMDDash.ReplaceAllString(timeStr, "$1$2$3$4")
 	}
 
-	timeStr = strings.ToUpper(timeStr)
 	timeStr = strings.ReplaceAll(timeStr, ":", "")
-	// timeStr = strings.ReplaceAll(timeStr, ".", "S")
-	timeStr = strings.ReplaceAll(timeStr, "T", "")
+	timeStr = strings.Replace(timeStr, "T", "", 1)
 
 	if lexer == nil {
 		return time.Time{}, TimestampParts{}, errors.New("Lexer is nil. Something went wrong")
@@ -142,19 +141,14 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 		return time.Time{}, TimestampParts{}, errors.New("Problem converting" + timeStr)
 	}
 
-	// fmt.Printf("timeStr %s\n", timeStr)
-
 	for tk, err, eof := scanner.Next(); !eof; tk, err, eof = scanner.Next() {
-		// fmt.Printf("timestr %s\n", timeStr)
 		if err != nil {
-			// fmt.Println("ERROR with lexer", err, timeStr)
 			return time.Time{}, TimestampParts{}, errors.New("Problem converting" + timeStr)
 		}
 		token := tk.(*lexmachine.Token)
 
 		switch token.Type {
 		case tokmap["DATE"]:
-			// fmt.Printf("Got DATE %s\n", token.Value.(string))
 			v := token.Value.(string)
 			tsp.YEAR = v[0:4]
 			tsp.MONTH = v[4:6]
@@ -162,19 +156,14 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 		case tokmap["TIME"]:
 			v := token.Value.(string)
 			v = strings.ReplaceAll(v, ":", "")
-			// fmt.Printf("Got TIME %s\n", v)
 			tsp.HOUR = v[0:2]
 			tsp.MINUTE = v[2:4]
 			tsp.SECOND = v[4:6]
-			// fmt.Printf("Got HOUR %s\n", ts.HOUR)
-			// fmt.Printf("Got MINUTE %s\n", ts.MINUTE)
-			// fmt.Printf("Got SECOND %s\n", ts.SECOND)
 		case tokmap["SUBSECOND"]:
 			v := token.Value.(string)
 			tsp.SUBSECOND = v
 		case tokmap["ZONE"]:
 			v := token.Value.(string)
-			// Handle 2 digit zone
 			if len(v) == 3 {
 				v = v + "00"
 			}
@@ -182,7 +171,6 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 			if v == "-0000" {
 				tsp.ZONE = "+0000"
 			}
-			// fmt.Printf("Got ZONE %s\n", ts.ZONE)
 		}
 	}
 
