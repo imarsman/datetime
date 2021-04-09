@@ -44,6 +44,8 @@ const hundredMs = 100 * time.Millisecond
 // This is because the number of weeks is always inferred from the number of days.
 //
 type Period struct {
+	// repeat                                       bool
+	// times                                        int16
 	years, months, days, hours, minutes, seconds int16
 }
 

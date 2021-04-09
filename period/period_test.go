@@ -1106,3 +1106,31 @@ func nospace(s string) string {
 	}
 	return b.String()
 }
+
+func runningtime(s string) (string, time.Time) {
+	fmt.Println("Start:	", s)
+	return s, time.Now()
+}
+
+func track(s string, startTime time.Time) {
+	endTime := time.Now()
+	fmt.Println("End:	", s, "took", endTime.Sub(startTime))
+}
+
+func execute() {
+	defer track(runningtime("execute"))
+	time.Sleep(3 * time.Second)
+}
+
+func TestParsePeriod(t *testing.T) {
+
+	defer track(runningtime("Time to get period old 1000x"))
+	p := "PT1H4M"
+
+	period := &period64{}
+
+	for i := 0; i < 1000; i++ {
+		period, _ = parse(p, true)
+	}
+	t.Log(period)
+}
