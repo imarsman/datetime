@@ -144,8 +144,6 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 
 	// Colons are not useful for parsing
 	timeStr = strings.ReplaceAll(timeStr, ":", "")
-	// Gett rid of t
-	// timeStr = strings.Replace(timeStr, "T", "", 1)
 
 	if lexer == nil {
 		return time.Time{}, TimestampParts{}, errors.New("Lexer is nil. Something went wrong")
@@ -180,7 +178,6 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 			tsp.DAY = v[6:8]
 		case tokmap["TIME"]:
 			v := token.Value.(string)
-			v = strings.ReplaceAll(v, ":", "")
 			tsp.HOUR = v[0:2]
 			tsp.MINUTE = v[2:4]
 			tsp.SECOND = v[4:6]
