@@ -50,13 +50,17 @@ func NewTimestampParts() TimestampParts {
 	return TimestampParts{}
 }
 
+// A map of token names by int value
 var tokmap map[string]int
+
+// Lex Machine lexer
 var lexer *lexmachine.Lexer
-var reYMDDash *regexp.Regexp
+
+var reYMDPunctuation *regexp.Regexp
 
 func init() {
 	// Only for replacing in date portion
-	reYMDDash = regexp.MustCompile(`^(\d{4})[\-\.\/]?(\d{2})[\-\.\/]?(\d{2})(.*)`)
+	reYMDPunctuation = regexp.MustCompile(`^(\d{4})[\-\.\/]?(\d{2})[\-\.\/]?(\d{2})(.*)`)
 
 	tokmap = make(map[string]int)
 	for id, name := range tokens {
@@ -127,7 +131,7 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 	// Works for dashes in dates and for just dates
 	//   e.g. 2006-01-02
 	if strings.Count(timeStr, "-") > 1 || strings.Count(timeStr, "/") > 1 || strings.Count(timeStr, ".") > 1 {
-		timeStr = reYMDDash.ReplaceAllString(timeStr, "$1$2$3$4")
+		timeStr = reYMDPunctuation.ReplaceAllString(timeStr, "$1$2$3$4")
 	}
 	// If there are 3 dashes left, remove two. The third is assumed to be for zone.
 	if strings.Count(timeStr, "-") == 3 {
