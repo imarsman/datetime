@@ -13,9 +13,6 @@ import (
 var tokens = []string{
 	"DATE",
 	"TIME",
-	"DASH",
-	"HYPHEN",
-	"COLON",
 	"SUBSECOND",
 	"ZONE",
 }
@@ -34,8 +31,6 @@ type TimestampParts struct {
 	SECOND     string
 	SUBSECOND  string
 	ZONE       string
-	// PLUSMINUS  string
-	// ZONEOFFSET string
 }
 
 // Timestamp a timestamp representation
