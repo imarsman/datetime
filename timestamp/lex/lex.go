@@ -10,6 +10,12 @@ import (
 	"github.com/timtadh/lexmachine/machines"
 )
 
+const (
+	baseTimestampFormat  = "20060102T150405"
+	zuluIndicatorFormat  = "Z"
+	timezoneOffsetFormat = "-0700"
+)
+
 var tokens = []string{
 	"DATE",
 	"TIME",
@@ -95,7 +101,7 @@ func newLexer() *lexmachine.Lexer {
 	// Ignore spaces
 	lexer.Add([]byte(` `), skip)
 
-	err := lexer.Compile()
+	err := lexer.CompileDFA()
 	if err != nil {
 		lexer = nil
 	}
@@ -217,7 +223,7 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 		if tsp.SUBSECOND != "" {
 			str = str + tsp.SUBSECOND
 		}
-		format := "20060102T150405"
+		format := baseTimestampFormat
 		if tsp.SUBSECOND != "" {
 			format = format + "." + strings.Repeat("9", len(tsp.SUBSECOND)-1)
 		}
@@ -226,15 +232,15 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 			str = str + tsp.ZONE
 
 			switch tsp.ZONE {
-			case "Z":
-				format = format + "Z"
+			case zuluIndicatorFormat:
+				format = format + zuluIndicatorFormat
 			default:
-				format = format + "-0700"
+				format = format + timezoneOffsetFormat
 			}
 		} else {
-			str = str + "Z"
+			str = str + zuluIndicatorFormat
 
-			format = format + "Z"
+			format = format + zuluIndicatorFormat
 		}
 
 		tsp.CALCULATED = str

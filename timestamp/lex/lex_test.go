@@ -50,7 +50,7 @@ func TestParseTime(t *testing.T) {
 			ts, err = Parse([]byte(f))
 			assert.Nil(t, err)
 		}
-		t.Logf("Time to parse timestamp %s %dx %v", f, count, time.Since(start))
+		t.Logf("Time to parse timestamp %s %dx = %v", f, count, time.Since(start))
 		t.Log(ts)
 	}
 }
