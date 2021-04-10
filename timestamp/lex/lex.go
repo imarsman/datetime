@@ -168,9 +168,6 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 	// Colons are not useful for parsing
 	timeStr = strings.ReplaceAll(timeStr, ":", "")
 
-	// Colons are not useful for parsing
-	// timeStr = strings.ReplaceAll(timeStr, " ", "")
-
 	if lexer == nil {
 		return time.Time{}, TimestampParts{}, errors.New("Lexer is nil. Something went wrong")
 	}
@@ -209,12 +206,7 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 			tsParts.SECOND = v[4:6]
 		case tokmap["SUBSECOND"]:
 			v := token.Value.(string)
-			// if len(v[1:]) == 2 {
-			// 	v = v + "0"
-			// 	// fmt.Println(v)
-			// }
 			tsParts.SUBSECOND = v
-			// fmt.Println(tsp.SUBSECOND)
 		case tokmap["ZONE"]:
 			// Note that RFC3339 requires a zone either as Z or an offset
 			// The pattern 2006-01-02T15:04:05Z0700 is not meant to be a parser
