@@ -133,11 +133,11 @@ func ParseGetParts(bytes []byte) (time.Time, TimestampParts, error) {
 // scan read input and get time, the timestamp parts, and error
 // https://blog.gopheracademy.com/advent-2017/lexmachine-advent/
 func scan(bytes []byte) (time.Time, TimestampParts, error) {
-	tsp := NewTimestampParts()
+	tsParts := NewTimestampParts()
 
 	timeStr := string(bytes)
 
-	tsp.ORIGINAL = timeStr
+	tsParts.ORIGINAL = timeStr
 
 	timeStr = strings.ToUpper(timeStr)
 
@@ -199,21 +199,21 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 			// for the timestamp and following the formatting of the time value
 			// do an addition or subtration of the previous amount calculated.
 			v := token.Value.(string)
-			tsp.YEAR = v[0:4]
-			tsp.MONTH = v[4:6]
-			tsp.DAY = v[6:8]
+			tsParts.YEAR = v[0:4]
+			tsParts.MONTH = v[4:6]
+			tsParts.DAY = v[6:8]
 		case tokmap["TIME"]:
 			v := token.Value.(string)
-			tsp.HOUR = v[0:2]
-			tsp.MINUTE = v[2:4]
-			tsp.SECOND = v[4:6]
+			tsParts.HOUR = v[0:2]
+			tsParts.MINUTE = v[2:4]
+			tsParts.SECOND = v[4:6]
 		case tokmap["SUBSECOND"]:
 			v := token.Value.(string)
 			// if len(v[1:]) == 2 {
 			// 	v = v + "0"
 			// 	// fmt.Println(v)
 			// }
-			tsp.SUBSECOND = v
+			tsParts.SUBSECOND = v
 			// fmt.Println(tsp.SUBSECOND)
 		case tokmap["ZONE"]:
 			// Note that RFC3339 requires a zone either as Z or an offset
@@ -227,43 +227,43 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 			if len(v) == 3 {
 				v = v + "00"
 			}
-			tsp.ZONE = v
+			tsParts.ZONE = v
 			if v == "-0000" {
-				tsp.ZONE = "+0000"
+				tsParts.ZONE = "+0000"
 			}
 		}
 	}
 
 	// Allow for just a date with no time and no zone
 	// This will assume UTC
-	if tsp.ZONE == "" {
-		if tsp.HOUR == "" {
-			tsp.HOUR = "00"
+	if tsParts.ZONE == "" {
+		if tsParts.HOUR == "" {
+			tsParts.HOUR = "00"
 		}
-		if tsp.MINUTE == "" {
-			tsp.MINUTE = "00"
+		if tsParts.MINUTE == "" {
+			tsParts.MINUTE = "00"
 		}
-		if tsp.SECOND == "" {
-			tsp.SECOND = "00"
+		if tsParts.SECOND == "" {
+			tsParts.SECOND = "00"
 		}
 	}
 
-	canProceed := tsp.YEAR != "" && tsp.HOUR != ""
+	canProceed := tsParts.YEAR != "" && tsParts.HOUR != ""
 
 	if canProceed == true {
-		str := tsp.YEAR + tsp.MONTH + tsp.DAY + "T" + tsp.HOUR + tsp.MINUTE + tsp.SECOND
-		if tsp.SUBSECOND != "" {
-			str = str + tsp.SUBSECOND
+		str := tsParts.YEAR + tsParts.MONTH + tsParts.DAY + "T" + tsParts.HOUR + tsParts.MINUTE + tsParts.SECOND
+		if tsParts.SUBSECOND != "" {
+			str = str + tsParts.SUBSECOND
 		}
 		format := baseTimestampFormat
-		if tsp.SUBSECOND != "" {
-			format = format + "." + strings.Repeat("0", len(tsp.SUBSECOND)-1)
+		if tsParts.SUBSECOND != "" {
+			format = format + "." + strings.Repeat("0", len(tsParts.SUBSECOND)-1)
 		}
 
-		if tsp.ZONE != "" {
-			str = str + tsp.ZONE
+		if tsParts.ZONE != "" {
+			str = str + tsParts.ZONE
 
-			switch tsp.ZONE {
+			switch tsParts.ZONE {
 			case zuluIndicatorFormat:
 				format = format + zuluIndicatorFormat
 			default:
@@ -275,7 +275,7 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 			format = format + zuluIndicatorFormat
 		}
 
-		tsp.CALCULATED = str
+		tsParts.CALCULATED = str
 		t, err := time.Parse(format, str)
 
 		if err != nil {
@@ -284,7 +284,7 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 
 		t = t.In(time.UTC)
 
-		return t, tsp, nil
+		return t, tsParts, nil
 	}
 
 	// If we got here we have a problem
