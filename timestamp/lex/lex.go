@@ -2,6 +2,7 @@ package lex
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -83,8 +84,15 @@ func getToken(tokenType int) lexmachine.Action {
 
 func newLexer() *lexmachine.Lexer {
 	lexer := lexmachine.NewLexer()
+	// A range of subsecond digit lengths
+	lexer.Add([]byte(`\.\d`), getToken(tokmap["SUBSECOND"]))
+	lexer.Add([]byte(`\.\d\d`), getToken(tokmap["SUBSECOND"]))
 	lexer.Add([]byte(`\.\d\d\d`), getToken(tokmap["SUBSECOND"]))
+	lexer.Add([]byte(`\.\d\d\d\d`), getToken(tokmap["SUBSECOND"]))
+	lexer.Add([]byte(`\.\d\d\d\d\d`), getToken(tokmap["SUBSECOND"]))
 	lexer.Add([]byte(`\.\d\d\d\d\d\d`), getToken(tokmap["SUBSECOND"]))
+	lexer.Add([]byte(`\.\d\d\d\d\d\d\d`), getToken(tokmap["SUBSECOND"]))
+	lexer.Add([]byte(`\.\d\d\d\d\d\d\d\d`), getToken(tokmap["SUBSECOND"]))
 	lexer.Add([]byte(`\.\d\d\d\d\d\d\d\d\d`), getToken(tokmap["SUBSECOND"]))
 	// Assumes after first and second millennium
 	lexer.Add([]byte(`[12]\d\d\d\d\d\d\d`), getToken(tokmap["DATE"]))
@@ -139,9 +147,19 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 	if strings.Count(timeStr, "-") > 1 || strings.Count(timeStr, "/") > 1 || strings.Count(timeStr, ".") > 1 {
 		timeStr = reYMDPunctuation.ReplaceAllString(timeStr, "$1$2$3$4")
 	}
-	// If there are 3 dashes left, remove two. The third is assumed to be for zone.
-	if strings.Count(timeStr, "-") == 3 {
-		timeStr = strings.Replace(timeStr, "-", "", 2)
+	// If there is more than 1 dash left, decide what to do.
+	//   e.g. 2021-01-02T00-00-00Z
+	//        2021-01-02T00-00-00-04:00
+	c := strings.Count(timeStr, "-")
+	if c > 1 {
+		// Assume bad time with dashes and potentially Z timezone
+		if c == 2 {
+			timeStr = strings.Replace(timeStr, "-", "", 2)
+		}
+		// Assume bad time with dashes and a negative UTC offset
+		if c == 3 {
+			timeStr = strings.Replace(timeStr, "-", "", 2)
+		}
 	}
 	// If there are two dashes assume they are for a bad timestamp with dashes
 	if strings.Count(timeStr, "-") == 2 {
@@ -150,6 +168,9 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 
 	// Colons are not useful for parsing
 	timeStr = strings.ReplaceAll(timeStr, ":", "")
+
+	// Colons are not useful for parsing
+	// timeStr = strings.ReplaceAll(timeStr, " ", "")
 
 	if lexer == nil {
 		return time.Time{}, TimestampParts{}, errors.New("Lexer is nil. Something went wrong")
@@ -189,7 +210,12 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 			tsp.SECOND = v[4:6]
 		case tokmap["SUBSECOND"]:
 			v := token.Value.(string)
+			// if len(v[1:]) == 2 {
+			// 	v = v + "0"
+			// 	// fmt.Println(v)
+			// }
 			tsp.SUBSECOND = v
+			// fmt.Println(tsp.SUBSECOND)
 		case tokmap["ZONE"]:
 			// Note that RFC3339 requires a zone either as Z or an offset
 			// The pattern 2006-01-02T15:04:05Z0700 is not meant to be a parser
@@ -199,7 +225,6 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 			// is incorrectly specified.
 			// https://stackoverflow.com/a/63321401/2694971
 			v := token.Value.(string)
-			// fmt.Println(v)
 			if len(v) == 3 {
 				v = v + "00"
 			}
@@ -233,7 +258,7 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 		}
 		format := baseTimestampFormat
 		if tsp.SUBSECOND != "" {
-			format = format + "." + strings.Repeat("9", len(tsp.SUBSECOND)-1)
+			format = format + "." + strings.Repeat("0", len(tsp.SUBSECOND)-1)
 		}
 
 		if tsp.ZONE != "" {
@@ -252,6 +277,7 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 		}
 
 		tsp.CALCULATED = str
+		fmt.Printf("format %s\n", format)
 		t, err := time.Parse(format, str)
 
 		if err != nil {

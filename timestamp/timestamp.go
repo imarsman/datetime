@@ -122,13 +122,13 @@ func init() {
 	timeFormats = append(timeFormats, nonISOTimeFormats...)
 }
 
-// RangeDate returns a date range function over start date to end date inclusive.
+// RangeOverTimes returns a date range function over start date to end date inclusive.
 // After the end of the range, the range function returns a zero date,
 // date.IsZero() is true.
 //
 // Sample usage assuming building a map with empty string values:
 /*
-  for rd := dateutils.RangeDate(start, end); ; {
+  for rd := dateutils.RangeOverTimes(start, end); ; {
 	 date := rd()
 	 if date.IsZero() {
 	   break
@@ -136,7 +136,7 @@ func init() {
 	 indicesForDays[getIndexForDate(*date)] = ""
   }
 */
-func RangeDate(start, end time.Time) func() time.Time {
+func RangeOverTimes(start, end time.Time) func() time.Time {
 	start = start.In(time.UTC)
 	end = end.In(time.UTC)
 
@@ -224,15 +224,13 @@ func ParseISOInLocation(timeStr string, loc *time.Location) (time.Time, error) {
 func parseTimestampInLocation(timeStr string, loc *time.Location) (time.Time, error) {
 	original := timeStr
 
-	// Try ISO parsing first
+	// Try ISO parsing first. The lexer is tolerant of some inconsistency in
+	// format that is not ISO-8601 compliant, such as dashes where there should
+	// be colons and a space instead of a T to separate date and time.
 	t, err := lex.Parse([]byte(timeStr))
 	if err == nil {
 		return t, nil
 	}
-
-	// if timeStr == "2006-01-02T15:04:05-07:00" {
-	// 	fmt.Println("Got past lex")
-	// }
 
 	s := nonISOTimeFormats
 	for _, format := range s {
@@ -243,10 +241,6 @@ func parseTimestampInLocation(timeStr string, loc *time.Location) (time.Time, er
 			return t, nil
 		}
 	}
-
-	// if timeStr == "20060102" {
-	// 	fmt.Println("Passed non-iso ts check")
-	// }
 
 	// Deal with oddball unix timestamp
 	match, err := regexp.MatchString("^\\d+$", timeStr)
@@ -277,26 +271,6 @@ func parseTimestampInLocation(timeStr string, loc *time.Location) (time.Time, er
 
 		return t, nil
 	}
-
-	// timeStr = strings.Replace(timeStr, " ", "T", 1)
-	// // fmt.Println("timeStr pre", timeStr)
-	// timeStr = strings.ReplaceAll(timeStr, ":", "")
-	// re := regexp.MustCompile("(\\d\\d\\d\\d)-(\\d\\d)-(\\d\\d)(.*)")
-	// timeStr = re.ReplaceAllString(timeStr, "$1$2$3$4")
-	// re = regexp.MustCompile("[^\\d](\\d\\d)-(\\d\\d)-(\\d\\d)(.*)")
-	// timeStr = re.ReplaceAllString(timeStr, "$1$2$3$4")
-
-	// s = isoTimeFormats
-
-	// // Continue on for non unix timestamp patterns
-	// for _, format := range s {
-	// 	t, err := time.Parse(format, timeStr)
-	// 	if err == nil {
-	// 		t = t.In(loc)
-
-	// 		return t, nil
-	// 	}
-	// }
 
 	return time.Time{}, fmt.Errorf("Could not parse time %s", timeStr)
 }
