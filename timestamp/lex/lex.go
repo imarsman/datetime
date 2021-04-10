@@ -2,7 +2,6 @@ package lex
 
 import (
 	"errors"
-	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -159,12 +158,12 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 	scanner, err := lexer.Scanner([]byte(timeStr))
 	if err != nil {
 		// fmt.Println(err)
-		return time.Time{}, TimestampParts{}, errors.New("Problem converting" + timeStr)
+		return time.Time{}, TimestampParts{}, errors.New("Problem converting " + timeStr)
 	}
 
 	for tk, err, eof := scanner.Next(); !eof; tk, err, eof = scanner.Next() {
 		if err != nil {
-			return time.Time{}, TimestampParts{}, errors.New("Problem converting" + timeStr)
+			return time.Time{}, TimestampParts{}, errors.New("Problem converting " + timeStr)
 		}
 		token := tk.(*lexmachine.Token)
 
@@ -200,7 +199,7 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 			// is incorrectly specified.
 			// https://stackoverflow.com/a/63321401/2694971
 			v := token.Value.(string)
-			fmt.Println(v)
+			// fmt.Println(v)
 			if len(v) == 3 {
 				v = v + "00"
 			}

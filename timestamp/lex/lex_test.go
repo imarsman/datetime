@@ -1,11 +1,12 @@
-package lex
+package lex_test
 
 import (
 	"fmt"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/imarsman/datetime/timestamp/lex"
+	"github.com/matryer/is"
 )
 
 func runningtime(s string) (string, time.Time) {
@@ -24,6 +25,8 @@ func execute() {
 }
 
 func TestParseTime(t *testing.T) {
+	is := is.New(t)
+
 	formats := []string{
 		"20200102T122436Z",
 		"20200102T122436-0000",
@@ -42,20 +45,23 @@ func TestParseTime(t *testing.T) {
 		"2006.01.02",
 	}
 	for _, f := range formats {
-		ts, err := Parse([]byte(f))
+		ts, err := lex.Parse([]byte(f))
 		count := 1000
 		start := time.Now()
 		// defer track(runningtime(fmt.Sprintf("Time to parse timestamp %dx", count)))
 		for i := 0; i < count; i++ {
-			ts, err = Parse([]byte(f))
-			assert.Nil(t, err)
+			ts, err = lex.Parse([]byte(f))
+			is.NoErr(err)
 		}
+
 		t.Logf("Time to parse timestamp %s %dx = %v", f, count, time.Since(start))
 		t.Log(ts)
 	}
 }
 
 func TestParseFormats(t *testing.T) {
+	is := is.NewRelaxed(t)
+
 	formats := []string{
 		"20200102T122436Z",
 		"20200102T122436-0000",
@@ -74,14 +80,15 @@ func TestParseFormats(t *testing.T) {
 		"2006-01-02T15:04:05+0700",
 	}
 	for _, f := range formats {
-		ts, err := Parse([]byte(f))
-		assert.Nil(t, err)
+		ts, err := lex.Parse([]byte(f))
+		is.NoErr(err)
+
 		tStr := ts.Format("20060102T150405.999999999-0700")
-		assert.Nil(t, err)
 		t.Logf("Input %s, output %v", f, tStr)
 	}
-	_, err := Parse([]byte("20060102Z"))
-	assert.NotNil(t, err)
-	_, err = Parse([]byte("20060102-0400"))
-	assert.NotNil(t, err)
+	_, err := lex.Parse([]byte("20060102Z"))
+	is.True(err != nil)
+
+	_, err = lex.Parse([]byte("20060102-0400"))
+	is.True(err != nil)
 }

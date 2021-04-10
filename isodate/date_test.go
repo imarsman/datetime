@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/imarsman/datetime/period"
-	"github.com/stretchr/testify/assert"
+	"github.com/matryer/is"
 )
 
 func same(d Date, t time.Time) bool {
@@ -322,32 +322,34 @@ func TestDaysIn(t *testing.T) {
 }
 
 func TestDatesInRange(t *testing.T) {
+	is := is.New(t)
+
 	d1, err := ParseISO("2019-12-31")
-	assert.Nil(t, err)
+	is.NoErr(err)
 	t.Log("d1", d1)
 
 	d2, err := ParseISO("2020-01-09")
-	assert.Nil(t, err)
+	is.NoErr(err)
 	t.Log("d2", d2)
 
 	dates, err := DatesInRange(d1, d2)
-	assert.Nil(t, err)
+	is.NoErr(err)
 
 	for _, v := range dates {
 		t.Logf("Date: %v", v)
 	}
-
-	// assert.Equal(t, 10, len(dates))
 }
 
 func TestTiming(t *testing.T) {
+	is := is.New(t)
+
 	start := time.Now()
 	format := "2019-12-31"
 	count := 1000
 	for i := 0; i < count; i++ {
 		// Get a unix timestamp we should not parse
 		_, err := ParseISO(format)
-		assert.Nil(t, err)
+		is.NoErr(err)
 	}
 
 	t.Logf("Took %v to check %s  %d times", time.Since(start), format, count)
