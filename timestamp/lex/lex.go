@@ -2,7 +2,6 @@ package lex
 
 import (
 	"errors"
-	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -277,7 +276,6 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 		}
 
 		tsp.CALCULATED = str
-		fmt.Printf("format %s\n", format)
 		t, err := time.Parse(format, str)
 
 		if err != nil {
