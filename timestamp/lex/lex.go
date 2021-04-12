@@ -83,16 +83,8 @@ func getToken(tokenType int) lexmachine.Action {
 
 func newLexer() *lexmachine.Lexer {
 	lexer := lexmachine.NewLexer()
-	// A range of subsecond digit lengths
-	lexer.Add([]byte(`\.\d`), getToken(tokmap["SUBSECOND"]))
-	lexer.Add([]byte(`\.\d\d`), getToken(tokmap["SUBSECOND"]))
-	lexer.Add([]byte(`\.\d\d\d`), getToken(tokmap["SUBSECOND"]))
-	lexer.Add([]byte(`\.\d\d\d\d`), getToken(tokmap["SUBSECOND"]))
-	lexer.Add([]byte(`\.\d\d\d\d\d`), getToken(tokmap["SUBSECOND"]))
-	lexer.Add([]byte(`\.\d\d\d\d\d\d`), getToken(tokmap["SUBSECOND"]))
-	lexer.Add([]byte(`\.\d\d\d\d\d\d\d`), getToken(tokmap["SUBSECOND"]))
-	lexer.Add([]byte(`\.\d\d\d\d\d\d\d\d`), getToken(tokmap["SUBSECOND"]))
-	lexer.Add([]byte(`\.\d\d\d\d\d\d\d\d\d`), getToken(tokmap["SUBSECOND"]))
+	// A range of subsecond digit lengths are covered
+	lexer.Add([]byte(`\.\d+`), getToken(tokmap["SUBSECOND"]))
 	// Assumes after first and second millennium
 	lexer.Add([]byte(`[12]\d\d\d\d\d\d\d`), getToken(tokmap["DATE"]))
 	// lexer.Add([]byte(`[\+\-]\d\d\d\d\d\d\d\d\d`), getToken(tokmap["DATE"]))
