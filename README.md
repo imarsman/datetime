@@ -7,7 +7,7 @@ parsing of a range of input timestamp formats with an emphasis on ISO-8601
 timestamps. The parsing produces Golang time.Time values. The desire to build
 this functionality arose from an earlier project written in Java where timestamp
 inputs were in varying formats that had to be read in reliably to produce
-timestamps that could be used in the proeduction of output documents.
+timestamps that could be used in the production of output documents.
 
 Handling of ISO-8601 dates, periods, and timespans is included using the code
 found at https://github.com/rickb777/date. That code is for the most part
