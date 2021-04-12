@@ -18,17 +18,16 @@ existing parsing functionality. It will likely be removed as the existing
 parsing is about 3x faster and has already benefitted from careful attention to
 proper handling.
 
-The timesstamp parsing is weighted in favour of allowing for some non-compliant
-formatting of parsed input as long as the compliance issues do not make what is
-accepted for parsing ambiguous. The library takes the approach of initially
-trying to tokenize ISO-8601 format timestamps. If that step fails a number of
-non-ISO-8601 formats are tried in a loop in a best effort to parse the incoming
-timestamp.
+The timestamp parsing is weighted in favour of allowing for some non-compliant
+formatting of parsed input as long as the compliance issues do allow acceptance
+of ambiguous input. The library takes the approach of initially trying to
+tokenize ISO-8601 format timestamps. If that step fails a number of non-ISO-8601
+formats are tried in a loop in a best effort to parse the incoming timestamp.
 
 None of the ISO-8601 time types are comprehensive in their handling of the
 possible formats and variations in formats. The ISO-8601 standard is a large one.
 
-The code for ISO-8601 date, period, and timespan handling is licences under the
+The code for ISO-8601 date, period, and timespan handling is licenced under the
 BSD-3-Clause Licence. You can read this licence at the end of the LICENCE file
 for this project. The timestamp parsing, date, period, and timespan support are
 used here in separate packages, for date, period, timespan, and timestamp.
