@@ -1,21 +1,38 @@
 # datetime parsing and handling library
 
-Date and time functionality for ISO-8601 standard formats. 
+Date and time functionality for ISO-8601 standard formats.
 
-The code for ISO-8601 date handling, ISO-8601 period handling, and intervals is
-from https://github.com/rickb777/date. It is licences under the BSD-3-Clause
-Licence. You can read this licence at the end of the LICENCE file for this
-project.
+This library was initially written in an attempt to allow for the flexible
+parsing of a range of input timestamp formats with an emphasis on ISO-8601
+timestamps. The parsing produces Golang time.Time values. The desire to build
+this functionality arose from an earlier project written in Java where timestamp
+inputs were in varying formats that had to be read in reliably to produce
+timestamps that could be used in the proeduction of output documents.
 
-Code for handling parsing of timestamps is written by Ian Marsman. It is
-primarily aimed at parsing ISO-8601 dates but will fall back on alternate
-formats such as formats for SQL timestamps if the initial attempt to parse
-ISO-8601 format fails.
+Handling of ISO-8601 dates, periods, and timespans is included using the code
+found at https://github.com/rickb777/date. That code is for the most part
+included without modification as it is evidently well optimized and the result
+of a great deal of thought and careful attention to accuracy. A period lexing
+package is included but was mostly written for comparison purposes with the
+existing parsing functionality. It will likely be removed as the existing
+parsing is about 3x faster and has already benefitted from careful attention to
+proper handling.
 
-The ISO-8601 time format standards are broad and more comprehensive than is
-supported by any of the packages in this project. Things like repeating periods
-and years with more than four digits are not currently handled.
+The timesstamp parsing is weighted in favour of allowing for some non-compliant
+formatting of parsed input as long as the compliance issues do not make what is
+accepted for parsing ambiguous. The library takes the approach of initially
+trying to tokenize ISO-8601 format timestamps. If that step fails a number of
+non-ISO-8601 formats are tried in a loop in a best effort to parse the incoming
+timestamp.
 
-It is very possible that errors have been made in the implementation of the
-various ISO-8601 formats handling. Please let the author know if you discover
-any outright errors.
+None of the ISO-8601 time types are comprehensive in their handling of the
+possible formats and variations in formats. The ISO-8601 standard is a large one.
+
+The code for ISO-8601 date, period, and timespan handling is licences under the
+BSD-3-Clause Licence. You can read this licence at the end of the LICENCE file
+for this project. The timestamp parsing, date, period, and timespan support are
+used here in separate packages, for date, period, timespan, and timestamp.
+
+Although testing has been done to attempt to ensure correct handling of the
+types represented here, there are likely errors. Please submit any errors as
+issues for this project.

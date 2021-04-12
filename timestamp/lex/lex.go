@@ -21,6 +21,8 @@ var tokens = []string{
 	"TIME",
 	"SUBSECOND",
 	"ZONE",
+	"SHORTZONE",
+	"ZULU",
 }
 
 var tokenIDs map[string]string // A map from the token names to their string ids
@@ -83,18 +85,18 @@ func getToken(tokenType int) lexmachine.Action {
 
 func newLexer() *lexmachine.Lexer {
 	lexer := lexmachine.NewLexer()
-	// A range of subsecond digit lengths are covered
-	lexer.Add([]byte(`\.\d+`), getToken(tokmap["SUBSECOND"]))
 	// Assumes after first and second millennium
 	lexer.Add([]byte(`[12]\d\d\d\d\d\d\d`), getToken(tokmap["DATE"]))
 	// lexer.Add([]byte(`[\+\-]\d\d\d\d\d\d\d\d\d`), getToken(tokmap["DATE"]))
 	lexer.Add([]byte(`\d\d\d\d\d\d`), getToken(tokmap["TIME"]))
+	// A range of subsecond digit lengths are covered
+	lexer.Add([]byte(`\.\d+`), getToken(tokmap["SUBSECOND"]))
 	// Four digit zone
 	lexer.Add([]byte(`[\-\+]\d\d\d\d`), getToken(tokmap["ZONE"]))
 	// Allow for 2 digit zone
-	lexer.Add([]byte(`[\-\+]\d\d`), getToken(tokmap["ZONE"]))
+	lexer.Add([]byte(`[\-\+]\d\d`), getToken(tokmap["SHORTZONE"]))
 	// Zulu (UTC) indicator
-	lexer.Add([]byte(`Z`), getToken(tokmap["ZONE"]))
+	lexer.Add([]byte(`Z`), getToken(tokmap["ZULU"]))
 	// Skip date/time separator
 	lexer.Add([]byte(`[tT]`), skip)
 	// Ignore spaces
@@ -199,7 +201,9 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 		case tokmap["SUBSECOND"]:
 			v := token.Value.(string)
 			tsParts.SUBSECOND = v
+			// A zone with hours and minutes offset
 		case tokmap["ZONE"]:
+			// ZONE NOTE:
 			// Note that RFC3339 requires a zone either as Z or an offset
 			// The pattern 2006-01-02T15:04:05Z0700 is not meant to be a parser
 			// pattern but rather a requirement specification for some kind of
@@ -208,13 +212,16 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 			// is incorrectly specified.
 			// https://stackoverflow.com/a/63321401/2694971
 			v := token.Value.(string)
-			if len(v) == 3 {
-				v = v + "00"
-			}
 			tsParts.ZONE = v
 			if v == "-0000" {
 				tsParts.ZONE = "+0000"
 			}
+			// A zone with just two digits (hours) offset
+		case tokmap["SHORTZONE"]:
+			tsParts.ZONE = token.Value.(string) + "00"
+			// Zulu (Z) offset (+0000)
+		case tokmap["ZULU"]:
+			tsParts.ZONE = "Z"
 		}
 	}
 
