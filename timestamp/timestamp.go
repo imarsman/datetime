@@ -13,40 +13,6 @@ import (
 	"github.com/imarsman/datetime/timestamp/lex"
 )
 
-var isoTimeFormats = []string{
-	// Short ISO-8601 timestamps with numerical zone offsets
-	"20060102T150405-0700",
-	"20060102T150405.999-0700",
-	"20060102T150405.999999-0700",
-	"20060102T150405.999999999-0700",
-
-	"20060102T150405-07",
-	"20060102T150405.999-07",
-	"20060102T150405.999999-07",
-	"20060102T150405.999999999-07",
-
-	// Long ISO-8601 timestamps with numerical zone offsets
-	// "2006-01-02T15:04:05-07:00",
-	// "2006-01-02T15:04:05.999-07:00",
-	// "2006-01-02T15:04:05.999-07",
-	// "2006-01-02T15:04:05.999999-07:00",
-	// "2006-01-02T15:04:05.999999-07",
-	// "2006-01-02T15:04:05.999999999-07:00",
-	// "2006-01-02T15:04:05.999999999-07",
-
-	// Short  ISO-8601 timestamps with UTC zone offsets
-	"20060102T150405Z",
-	"20060102T150405.999Z",
-	"20060102T150405.999Z",
-	"20060102T150405.999999999Z",
-
-	// Long ISO-8601 timestamps with UTC zone offsets
-	// "2006-01-02T15:04:05Z",
-	// "2006-01-02T15:04:05.999Z",
-	// "2006-01-02T15:04:05.999999Z",
-	// "2006-01-02T15:04:05.999999999Z",
-}
-
 // timeFormats a list of Golang time formats to cycle through. The first match
 // will cause the loop through the formats to exit.
 var nonISOTimeFormats = []string{
@@ -108,17 +74,11 @@ var nonISOTimeFormats = []string{
 	"2006-01-02T15-04-05.999999-07",
 	"2006-01-02T15-04-05.999999999-07:00",
 	"2006-01-02T15-04-05.999999999-07",
-
-	// Actually, Golang's parse can't parse the RFC2229 format as defined as a
-	// constant by the Go time library.
-	// time.RFC3339,
-	// "2006-01-02T15:04:05Z07:00",
 }
 
 var timeFormats = []string{}
 
 func init() {
-	timeFormats = append(timeFormats, isoTimeFormats...)
 	timeFormats = append(timeFormats, nonISOTimeFormats...)
 }
 

@@ -1,6 +1,7 @@
 package lex
 
 import (
+	"bytes"
 	"errors"
 	"regexp"
 	"strings"
@@ -126,10 +127,10 @@ func ParseGetParts(bytes []byte) (time.Time, TimestampParts, error) {
 
 // scan read input and get time, the timestamp parts, and error
 // https://blog.gopheracademy.com/advent-2017/lexmachine-advent/
-func scan(bytes []byte) (time.Time, TimestampParts, error) {
+func scan(input []byte) (time.Time, TimestampParts, error) {
 	tsParts := NewTimestampParts()
 
-	timeStr := string(bytes)
+	timeStr := string(input)
 
 	tsParts.ORIGINAL = timeStr
 
@@ -155,6 +156,7 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 		}
 	}
 	// If there are two dashes assume they are for a bad timestamp with dashes
+	// between time elements
 	if strings.Count(timeStr, "-") == 2 {
 		timeStr = strings.ReplaceAll(timeStr, "-", "")
 	}
@@ -218,7 +220,12 @@ func scan(bytes []byte) (time.Time, TimestampParts, error) {
 			}
 			// A zone with just two digits (hours) offset
 		case tokmap["SHORTZONE"]:
-			tsParts.ZONE = token.Value.(string) + "00"
+			var b bytes.Buffer
+			b.WriteString(token.Value.(string))
+			b.WriteString("00")
+
+			// v := token.Value.(string)
+			tsParts.ZONE = b.String() // token.Value.(string) + "00"
 			// Zulu (Z) offset (+0000)
 		case tokmap["ZULU"]:
 			tsParts.ZONE = "Z"

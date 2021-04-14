@@ -122,3 +122,22 @@ func TestParseFormats(t *testing.T) {
 	_, err = lex.Parse([]byte("20060102-0400"))
 	is.True(err != nil)
 }
+
+// Run as
+//  go test -run=XXX -bench=.
+func BenchmarkTest(b *testing.B) {
+	_, err := lex.Parse([]byte("20200102T122436-0400"))
+	if err != nil {
+		b.Log(err)
+	}
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, err := lex.Parse([]byte("20200102T122436-0400"))
+			if err != nil {
+				b.Log(err)
+			}
+		}
+	})
+}

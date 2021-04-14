@@ -245,3 +245,22 @@ func BenchmarkParse(b *testing.B) {
 		}
 	}
 }
+
+// Run as
+//  go test -run=XXX -bench=.
+// func BenchmarkTest(b *testing.B) {
+// 	_, err := lex.Parse([]byte("2020-01-02T12:24:36-04:00"))
+// 	if err != nil {
+// 		b.Log(err)
+// 	}
+// 	b.ReportAllocs()
+// 	b.SetParallelism(30)
+// 	b.RunParallel(func(pb *testing.PB) {
+// 		for pb.Next() {
+// 			_, err := lex.Parse([]byte("2020-01-02T12:24:36-04:00"))
+// 			if err != nil {
+// 				b.Log(err)
+// 			}
+// 		}
+// 	})
+// }

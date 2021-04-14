@@ -1134,3 +1134,31 @@ func TestParsePeriod(t *testing.T) {
 	}
 	t.Log(period)
 }
+
+// Run as
+//  go test -run=XXX -bench=.
+func BenchmarkTest(b *testing.B) {
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, err := parse("PT1H4M", true)
+			if err != nil {
+				b.Log(err)
+			}
+		}
+	})
+}
+
+func BenchmarkTestTimeParse(b *testing.B) {
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, err := time.Parse("20060102T150405.999999999-0700", "20060102T150405.123456000-0400")
+			if err != nil {
+				b.Log(err)
+			}
+		}
+	})
+}
