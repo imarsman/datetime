@@ -24,8 +24,8 @@ import (
 			package, not by a library. Libraries normally shouldn't decide
 			whether to include the timezone database in a program.
 
-			This package will be automatically imported if you build with -tags
-			timetzdata.
+			This package will be automatically imported if you build with
+			  -tags timetzdata
 	*/
 	// This will explicitly include tzdata in a build. See above for build flag.
 	// You can do this in the main package if you choose.
@@ -272,19 +272,21 @@ func ParseISOInUTC(timeStr string) (time.Time, error) {
 	return parseTimestamp(timeStr, time.UTC, true)
 }
 
-// ParseInLocation parse for all timestamp formats and return time with specific
-// time library location
+// ParseInLocation parse for all timestamp formats and default to location if
+// there is no zone in the incoming timestamp. Return time adjusted to UTC.
 func ParseInLocation(timeStr string, location *time.Location) (time.Time, error) {
 	return parseTimestamp(timeStr, location, false)
 }
 
-// ParseISOInLocation parse limited to ISO timestamp formats and return time with
-// UTC zoned time
+// ParseISOInLocation parse limited to ISO timestamp formats, defaulting to
+// location if there is no zone in the incoming timezone. Return time  adjusted
+// to UTC.
 func ParseISOInLocation(timeStr string, location *time.Location) (time.Time, error) {
 	return parseTimestamp(timeStr, location, true)
 }
 
-// ParseTimestampInLocation and return time with specific time library location
+// ParseTimestampInLocation parse timestamp, defaulting to location if there is
+// no zone in the incoming timestamp, and return time ajusted to UTC.
 func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time.Time, error) {
 	original := timeStr
 
@@ -297,7 +299,7 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 	}
 
 	if isoOnly == true {
-		return time.Time{}, errors.New("No ISO format match")
+		return time.Time{}, fmt.Errorf("No ISO format matched %s", timeStr)
 	}
 
 	// Don't try to
@@ -367,33 +369,33 @@ func RFC7232(t time.Time) string {
 	return t.Format(http.TimeFormat)
 }
 
-// ISO8601Short ISO-8601 timestamp with no seconds
+// ISO8601Compact ISO-8601 timestamp with no sub seconds
 //   "20060102T150405-0700"
-func ISO8601Short(t time.Time) string {
+func ISO8601Compact(t time.Time) string {
 	t = t.In(time.UTC)
 
 	return t.Format("20060102T150405-0700")
 }
 
-// ISO8601ShortMsec ISO-8601 timestamp with no seconds
+// ISO8601CompactMsec ISO-8601 timestamp with no seconds
 //   "20060102T150405.000-0700"
-func ISO8601ShortMsec(t time.Time) string {
+func ISO8601CompactMsec(t time.Time) string {
 	t = t.In(time.UTC)
 
 	return t.Format("20060102T150405.000-0700")
 }
 
-// ISO8601Long ISO-8601 timestamp long format string result
+// ISO8601 ISO-8601 timestamp long format string result
 //   "2006-01-02T15:04:05-07:00"
-func ISO8601Long(t time.Time) string {
+func ISO8601(t time.Time) string {
 	t = t.In(time.UTC)
 
 	return t.Format("2006-01-02T15:04:05-07:00")
 }
 
-// ISO8601LongMsec ISO-8601 longtimestamp with msec
+// ISO8601Msec ISO-8601 longtimestamp with msec
 //   "2006-01-02T15:04:05.000-07:00"
-func ISO8601LongMsec(t time.Time) string {
+func ISO8601Msec(t time.Time) string {
 	t = t.In(time.UTC)
 
 	// var b []byte
