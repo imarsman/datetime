@@ -42,14 +42,14 @@ func TestParse(t *testing.T) {
 	start := time.Now()
 	// It is possible to have a strring which is just digits that will be parsed
 	// as a timestamp, incorrectly.
-	t.Log(timestamp.ParseUTC("2006010247"))
+	t.Log(timestamp.ParseInUTC("2006010247"))
 
 	// Get a unix timestamp we should not parse
-	_, err := timestamp.ParseUTC("1")
+	_, err := timestamp.ParseInUTC("1")
 	is.True(err != nil) // Error should be true
 
 	// Get time value from parsed reference time
-	unixBase, err := timestamp.ParseUTC("2006-01-02T15:04:05.000+00:00")
+	unixBase, err := timestamp.ParseInUTC("2006-01-02T15:04:05.000+00:00")
 	is.NoErr(err)
 
 	// Use parsed reference time to create unix timestamp and nanosecond timestamp
@@ -174,13 +174,13 @@ func TestISOCompare(t *testing.T) {
 	// as a timestamp, incorrectly.
 
 	format := "2006-01-02T15:04:05-07:00"
-	_, err := timestamp.ParseUTC(format)
+	_, err := timestamp.ParseInUTC(format)
 	is.NoErr(err)
 	count := 1000
 
 	for i := 0; i < count; i++ {
 		// Get a unix timestamp we should not parse
-		_, err := timestamp.ParseUTC(format)
+		_, err := timestamp.ParseInUTC(format)
 		is.NoErr(err) // Should parse with no error
 	}
 
@@ -191,7 +191,7 @@ func TestISOCompare(t *testing.T) {
 	format = "20060102T150405-0700"
 	for i := 0; i < count; i++ {
 		// Get a unix timestamp we should not parse
-		_, err := timestamp.ParseUTC(format)
+		_, err := timestamp.ParseInUTC(format)
 		is.NoErr(err) // Should parse with no error
 	}
 	t.Logf("Took %v to parse %s  %d times", time.Since(start), format, count)
@@ -200,7 +200,7 @@ func TestISOCompare(t *testing.T) {
 	// format = "1/2/2006"
 	for i := 0; i < count; i++ {
 		// Get a unix timestamp we should not parse
-		_, err := timestamp.ParseUTC(format)
+		_, err := timestamp.ParseInUTC(format)
 		is.NoErr(err) // Should parse with no error
 	}
 	t.Logf("Took %v to check %s  %d times", time.Since(start), format, count)
@@ -210,10 +210,10 @@ func TestISOCompare(t *testing.T) {
 func TestOrdering(t *testing.T) {
 	is := is.New(t)
 
-	t1, err1 := timestamp.ParseUTC("20201210T223900-0500")
+	t1, err1 := timestamp.ParseInUTC("20201210T223900-0500")
 	is.NoErr(err1) // Should parse with no error
 
-	t2, err2 := timestamp.ParseUTC("20201211T223900-0500")
+	t2, err2 := timestamp.ParseInUTC("20201211T223900-0500")
 	is.NoErr(err2) // Should parse with no error
 
 	is.True(timestamp.StartTimeIsBeforeEndTime(t1, t2))  // Start before end
@@ -227,7 +227,7 @@ func TestTime(t *testing.T) {
 	count := 1000
 	defer track(runningtime(fmt.Sprintf("Time to parse timestamp %dx", count)))
 	for i := 0; i < count; i++ {
-		unixBase, err = timestamp.ParseUTC("2006-01-02T15:04:05.000+00:00")
+		unixBase, err = timestamp.ParseInUTC("2006-01-02T15:04:05.000+00:00")
 	}
 	is.NoErr(err) // Should parse with no error
 	t.Logf("Timestamp %s", timestamp.ISO8601LongMsec(unixBase))
@@ -235,7 +235,7 @@ func TestTime(t *testing.T) {
 
 func TestFormat(t *testing.T) {
 	is := is.New(t)
-	ts, err := timestamp.ParseUTC("2006-01-02T15:04:05.000+00:00")
+	ts, err := timestamp.ParseInUTC("2006-01-02T15:04:05.000+00:00")
 	is.NoErr(err) // Should parse with no error
 
 	// var unixBase time.Time
@@ -266,17 +266,17 @@ func TestOffsetForZones(t *testing.T) {
 	// var utcTime time.Time
 	var hours, minutes int
 	var err error
-	t1, err := timestamp.ParseUTC("20200101T000000Z")
+	t1, err := timestamp.ParseInUTC("20200101T000000Z")
 	is.NoErr(err)
-	t2, err := timestamp.ParseUTC("20200701T000000Z")
+	t2, err := timestamp.ParseInUTC("20200701T000000Z")
 	is.NoErr(err)
 	for _, zone := range zones {
-		hours, minutes, err = timestamp.OffsetForZone(t1, zone)
+		hours, minutes, err = timestamp.OffsetForZone(2006, 1, 1, zone)
 		is.NoErr(err)
 		// zone = timestamp.OffsetString(hours, minutes)
 		offset := timestamp.OffsetString(hours, minutes)
 		t.Logf("start zone %s time %v offset %s hours %d minutes %d offset %s error %v", zone, t1, offset, hours, minutes, offset, err)
-		hours, minutes, err = timestamp.OffsetForZone(t2, zone)
+		hours, minutes, err = timestamp.OffsetForZone(2006, 1, 1, zone)
 		is.NoErr(err)
 		// zone = timestamp.OffsetString(hours, minutes)
 		offset = timestamp.OffsetString(hours, minutes)
@@ -294,7 +294,7 @@ func TestZoneTime(t *testing.T) {
 	var hours, minutes int
 	var err error
 	for i := 0; i < count; i++ {
-		hours, minutes, err = timestamp.OffsetForZone(time.Now().In(time.UTC), zone)
+		hours, minutes, err = timestamp.OffsetForZone(2006, 1, 1, zone)
 		_ = timestamp.OffsetString(hours, minutes)
 	}
 	is.NoErr(err)
@@ -302,11 +302,11 @@ func TestZoneTime(t *testing.T) {
 	t.Logf("start zone %s offset %s hours %d minutes %d offset %s error %v", zone, offset, hours, minutes, offset, err)
 }
 
-func TestOffset(t *testing.T) {
-	t1, _ := timestamp.ParseUTC("Monday, 02-Jan-06 15:04:05 MST")
-	t.Log(t1)
-	t1, _ = timestamp.ParseUTC("Monday, 02-Jan-06 15:04:05 PST")
-	t.Log(t1)
-	t1, _ = timestamp.ParseUTC("Monday, 02-Jan-06 15:04:05 America/Toronto")
-	t.Log(t1)
-}
+// func TestOffset(t *testing.T) {
+// 	t1, _ := timestamp.ParseInUTC("Monday, 02-Jan-06 15:04:05 MST")
+// 	t.Log(t1)
+// 	t1, _ = timestamp.ParseInUTC("Monday, 02-Jan-06 15:04:05 PST")
+// 	t.Log(t1)
+// 	t1, _ = timestamp.ParseInUTC("Monday, 02-Jan-06 15:04:05 America/Toronto")
+// 	t.Log(t1)
+// }

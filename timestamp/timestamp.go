@@ -41,11 +41,6 @@ var namedZoneTimeFormats = []string{
 
 // timeFormats a list of Golang time formats to cycle through. The first match
 // will cause the loop through the formats to exit.
-//
-// A mapping of time zone names to UTC offsets could be made, but there is
-// unreliability of offset for some cases based on DST state.
-//   e.g. Name, Location, offset
-//   MT - Mountain Time, North America, UTC -7:00/-6:00
 var nonISOTimeFormats = []string{
 
 	// "Monday, 02-Jan-06 15:04:05 MST",
@@ -103,7 +98,8 @@ func init() {
 	timeFormats = append(timeFormats, nonISOTimeFormats...)
 }
 
-// LocationForZone get a location from a named zone
+// LocationForZone get a location from a named zone. Could be useful when
+// needint to supply a location when parsing.
 func LocationForZone(zone string) (*time.Location, error) {
 	location, err := time.LoadLocation(strings.TrimSpace(zone))
 	if err != nil {
@@ -112,15 +108,18 @@ func LocationForZone(zone string) (*time.Location, error) {
 	return location, nil
 }
 
-// OffsetForZone get offset data for a zone. This assumes that a UTC time is
-// available to start with then adjust for the zone.
-func OffsetForZone(t time.Time, zone string) (hours, minutes int, err error) {
-	location, err := time.LoadLocation(zone)
+// OffsetForZone get offset data for a zone. This assumes that a year, month,
+// and day is available and have been used to create the date to be analyzed.
+// Based on this the offset for the supplied zone name is obtained.
+// This has to be tested more, in particular the calculations to get the minutes.
+func OffsetForZone(year int, month time.Month, day int, zone string) (hours, minutes int, err error) {
+	location, err := LocationForZone(zone)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	_, tzOffset := t.In(time.UTC).In(location).Zone()
+	t := time.Date(year, month, day, 0, 0, 0, 0, location)
+	_, tzOffset := t.Zone()
 
 	d, err := time.ParseDuration(fmt.Sprint(tzOffset) + "s")
 	hours = int(d.Hours())
