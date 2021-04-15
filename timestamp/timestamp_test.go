@@ -138,17 +138,17 @@ func TestParse(t *testing.T) {
 
 	mst, err := time.LoadLocation("MST")
 	is.NoErr(err)
+	t.Log("Trying", mst.String())
 	// RFC1123Z
-	checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", "2006-01-02T22:04:05.000+00:00", time.UTC)
-	checkDate(t, "Mon, 02 Jan 2006 15:04:05", "2006-01-02T15:04:05.000+00:00", time.UTC)
+	checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", "2006-01-02T22:04:05.000+00:00", mst)
 	checkDate(t, "Mon, 02 Jan 2006 15:04:05", "2006-01-02T22:04:05.000+00:00", mst)
 
 	// RFC822Z
 	checkDate(t, "02 Jan 06 15:04 -0700", "2006-01-02T22:04:00.000+00:00", time.UTC)
 
 	// Just in case
-	checkDate(t, "2006-01-02 15-04-05", "2006-01-02T15:04:05.000+00:00", time.UTC)
-	checkDate(t, "20060102150405", "2006-01-02T15:04:05.000+00:00", time.UTC)
+	checkDate(t, "2006-01-02 15-04-05", "2006-01-02T22:04:05.000+00:00", mst)
+	checkDate(t, "20060102150405", "2006-01-02T22:04:05.000+00:00", mst)
 
 	// checkDate(t, "Monday, 02-Jan-06 15:04:05 EST", "2006-01-02T14:04:05.000+00:00", time.UTC)
 	// checkDate(t, "Mon, 02 Jan 2006 15:04:05 EST", "2006-01-02T14:04:05.000+00:00", time.UTC)
@@ -159,9 +159,17 @@ func TestParse(t *testing.T) {
 
 	est, err := time.LoadLocation("EST")
 	is.NoErr(err)
-	t.Log("est", est.String())
+	t.Log("Trying", est.String())
 	// Try modifying zone
+	checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", "2006-01-02T22:04:05.000+00:00", est)
 	checkDate(t, "2006-01-02 15-04-05", "2006-01-02T20:04:05.000+00:00", est)
+
+	// RFC822Z
+	checkDate(t, "02 Jan 06 15:04 -0700", "2006-01-02T22:04:00.000+00:00", est)
+
+	// Just in case
+	checkDate(t, "2006-01-02 15-04-05", "2006-01-02T20:04:05.000+00:00", est)
+	checkDate(t, "20060102150405", "2006-01-02T20:04:05.000+00:00", est)
 
 	t.Logf("Took %v to check", time.Since(start))
 }

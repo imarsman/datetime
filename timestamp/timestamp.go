@@ -96,7 +96,7 @@ var nonISOTimeFormats = []string{
 var timeFormats = []string{}
 
 func init() {
-	reDigits = regexp.MustCompile("^\\d+$")
+	reDigits = regexp.MustCompile("^\\d+\\.?\\d+$")
 	timeFormats = append(timeFormats, nonISOTimeFormats...)
 }
 
@@ -301,13 +301,16 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 		return t, nil
 	}
 
+	// If only iso format patterns should be tried leave now
 	if isoOnly == true {
-		return time.Time{}, fmt.Errorf("No ISO format matched %s", timeStr)
+		return time.Time{}, fmt.Errorf("No ISO format matched %s", err)
 	}
 
-	// Deal with oddball unix timestamp
+	// Check to see if the incoming data is a series of digits or digits with a
+	// single decimal place.
 	match := reDigits.MatchString(timeStr)
 
+	// If not a unix type timestamp try alternate non-iso timestamp formats
 	if match == false {
 		s := nonISOTimeFormats
 		for _, format := range s {

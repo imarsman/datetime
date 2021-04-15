@@ -46,12 +46,12 @@ func TestParseTime(t *testing.T) {
 		"2006.01.02",
 	}
 	for _, f := range formats {
-		ts, err := lex.Parse([]byte(f))
+		ts, err := lex.ParseInUTC([]byte(f))
 		count := 1000
 		start := time.Now()
 		// defer track(runningtime(fmt.Sprintf("Time to parse timestamp %dx", count)))
 		for i := 0; i < count; i++ {
-			ts, err = lex.Parse([]byte(f))
+			ts, err = lex.ParseInUTC([]byte(f))
 			is.NoErr(err)
 		}
 
@@ -110,16 +110,16 @@ func TestParseFormats(t *testing.T) {
 		"20060102T150405.123456000-0400",
 	}
 	for _, f := range formats {
-		ts, err := lex.Parse([]byte(f))
+		ts, err := lex.ParseInUTC([]byte(f))
 		is.NoErr(err)
 
 		tStr := ts.Format("20060102T150405.999999999-0700")
 		t.Logf("Input %s, output %v", f, tStr)
 	}
-	_, err := lex.Parse([]byte("20060102Z"))
+	_, err := lex.ParseInUTC([]byte("20060102Z"))
 	is.True(err != nil)
 
-	_, err = lex.Parse([]byte("20060102-0400"))
+	_, err = lex.ParseInUTC([]byte("20060102-0400"))
 	is.True(err != nil)
 }
 
@@ -129,15 +129,16 @@ func TestParseFormats(t *testing.T) {
 // go tool pprof -http=:8080 memprofile.out
 // go tool pprof -http=:8080 cpuprofile.out
 func BenchmarkTest(b *testing.B) {
-	_, err := lex.Parse([]byte("20200102T122436-0400"))
+	_, err := lex.ParseInUTC([]byte("20200102T122436-0400"))
 	if err != nil {
 		b.Log(err)
 	}
+	b.SetBytes(2)
 	b.ReportAllocs()
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_, err := lex.Parse([]byte("20200102T122436-0400"))
+			_, err := lex.ParseInUTC([]byte("20200102T122436-0400"))
 			if err != nil {
 				b.Log(err)
 			}
