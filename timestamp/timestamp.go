@@ -100,6 +100,8 @@ func init() {
 
 // LocationForZone get a location from a named zone. Could be useful when
 // needint to supply a location when parsing.
+//
+// If the zone is not recognized in Go's tzdata database an error will be returned.
 func LocationForZone(zone string) (*time.Location, error) {
 	location, err := time.LoadLocation(strings.TrimSpace(zone))
 	if err != nil {
@@ -108,10 +110,26 @@ func LocationForZone(zone string) (*time.Location, error) {
 	return location, nil
 }
 
-// OffsetForZone get offset data for a zone. This assumes that a year, month,
-// and day is available and have been used to create the date to be analyzed.
-// Based on this the offset for the supplied zone name is obtained.
-// This has to be tested more, in particular the calculations to get the minutes.
+// OffsetForZone get offset data for a named zone such a America/Tornto or EST
+// or MST. Based on date the offset for a zone can differ, with, for example, an
+// offset of -0500 for EST in the summer and -0400 for EST in the winter. This
+// assumes that a year, month, and day is available and have been used to create
+// the date to be analyzed. Based on this the offset for the supplied zone name
+// is obtained. This has to be tested more, in particular the calculations to
+// get the minutes.
+//
+// Get integer value of hours offset
+//   hours = int(d.Hours())
+//
+// For 5.5 hours of offset or 0530
+//  60 × 5.5 = 330 minutes total offset
+//  330 % 60 = 30 minutes
+//
+// For an offset of 4.25 hours or 0415
+//  60 × 4.25 = 255 minutes total offset
+//  255 % 60 = 15 minutes
+//
+// If the zone is not recognized in Go's tzdata database an error will be returned.
 func OffsetForZone(year int, month time.Month, day int, zone string) (hours, minutes int, err error) {
 	location, err := LocationForZone(zone)
 	if err != nil {
@@ -129,9 +147,43 @@ func OffsetForZone(year int, month time.Month, day int, zone string) (hours, min
 	return hours, minutes, nil
 }
 
+// ZoneOffsetString get an offset in HHMM format based on hours and minutes
+// offset from UTC.
+//
+// For 5 hours and 30 minutes
+//  0530
+//
+// For -5 hours and 30 minutes
+//  -0500
+func ZoneOffsetString(hours, minutes int) string {
+	return zoneOffsetString(hours, minutes, false)
+}
+
+// ZoneOffsetStringDelimited get an offset in HHMM format based on hours and
+// minutes offset from UTC.
+//
+// For 5 hours and 30 minutes
+//  05:30
+//
+// For -5 hours and 30 minutes
+//  -05:00
+func ZoneOffsetStringDelimited(hours, minutes int) string {
+	return zoneOffsetString(hours, minutes, true)
+}
+
 // OffsetString get an offset in HHMM format based on hours and minutes offset
-func OffsetString(hours, minutes int) string {
-	return fmt.Sprintf("%+03d%02d", hours, minutes)
+// from UTC.
+//
+// For 5 hours and 30 minutes
+//  0530
+//
+// For -5 hours and 30 minutes
+//  -0500
+func zoneOffsetString(hours, minutes int, delimited bool) string {
+	if delimited == false {
+		return fmt.Sprintf("%+03d%02d", hours, minutes)
+	}
+	return fmt.Sprintf("%+03d:%02d", hours, minutes)
 }
 
 // RangeOverTimes returns a date range function over start date to end date inclusive.

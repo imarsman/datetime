@@ -274,12 +274,12 @@ func TestOffsetForZones(t *testing.T) {
 		hours, minutes, err = timestamp.OffsetForZone(2006, 1, 1, zone)
 		is.NoErr(err)
 		// zone = timestamp.OffsetString(hours, minutes)
-		offset := timestamp.OffsetString(hours, minutes)
+		offset := timestamp.ZoneOffsetString(hours, minutes)
 		t.Logf("start zone %s time %v offset %s hours %d minutes %d offset %s error %v", zone, t1, offset, hours, minutes, offset, err)
 		hours, minutes, err = timestamp.OffsetForZone(2006, 1, 1, zone)
 		is.NoErr(err)
 		// zone = timestamp.OffsetString(hours, minutes)
-		offset = timestamp.OffsetString(hours, minutes)
+		offset = timestamp.ZoneOffsetString(hours, minutes)
 		t.Logf("start zone %s time %v offset %s hours %d minutes %d offset %s error %v", zone, t2, offset, hours, minutes, offset, err)
 	}
 }
@@ -295,10 +295,10 @@ func TestZoneTime(t *testing.T) {
 	var err error
 	for i := 0; i < count; i++ {
 		hours, minutes, err = timestamp.OffsetForZone(2006, 1, 1, zone)
-		_ = timestamp.OffsetString(hours, minutes)
+		_ = timestamp.ZoneOffsetString(hours, minutes)
 	}
 	is.NoErr(err)
-	offset := timestamp.OffsetString(hours, minutes)
+	offset := timestamp.ZoneOffsetStringDelimited(hours, minutes)
 	t.Logf("start zone %s offset %s hours %d minutes %d offset %s error %v", zone, offset, hours, minutes, offset, err)
 }
 
