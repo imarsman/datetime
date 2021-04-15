@@ -1,7 +1,6 @@
 package timestamp
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -33,6 +32,8 @@ import (
 
 	"github.com/imarsman/datetime/timestamp/lex"
 )
+
+var reDigits *regexp.Regexp
 
 var namedZoneTimeFormats = []string{
 	"Monday, 02-Jan-06 15:04:05 MST",
@@ -95,6 +96,7 @@ var nonISOTimeFormats = []string{
 var timeFormats = []string{}
 
 func init() {
+	reDigits = regexp.MustCompile("^\\d+$")
 	timeFormats = append(timeFormats, nonISOTimeFormats...)
 }
 
@@ -288,6 +290,7 @@ func ParseISOInLocation(timeStr string, location *time.Location) (time.Time, err
 // ParseTimestampInLocation parse timestamp, defaulting to location if there is
 // no zone in the incoming timestamp, and return time ajusted to UTC.
 func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time.Time, error) {
+	timeStr = strings.TrimSpace(timeStr)
 	original := timeStr
 
 	// Try ISO parsing first. The lexer is tolerant of some inconsistency in
@@ -302,26 +305,26 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 		return time.Time{}, fmt.Errorf("No ISO format matched %s", timeStr)
 	}
 
-	s := nonISOTimeFormats
-	for _, format := range s {
-		// If no zone in timestamp use location
-		t, err := time.ParseInLocation(format, original, location)
-		if err == nil {
-			t = t.In(time.UTC)
-			return t, nil
-		}
-	}
-
 	// Deal with oddball unix timestamp
-	match, err := regexp.MatchString("^\\d+$", timeStr)
-	if err != nil {
-		return time.Time{}, errors.New("Could not parse time")
+	match := reDigits.MatchString(timeStr)
+
+	if match == false {
+		s := nonISOTimeFormats
+		for _, format := range s {
+			// If no zone in timestamp use location
+			t, err := time.ParseInLocation(format, original, location)
+			if err == nil {
+				t = t.In(time.UTC)
+				return t, nil
+			}
+		}
+		return time.Time{}, fmt.Errorf("Could not parse time %s", timeStr)
 	}
 
 	// Don't support timestamps less than 7 characters in length
 	// to avoid strange date formats from being parsed.
 	// Max would be 9999999, or Sun Apr 26 1970 17:46:39 GMT+0000
-	if match == true && len(timeStr) > 6 {
+	if len(timeStr) > 6 {
 		toSend := timeStr
 		// Break it into a format that has a period between second and
 		// millisecond portions for the function.
@@ -387,18 +390,8 @@ func ISO8601(t time.Time) string {
 func ISO8601Msec(t time.Time) string {
 	t = t.In(time.UTC)
 
-	// var b []byte
-	// return string(t.AppendFormat(b, "2006-01-02T15:04:05.000-07:00"))
 	return t.Format("2006-01-02T15:04:05.000-07:00")
 }
-
-// func ISO8601LongMsec2(t time.Time) string {
-// 	t = t.In(time.UTC)
-
-// 	// var b []byte
-// 	// return string(t.AppendFormat(b, "2006-01-02T15:04:05.000-07:00"))
-// 	return t.Format("2006-01-02T15:04:05.000-07:00")
-// }
 
 // StartTimeIsBeforeEndTime if time 1 is before time 2 return true, else false
 func StartTimeIsBeforeEndTime(t1 time.Time, t2 time.Time) bool {

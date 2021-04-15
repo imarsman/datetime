@@ -173,37 +173,28 @@ func TestISOCompare(t *testing.T) {
 	// It is possible to have a strring which is just digits that will be parsed
 	// as a timestamp, incorrectly.
 
-	format := "2006-01-02T15:04:05-07:00"
-	_, err := timestamp.ParseInUTC(format)
+	ts := "2006-01-02T15:04:05-07:00"
+	_, err := timestamp.ParseInUTC(ts)
 	is.NoErr(err)
 	count := 1000
 
 	for i := 0; i < count; i++ {
 		// Get a unix timestamp we should not parse
-		_, err := timestamp.ParseInUTC(format)
+		_, err := timestamp.ParseInUTC(ts)
 		is.NoErr(err) // Should parse with no error
 	}
 
-	t.Logf("Took %v to parse %s  %d times", time.Since(start), format, count)
+	t.Logf("Took %v to parse %s %d times", time.Since(start), ts, count)
 
 	start = time.Now()
 
-	format = "20060102T150405-0700"
+	ts = "20060102T150405-0700"
 	for i := 0; i < count; i++ {
 		// Get a unix timestamp we should not parse
-		_, err := timestamp.ParseInUTC(format)
+		_, err := timestamp.ParseInUTC(ts)
 		is.NoErr(err) // Should parse with no error
 	}
-	t.Logf("Took %v to parse %s  %d times", time.Since(start), format, count)
-
-	format = "2006-01-02T15:04:05-07:00"
-	// format = "1/2/2006"
-	for i := 0; i < count; i++ {
-		// Get a unix timestamp we should not parse
-		_, err := timestamp.ParseInUTC(format)
-		is.NoErr(err) // Should parse with no error
-	}
-	t.Logf("Took %v to check %s  %d times", time.Since(start), format, count)
+	t.Logf("Took %v to parse %s %d times", time.Since(start), ts, count)
 }
 
 // TestOrdering check ordering call
