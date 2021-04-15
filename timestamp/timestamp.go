@@ -302,17 +302,6 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 		return time.Time{}, fmt.Errorf("No ISO format matched %s", timeStr)
 	}
 
-	// Don't try to
-	zoneMatch, err := regexp.MatchString("\\s\\w+\\/\\w+", timeStr)
-	if err != nil {
-		return time.Time{}, err
-	}
-	if zoneMatch == true {
-		re := regexp.MustCompile("^.*(\\s\\w{2,}\\/\\w{2,}).*$")
-		zone := re.ReplaceAllString(timeStr, "$1")
-		return time.Time{}, fmt.Errorf("Can't parse time zone for location %s", strings.TrimSpace(zone))
-	}
-
 	s := nonISOTimeFormats
 	for _, format := range s {
 		// If no zone in timestamp use location
