@@ -10,76 +10,129 @@ import (
 	"strings"
 	"time"
 
+	// https://golang.org/pkg/time/tzdata/
+	/*
+		    Package tzdata provides an embedded copy of the timezone database.
+		    If this package is imported anywhere in the program, then if the
+		    time package cannot find tzdata files on the system, it will use
+		    this embedded information.
+
+			Importing this package will increase the size of a program by about
+			450 KB.
+
+			This package should normally be imported by a program's main
+			package, not by a library. Libraries normally shouldn't decide
+			whether to include the timezone database in a program.
+
+			This package will be automatically imported if you build with -tags
+			timetzdata.
+	*/
+	// This will explicitly include tzdata in a build. See above for build flag.
+	// You can do this in the main package if you choose.
+	// _ "time/tzdata"
+
 	"github.com/imarsman/datetime/timestamp/lex"
 )
 
+var namedZoneTimeFormats = []string{
+	"Monday, 02-Jan-06 15:04:05 MST",
+	"Mon, 02 Jan 2006 15:04:05 MST",
+}
+
 // timeFormats a list of Golang time formats to cycle through. The first match
 // will cause the loop through the formats to exit.
+//
+// A mapping of time zone names to UTC offsets could be made, but there is
+// unreliability of offset for some cases based on DST state.
+//   e.g. Name, Location, offset
+//   MT - Mountain Time, North America, UTC -7:00/-6:00
 var nonISOTimeFormats = []string{
+
+	// "Monday, 02-Jan-06 15:04:05 MST",
+	// "Mon, 02 Jan 2006 15:04:05 MST",
 
 	// RFC7232 - used in HTTP protocol
 	"Mon, 02 Jan 2006 15:04:05 GMT",
+
+	// RFC850
+	// Unreliable to have Zone name known - don't try
+	// "Monday, 02-Jan-06 15:04:05 MST",
+
+	// RFC1123
+	// Unreliable to have Zone name known - don't try
+	// "Mon, 02 Jan 2006 15:04:05 MST",
+
+	// RFC1123Z
+	"Mon, 02 Jan 2006 15:04:05 -0700",
+
+	"Mon, 02 Jan 2006 15:04:05",
+	"Monday, 02-Jan-2006 15:04:05",
+
+	// RFC822Z
+	"02 Jan 06 15:04 -0700",
 
 	// Just in case
 	"2006-01-02 15-04-05",
 	"20060102150405",
 
-	// Short ISO-8601 timestamps with no zone offset. Assume UTC.
-	"20060102T150405",
-	"20060102T150405.999",
-	"20060102T150405.999999",
-	"20060102T150405.999999999",
+	// Stamp
+	// Year not known - don't try
+	// "Jan _2 15:04:05",
 
-	// SQL
-	"20060102 150405",
-	"20060102 150405 -07",
-	"20060102 150405 -07:00",
+	// StampMilli
+	// Year not known - don't try
+	// "Jan _2 15:04:05.000",
 
-	"2006-01-02 15:04:05",
-	"2006-01-02 15:04:05 -07",
-	"2006-01-02 15:04:05 -07:00",
+	// StampMicro
+	// Year not known - don't try
+	// "Jan _2 15:04:05.000000",
 
-	"2006-01-02 15:04:05-07",
-	"2006-01-02 15:04:05.000-07",
-	"2006-01-02 15:04:05.000000-07",
-	"2006-01-02 15:04:05.000000000-07",
+	// StampNano
+	// Year not known - don't try
+	// "Jan _2 15:04:05.000000000",
 
 	// Hopefully less likely to be found. Assume UTC.
 	"20060102",
-	"2006-01-02",
-	"2006/01/02",
 	"01/02/2006",
 	"1/2/2006",
-
-	// Weird ones with improper separators
-	"2006-01-02T15-04-05Z",
-	"2006-01-02T15-04-05.999Z",
-	"2006-01-02T15-04-05.999999Z",
-	"2006-01-02T15-04-05.999999999Z",
-
-	// Weird ones with improper separators
-	"2006-01-02T15-04-05-0700",
-	"2006-01-02T15-04-05-07",
-	"2006-01-02T15-04-05.000-0700",
-	"2006-01-02T15-04-05.000-07",
-	"2006-01-02T15-04-05.000000-0700",
-	"2006-01-02T15-04-05.000000-07",
-	"2006-01-02T15-04-05.999999999-0700",
-	"2006-01-02T15-04-05.999999999-07",
-
-	"2006-01-02T15-04-05-07:00",
-	"2006-01-02T15-04-05.999-07:00",
-	"2006-01-02T15-04-05.999-07",
-	"2006-01-02T15-04-05.999999-07:00",
-	"2006-01-02T15-04-05.999999-07",
-	"2006-01-02T15-04-05.999999999-07:00",
-	"2006-01-02T15-04-05.999999999-07",
 }
 
 var timeFormats = []string{}
 
 func init() {
 	timeFormats = append(timeFormats, nonISOTimeFormats...)
+}
+
+// LocationForZone get a location from a named zone
+func LocationForZone(zone string) (*time.Location, error) {
+	location, err := time.LoadLocation(strings.TrimSpace(zone))
+	if err != nil {
+		return nil, err
+	}
+	return location, nil
+}
+
+// OffsetForZone get offset data for a zone. This assumes that a UTC time is
+// available to start with then adjust for the zone.
+func OffsetForZone(t time.Time, zone string) (hours, minutes int, err error) {
+	location, err := time.LoadLocation(zone)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	_, tzOffset := t.In(time.UTC).In(location).Zone()
+
+	d, err := time.ParseDuration(fmt.Sprint(tzOffset) + "s")
+	hours = int(d.Hours())
+	m := int(int64(d.Minutes()) % 60)
+	minutes = int(math.Abs(float64(m)))
+
+	return hours, minutes, nil
+}
+
+// OffsetString get an offset in HHMM format based on hours and minutes offset
+func OffsetString(hours, minutes int) string {
+	return fmt.Sprintf("%+03d%02d", hours, minutes)
 }
 
 // RangeOverTimes returns a date range function over start date to end date inclusive.
@@ -158,46 +211,61 @@ func parseUnixTS(value string) (int64, int64, error) {
 	return s, n, nil
 }
 
-// ParseUTC parse for all timestamps and return UTC zoned time
-func ParseUTC(timeStr string) (time.Time, error) {
-	return parseTimestampInLocation(timeStr, time.UTC)
+// ParseInUTC parse for all timestamps, defaulting to UTC, and return UTC zoned time
+func ParseInUTC(timeStr string) (time.Time, error) {
+	return parseTimestamp(timeStr, time.UTC, false)
 }
 
-// ParseISOUTC parse for ISO timestamp formats and return UTC zoned time
-func ParseISOUTC(timeStr string) (time.Time, error) {
-	return parseTimestampInLocation(timeStr, time.UTC)
+// ParseISOInUTC parse limited to ISO timestamp formats and return UTC zoned time
+func ParseISOInUTC(timeStr string) (time.Time, error) {
+	return parseTimestamp(timeStr, time.UTC, true)
 }
 
 // ParseInLocation parse for all timestamp formats and return time with specific
 // time library location
-func ParseInLocation(timeStr string, loc *time.Location) (time.Time, error) {
-	return parseTimestampInLocation(timeStr, loc)
+func ParseInLocation(timeStr string, location *time.Location) (time.Time, error) {
+	return parseTimestamp(timeStr, location, false)
 }
 
-// ParseISOInLocation parse for ISO timestamp formats and return time with
+// ParseISOInLocation parse limited to ISO timestamp formats and return time with
 // UTC zoned time
-func ParseISOInLocation(timeStr string, loc *time.Location) (time.Time, error) {
-	return parseTimestampInLocation(timeStr, loc)
+func ParseISOInLocation(timeStr string, location *time.Location) (time.Time, error) {
+	return parseTimestamp(timeStr, location, true)
 }
 
 // ParseTimestampInLocation and return time with specific time library location
-func parseTimestampInLocation(timeStr string, loc *time.Location) (time.Time, error) {
+func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time.Time, error) {
 	original := timeStr
 
 	// Try ISO parsing first. The lexer is tolerant of some inconsistency in
 	// format that is not ISO-8601 compliant, such as dashes where there should
 	// be colons and a space instead of a T to separate date and time.
-	t, err := lex.Parse([]byte(timeStr))
+	t, err := lex.ParseInLocation([]byte(timeStr), location)
 	if err == nil {
 		return t, nil
 	}
 
+	if isoOnly == true {
+		return time.Time{}, errors.New("No ISO format match")
+	}
+
+	// Don't try to
+	zoneMatch, err := regexp.MatchString("\\s\\w+\\/\\w+", timeStr)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if zoneMatch == true {
+		re := regexp.MustCompile("^.*(\\s\\w{2,}\\/\\w{2,}).*$")
+		zone := re.ReplaceAllString(timeStr, "$1")
+		return time.Time{}, fmt.Errorf("Can't parse time zone for location %s", strings.TrimSpace(zone))
+	}
+
 	s := nonISOTimeFormats
 	for _, format := range s {
-		t, err := time.Parse(format, original)
+		// If no zone in timestamp use location
+		t, err := time.ParseInLocation(format, original, location)
 		if err == nil {
-			t = t.In(loc)
-
+			t = t.In(time.UTC)
 			return t, nil
 		}
 	}
@@ -227,7 +295,7 @@ func parseTimestampInLocation(timeStr string, loc *time.Location) (time.Time, er
 		// If it was a unix seconds timestamp n will be zero. If it was a
 		// nanoseconds timestamp there will be a nanoseconds portion that is not
 		// zero.
-		t := time.Unix(s, n).In(loc)
+		t := time.Unix(s, n).In(location)
 
 		return t, nil
 	}
@@ -277,8 +345,18 @@ func ISO8601Long(t time.Time) string {
 func ISO8601LongMsec(t time.Time) string {
 	t = t.In(time.UTC)
 
+	// var b []byte
+	// return string(t.AppendFormat(b, "2006-01-02T15:04:05.000-07:00"))
 	return t.Format("2006-01-02T15:04:05.000-07:00")
 }
+
+// func ISO8601LongMsec2(t time.Time) string {
+// 	t = t.In(time.UTC)
+
+// 	// var b []byte
+// 	// return string(t.AppendFormat(b, "2006-01-02T15:04:05.000-07:00"))
+// 	return t.Format("2006-01-02T15:04:05.000-07:00")
+// }
 
 // StartTimeIsBeforeEndTime if time 1 is before time 2 return true, else false
 func StartTimeIsBeforeEndTime(t1 time.Time, t2 time.Time) bool {

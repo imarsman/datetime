@@ -239,7 +239,8 @@ func ParseRFC5545InUTC(text string) (TimeSpan, error) {
 //
 // The timestamp package will assume UTC for timestamps lacking a timezone
 // indicator. The timespanreturned will have its tims set to the location specified.
-func ParseRFC5545InLocation(text string, loc *time.Location) (TimeSpan, error) {
+func ParseRFC5545InLocation(text string, location *time.Location) (TimeSpan, error) {
+	// There may be other options for delimiter but this one is a good start
 	slash := strings.IndexByte(text, '/')
 	if slash < 0 {
 		return TimeSpan{}, fmt.Errorf("cannot parse %q because there is no separator '/'", text)
@@ -248,7 +249,7 @@ func ParseRFC5545InLocation(text string, loc *time.Location) (TimeSpan, error) {
 	start := text[:slash]
 	rest := text[slash+1:]
 
-	st, err := timestamp.ParseISOInLocation(start, loc)
+	st, err := timestamp.ParseISOInLocation(start, location)
 	// st, err := parseTimeInLocation(start, loc)
 	if err != nil {
 		return TimeSpan{}, fmt.Errorf("cannot parse start time in %q: %s", text, err.Error())
@@ -273,7 +274,7 @@ func ParseRFC5545InLocation(text string, loc *time.Location) (TimeSpan, error) {
 		return NewTimeSpan(st, et), nil
 	}
 
-	et, err := timestamp.ParseISOInLocation(rest, loc)
+	et, err := timestamp.ParseISOInLocation(rest, location)
 	// et, err := parseTimeInLocation(rest, loc)
 
 	return NewTimeSpan(st, et), err

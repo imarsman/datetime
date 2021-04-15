@@ -125,6 +125,9 @@ func TestParseFormats(t *testing.T) {
 
 // Run as
 //  go test -run=XXX -bench=.
+// go test -bench=. -benchmem -memprofile memprofile.out -cpuprofile cpuprofile.out
+// go tool pprof -http=:8080 memprofile.out
+// go tool pprof -http=:8080 cpuprofile.out
 func BenchmarkTest(b *testing.B) {
 	_, err := lex.Parse([]byte("20200102T122436-0400"))
 	if err != nil {
@@ -140,4 +143,5 @@ func BenchmarkTest(b *testing.B) {
 			}
 		}
 	})
+	// fmt.Println(b)
 }

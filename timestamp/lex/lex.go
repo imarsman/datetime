@@ -97,7 +97,7 @@ func newLexer() *lexmachine.Lexer {
 	// Allow for 2 digit zone
 	lexer.Add([]byte(`[\-\+]\d\d`), getToken(tokmap["SHORTZONE"]))
 	// Zulu (UTC) indicator
-	lexer.Add([]byte(`Z`), getToken(tokmap["ZULU"]))
+	lexer.Add([]byte(`[zZ]`), getToken(tokmap["ZULU"]))
 	// Skip date/time separator
 	lexer.Add([]byte(`[tT]`), skip)
 	// Ignore spaces
@@ -114,33 +114,39 @@ func skip(scan *lexmachine.Scanner, match *machines.Match) (interface{}, error) 
 	return nil, nil
 }
 
-// Parse only get time and error
-func Parse(bytes []byte) (time.Time, error) {
-	t, _, err := ParseGetParts(bytes)
+// ParseInLocation parse and default to location if zone not present
+func ParseInLocation(bytes []byte, location *time.Location) (time.Time, error) {
+	t, _, err := ParseInLocationGetParts(bytes, location)
 	return t, err
 }
 
-// ParseGetParts parse and get the timestamp parts if more analysis is desired
-func ParseGetParts(bytes []byte) (time.Time, TimestampParts, error) {
-	return scan(bytes)
+// ParseInUTC only get time and error
+func ParseInUTC(bytes []byte) (time.Time, error) {
+	t, _, err := ParseInLocationGetParts(bytes, time.UTC)
+	return t, err
+}
+
+// ParseInLocationGetParts parse and get the timestamp parts if more analysis is desired
+func ParseInLocationGetParts(bytes []byte, location *time.Location) (time.Time, TimestampParts, error) {
+	return scan(bytes, location)
 }
 
 // scan read input and get time, the timestamp parts, and error
 // https://blog.gopheracademy.com/advent-2017/lexmachine-advent/
-func scan(input []byte) (time.Time, TimestampParts, error) {
+func scan(input []byte, location *time.Location) (time.Time, TimestampParts, error) {
 	tsParts := NewTimestampParts()
 
 	timeStr := string(input)
 
 	tsParts.ORIGINAL = timeStr
 
-	timeStr = strings.ToUpper(timeStr)
-
 	// Works for dashes in dates and for just dates
 	//   e.g. 2006-01-02
+	// 	reYMDPunctuation = regexp.MustCompile(`^(\d{4})[\-\.\/]?(\d{2})[\-\.\/]?(\d{2})(.*)`)
 	if strings.Count(timeStr, "-") > 1 || strings.Count(timeStr, "/") > 1 || strings.Count(timeStr, ".") > 1 {
 		timeStr = reYMDPunctuation.ReplaceAllString(timeStr, "$1$2$3$4")
 	}
+
 	// If there is more than 1 dash left, decide what to do.
 	//   e.g. 2021-01-02T00-00-00Z
 	//        2021-01-02T00-00-00-04:00
@@ -155,11 +161,6 @@ func scan(input []byte) (time.Time, TimestampParts, error) {
 			timeStr = strings.Replace(timeStr, "-", "", 2)
 		}
 	}
-	// If there are two dashes assume they are for a bad timestamp with dashes
-	// between time elements
-	if strings.Count(timeStr, "-") == 2 {
-		timeStr = strings.ReplaceAll(timeStr, "-", "")
-	}
 
 	// Colons are not useful for parsing
 	timeStr = strings.ReplaceAll(timeStr, ":", "")
@@ -170,7 +171,6 @@ func scan(input []byte) (time.Time, TimestampParts, error) {
 
 	scanner, err := lexer.Scanner([]byte(timeStr))
 	if err != nil {
-		// fmt.Println(err)
 		return time.Time{}, TimestampParts{}, errors.New("Problem converting " + timeStr)
 	}
 
@@ -255,7 +255,7 @@ func scan(input []byte) (time.Time, TimestampParts, error) {
 		}
 		format := baseTimestampFormat
 		if tsParts.SUBSECOND != "" {
-			format = format + "." + strings.Repeat("0", len(tsParts.SUBSECOND)-1)
+			format = format + "." + strings.Repeat("9", len(tsParts.SUBSECOND)-1)
 		}
 
 		if tsParts.ZONE != "" {
@@ -267,20 +267,18 @@ func scan(input []byte) (time.Time, TimestampParts, error) {
 			default:
 				format = format + timezoneOffsetFormat
 			}
-		} else {
-			str = str + zuluIndicatorFormat
-
-			format = format + zuluIndicatorFormat
 		}
+		// If no zone found the location used will be the default passed in
 
 		tsParts.CALCULATED = str
-		t, err := time.Parse(format, str)
+		var t time.Time
 
+		// time.ParseInLocation will only use the location argument if the
+		// timestamp has no zone offset information
+		t, err = time.ParseInLocation(format, str, location)
 		if err != nil {
 			return time.Time{}, TimestampParts{}, errors.New("Could not parse timestamp")
 		}
-
-		t = t.In(time.UTC)
 
 		return t, tsParts, nil
 	}
