@@ -142,33 +142,42 @@ func TestParse(t *testing.T) {
 	// RFC1123Z
 	checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", "2006-01-02T22:04:05.000+00:00", mst)
 	checkDate(t, "Mon, 02 Jan 2006 15:04:05", "2006-01-02T22:04:05.000+00:00", mst)
+	// MST not used because a different offset is in the timestamp
+	checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0600", "2006-01-02T21:04:05.000+00:00", mst)
 
 	// RFC822Z
 	checkDate(t, "02 Jan 06 15:04 -0700", "2006-01-02T22:04:00.000+00:00", time.UTC)
 
 	// Just in case
+	// Will be offset 7 hours to get UTC
 	checkDate(t, "2006-01-02 15-04-05", "2006-01-02T22:04:05.000+00:00", mst)
+	// Will be offset 7 hours to get UTC
 	checkDate(t, "20060102150405", "2006-01-02T22:04:05.000+00:00", mst)
 
-	// checkDate(t, "Monday, 02-Jan-06 15:04:05 EST", "2006-01-02T14:04:05.000+00:00", time.UTC)
-	// checkDate(t, "Mon, 02 Jan 2006 15:04:05 EST", "2006-01-02T14:04:05.000+00:00", time.UTC)
-
 	// Try modifying zone
+	// Will be offset 7 hours to get UTC
+	checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", "2006-01-02T22:04:05.000+00:00", mst)
+	// Will be offset 7 hours to get UTC
 	checkDate(t, "2006-01-02 15-04-05", "2006-01-02T22:04:05.000+00:00", mst)
-	// checkDate(t, "Monday, 02-Jan-06 15:04:05", "2006-01-02T22:04:05.000+00:00", mst)
 
 	est, err := time.LoadLocation("EST")
 	is.NoErr(err)
 	t.Log("Trying", est.String())
 	// Try modifying zone
+	// Will be offset 5 hours to get UTC
 	checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", "2006-01-02T22:04:05.000+00:00", est)
+	// Will be offset 5 hours to get UTC
 	checkDate(t, "2006-01-02 15-04-05", "2006-01-02T20:04:05.000+00:00", est)
+	// EST not used because a different offset is in the timestamp
+	checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0600", "2006-01-02T21:04:05.000+00:00", mst)
 
 	// RFC822Z
 	checkDate(t, "02 Jan 06 15:04 -0700", "2006-01-02T22:04:00.000+00:00", est)
 
 	// Just in case
+	// Will be offset 5 hours to get UTC
 	checkDate(t, "2006-01-02 15-04-05", "2006-01-02T20:04:05.000+00:00", est)
+	// Will be offset 5 hours to get UTC
 	checkDate(t, "20060102150405", "2006-01-02T20:04:05.000+00:00", est)
 
 	t.Logf("Took %v to check", time.Since(start))
