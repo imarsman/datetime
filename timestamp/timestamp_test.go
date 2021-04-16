@@ -39,13 +39,24 @@ func checkDate(t *testing.T, input string, compare string, location *time.Locati
 func TestParse(t *testing.T) {
 	is := is.New(t)
 
+	mst, err := time.LoadLocation("MST")
+	is.NoErr(err)
+	t.Log("Trying", mst.String())
+
+	test, err := time.LoadLocation("EST")
+	is.NoErr(err)
+	est, err := time.LoadLocation("America/Toronto")
+	is.NoErr(err)
+	is.True(test != est)
+	t.Log("Trying", est.String())
+
 	start := time.Now()
 	// It is possible to have a strring which is just digits that will be parsed
 	// as a timestamp, incorrectly.
 	t.Log(timestamp.ParseInUTC("2006010247"))
 
 	// Get a unix timestamp we should not parse
-	_, err := timestamp.ParseInUTC("1")
+	_, err = timestamp.ParseInUTC("1")
 	is.True(err != nil) // Error should be true
 
 	// Get time value from parsed reference time
@@ -104,6 +115,10 @@ func TestParse(t *testing.T) {
 
 	// SQL
 	checkDate(t, "2006-01-02 22:04:05", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	// MST i -0700 from UTC, so UTC will be 7 hours ahead
+	checkDate(t, "2006-01-02 22:04:05", "2006-01-03T05:04:04:05.000+00:00", mst)
+	// MST i -0500 from UTC, so UTC will be 5 hours ahead
+	checkDate(t, "2006-01-02 22:04:05", "2006-01-03T03:04:04:05.000+00:00", est)
 	checkDate(t, "2006-01-02 22:04:05 -00", "2006-01-02T22:04:05.000+00:00", time.UTC)
 	checkDate(t, "2006-01-02 22:04:05 +00", "2006-01-02T22:04:05.000+00:00", time.UTC)
 	checkDate(t, "2006-01-02 22:04:05 -00:00", "2006-01-02T22:04:05.000+00:00", time.UTC)
@@ -136,10 +151,6 @@ func TestParse(t *testing.T) {
 	// // RFC1123
 	// checkDate(t, "Mon, 02 Jan 2006 15:04:05 MST", "2006-01-02T22:04:05.000+00:00")
 
-	// mst, err := timestamp.LocationForZone("MST")
-	mst, err := time.LoadLocation("MST")
-	is.NoErr(err)
-	t.Log("Trying", mst.String())
 	// RFC1123Z
 	checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", "2006-01-02T22:04:05.000+00:00", mst)
 	checkDate(t, "Mon, 02 Jan 2006 15:04:05", "2006-01-02T22:04:05.000+00:00", mst)
@@ -161,12 +172,6 @@ func TestParse(t *testing.T) {
 	// Will be offset 7 hours to get UTC
 	checkDate(t, "2006-01-02 15-04-05", "2006-01-02T22:04:05.000+00:00", mst)
 
-	test, err := time.LoadLocation("EST")
-	is.NoErr(err)
-	est, err := time.LoadLocation("America/Toronto")
-	is.NoErr(err)
-	is.True(test != est)
-	t.Log("Trying", est.String())
 	// Try modifying zone
 	// Will be offset 5 hours to get UTC
 	checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", "2006-01-02T22:04:05.000+00:00", est)
