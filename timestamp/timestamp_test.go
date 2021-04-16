@@ -31,7 +31,7 @@ func checkDate(t *testing.T, input string, compare string, location *time.Locati
 	is.NoErr(err)
 
 	ts := timestamp.ISO8601Msec(v)
-	t.Logf("Input %s, Expecting %s, Got %s", input, compare, ts)
+	fmt.Printf("Input %s, Expected %s, Got %s UTC In Location %s\n", input, compare, ts, location.String())
 	is.Equal(compare, ts)
 }
 
@@ -116,9 +116,9 @@ func TestParse(t *testing.T) {
 	// SQL
 	checkDate(t, "2006-01-02 22:04:05", "2006-01-02T22:04:05.000+00:00", time.UTC)
 	// MST is -0700 from UTC, so UTC will be 7 hours ahead
-	checkDate(t, "2006-01-02 22:04:05", "2006-01-03T05:04:04:05.000+00:00", mst)
+	checkDate(t, "2006-01-02 22:04:05", "2006-01-03T05:04:05.000+00:00", mst)
 	// MST is -0500 from UTC, so UTC will be 5 hours ahead
-	checkDate(t, "2006-01-02 22:04:05", "2006-01-03T03:04:04:05.000+00:00", est)
+	checkDate(t, "2006-01-02 22:04:05", "2006-01-03T03:04:05.000+00:00", est)
 	checkDate(t, "2006-01-02 22:04:05 -00", "2006-01-02T22:04:05.000+00:00", time.UTC)
 	// The input has a timestamp so EST will not be applied
 	checkDate(t, "2006-01-02 22:04:05 -00", "2006-01-02T22:04:05.000+00:00", est)
