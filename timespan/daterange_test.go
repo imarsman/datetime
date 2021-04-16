@@ -10,29 +10,29 @@ import (
 	"testing"
 	"time"
 
-	"github.com/imarsman/datetime/isodate"
+	"github.com/imarsman/datetime/date"
 	"github.com/imarsman/datetime/period"
 )
 
-var d0320 = isodate.New(2015, time.March, 20)
-var d0321 = isodate.New(2015, time.March, 21)
-var d0325 = isodate.New(2015, time.March, 25)
-var d0326 = isodate.New(2015, time.March, 26)
-var d0327 = isodate.New(2015, time.March, 27)
-var d0328 = isodate.New(2015, time.March, 28)
-var d0329 = isodate.New(2015, time.March, 29) // n.b. clocks go forward (UK)
-var d0330 = isodate.New(2015, time.March, 30)
-var d0331 = isodate.New(2015, time.March, 31)
-var d0401 = isodate.New(2015, time.April, 1)
-var d0402 = isodate.New(2015, time.April, 2)
-var d0403 = isodate.New(2015, time.April, 3)
-var d0404 = isodate.New(2015, time.April, 4)
-var d0407 = isodate.New(2015, time.April, 7)
-var d0408 = isodate.New(2015, time.April, 8)
-var d0409 = isodate.New(2015, time.April, 9)
-var d0410 = isodate.New(2015, time.April, 10)
-var d0501 = isodate.New(2015, time.May, 1)
-var d1025 = isodate.New(2015, time.October, 25)
+var d0320 = date.New(2015, time.March, 20)
+var d0321 = date.New(2015, time.March, 21)
+var d0325 = date.New(2015, time.March, 25)
+var d0326 = date.New(2015, time.March, 26)
+var d0327 = date.New(2015, time.March, 27)
+var d0328 = date.New(2015, time.March, 28)
+var d0329 = date.New(2015, time.March, 29) // n.b. clocks go forward (UK)
+var d0330 = date.New(2015, time.March, 30)
+var d0331 = date.New(2015, time.March, 31)
+var d0401 = date.New(2015, time.April, 1)
+var d0402 = date.New(2015, time.April, 2)
+var d0403 = date.New(2015, time.April, 3)
+var d0404 = date.New(2015, time.April, 4)
+var d0407 = date.New(2015, time.April, 7)
+var d0408 = date.New(2015, time.April, 8)
+var d0409 = date.New(2015, time.April, 9)
+var d0410 = date.New(2015, time.April, 10)
+var d0501 = date.New(2015, time.May, 1)
+var d1025 = date.New(2015, time.October, 25)
 
 var london *time.Location = mustLoadLocation("Europe/London")
 
@@ -47,7 +47,7 @@ func mustLoadLocation(name string) *time.Location {
 func TestNewDateRangeOf(t *testing.T) {
 	dr := NewDateRangeOf(t0327, 7*24*time.Hour)
 	isEq(t, 0, dr.mark, d0327)
-	isEq(t, 0, dr.Days(), isodate.PeriodOfDays(7))
+	isEq(t, 0, dr.Days(), date.PeriodOfDays(7))
 	isEq(t, 0, dr.IsEmpty(), false)
 	isEq(t, 0, dr.Start(), d0327)
 	isEq(t, 0, dr.Last(), d0402)
@@ -55,7 +55,7 @@ func TestNewDateRangeOf(t *testing.T) {
 
 	dr2 := NewDateRangeOf(t0327, -7*24*time.Hour)
 	isEq(t, 0, dr2.mark, d0327)
-	isEq(t, 0, dr2.Days(), isodate.PeriodOfDays(7))
+	isEq(t, 0, dr2.Days(), date.PeriodOfDays(7))
 	isEq(t, 0, dr2.IsEmpty(), false)
 	isEq(t, 0, dr2.Start(), d0321)
 	isEq(t, 0, dr2.Last(), d0327)
@@ -76,7 +76,7 @@ func TestNewDateRangeWithNormalise(t *testing.T) {
 
 func TestEmptyRange(t *testing.T) {
 	drN0 := DateRange{d0327, -1}
-	isEq(t, 0, drN0.Days(), isodate.PeriodOfDays(1))
+	isEq(t, 0, drN0.Days(), date.PeriodOfDays(1))
 	isEq(t, 0, drN0.IsZero(), false)
 	isEq(t, 0, drN0.IsEmpty(), false)
 	isEq(t, 0, drN0.Start(), d0327)
@@ -84,15 +84,15 @@ func TestEmptyRange(t *testing.T) {
 	isEq(t, 0, drN0.String(), "1 day on 2015-03-26")
 
 	dr0 := DateRange{}
-	isEq(t, 0, dr0.Days(), isodate.PeriodOfDays(0))
+	isEq(t, 0, dr0.Days(), date.PeriodOfDays(0))
 	isEq(t, 0, dr0.IsZero(), true)
 	isEq(t, 0, dr0.IsEmpty(), true)
 	isEq(t, 0, dr0.String(), "0 days at 1970-01-01")
 
-	dr1 := EmptyRange(isodate.Date{})
+	dr1 := EmptyRange(date.Date{})
 	isEq(t, 0, dr1.IsZero(), true)
 	isEq(t, 0, dr1.IsEmpty(), true)
-	isEq(t, 0, dr1.Days(), isodate.PeriodOfDays(0))
+	isEq(t, 0, dr1.Days(), date.PeriodOfDays(0))
 
 	dr2 := EmptyRange(d0327)
 	isEq(t, 0, dr2.IsZero(), false)
@@ -100,67 +100,67 @@ func TestEmptyRange(t *testing.T) {
 	isEq(t, 0, dr2.Start(), d0327)
 	isEq(t, 0, dr2.Last().IsZero(), true)
 	isEq(t, 0, dr2.End(), d0327)
-	isEq(t, 0, dr2.Days(), isodate.PeriodOfDays(0))
+	isEq(t, 0, dr2.Days(), date.PeriodOfDays(0))
 	isEq(t, 0, dr2.String(), "0 days at 2015-03-27")
 }
 
 func TestOneDayRange(t *testing.T) {
-	dr1 := OneDayRange(isodate.Date{})
+	dr1 := OneDayRange(date.Date{})
 	isEq(t, 0, dr1.IsZero(), false)
 	isEq(t, 0, dr1.IsEmpty(), false)
-	isEq(t, 0, dr1.Days(), isodate.PeriodOfDays(1))
+	isEq(t, 0, dr1.Days(), date.PeriodOfDays(1))
 
 	dr2 := OneDayRange(d0327)
 	isEq(t, 0, dr2.Start(), d0327)
 	isEq(t, 0, dr2.Last(), d0327)
 	isEq(t, 0, dr2.End(), d0328)
-	isEq(t, 0, dr2.Days(), isodate.PeriodOfDays(1))
+	isEq(t, 0, dr2.Days(), date.PeriodOfDays(1))
 	isEq(t, 0, dr2.String(), "1 day on 2015-03-27")
 }
 
 func TestDayRange(t *testing.T) {
-	dr1 := DayRange(isodate.Date{}, 0)
+	dr1 := DayRange(date.Date{}, 0)
 	isEq(t, 0, dr1.IsZero(), true)
 	isEq(t, 0, dr1.IsEmpty(), true)
-	isEq(t, 0, dr1.Days(), isodate.PeriodOfDays(0))
+	isEq(t, 0, dr1.Days(), date.PeriodOfDays(0))
 
 	dr2 := DayRange(d0327, 2)
 	isEq(t, 0, dr2.Start(), d0327)
 	isEq(t, 0, dr2.Last(), d0328)
 	isEq(t, 0, dr2.End(), d0329)
-	isEq(t, 0, dr2.Days(), isodate.PeriodOfDays(2))
+	isEq(t, 0, dr2.Days(), date.PeriodOfDays(2))
 	isEq(t, 0, dr2.String(), "2 days from 2015-03-27 to 2015-03-28")
 
 	dr3 := DayRange(d0327, -2)
 	isEq(t, 0, dr3.Start(), d0325)
 	isEq(t, 0, dr3.Last(), d0326)
 	isEq(t, 0, dr3.End(), d0327)
-	isEq(t, 0, dr3.Days(), isodate.PeriodOfDays(2))
+	isEq(t, 0, dr3.Days(), date.PeriodOfDays(2))
 	isEq(t, 0, dr3.String(), "2 days from 2015-03-25 to 2015-03-26")
 }
 
 func TestNewYearOf(t *testing.T) {
 	dr := NewYearOf(2015)
-	isEq(t, 0, dr.Days(), isodate.PeriodOfDays(365))
-	isEq(t, 0, dr.Start(), isodate.New(2015, time.January, 1))
-	isEq(t, 0, dr.Last(), isodate.New(2015, time.December, 31))
-	isEq(t, 0, dr.End(), isodate.New(2016, time.January, 1))
+	isEq(t, 0, dr.Days(), date.PeriodOfDays(365))
+	isEq(t, 0, dr.Start(), date.New(2015, time.January, 1))
+	isEq(t, 0, dr.Last(), date.New(2015, time.December, 31))
+	isEq(t, 0, dr.End(), date.New(2016, time.January, 1))
 }
 
 func TestNewMonthOf(t *testing.T) {
 	dr := NewMonthOf(2015, time.February)
-	isEq(t, 0, dr.Days(), isodate.PeriodOfDays(28))
-	isEq(t, 0, dr.Start(), isodate.New(2015, time.February, 1))
-	isEq(t, 0, dr.Last(), isodate.New(2015, time.February, 28))
-	isEq(t, 0, dr.End(), isodate.New(2015, time.March, 1))
+	isEq(t, 0, dr.Days(), date.PeriodOfDays(28))
+	isEq(t, 0, dr.Start(), date.New(2015, time.February, 1))
+	isEq(t, 0, dr.Last(), date.New(2015, time.February, 28))
+	isEq(t, 0, dr.End(), date.New(2015, time.March, 1))
 }
 
 func TestShiftAndExtend(t *testing.T) {
 	cases := []struct {
 		dr    DateRange
-		n     isodate.PeriodOfDays
-		start isodate.Date
-		end   isodate.Date
+		n     date.PeriodOfDays
+		start date.Date
+		end   date.Date
 		s     string
 	}{
 		{DayRange(d0327, 6).ShiftBy(0), 6, d0327, d0402, "6 days from 2015-03-27 to 2015-04-01"},

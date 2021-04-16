@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/imarsman/datetime/isodate"
+	"github.com/imarsman/datetime/date"
 	"github.com/imarsman/datetime/period"
 )
 
@@ -16,55 +16,55 @@ const minusOneNano time.Duration = -1
 
 // DateRange carries a isodate and a number of days and describes a range between two isodates.
 type DateRange struct {
-	mark isodate.Date
-	days isodate.PeriodOfDays
+	mark date.Date
+	days date.PeriodOfDays
 }
 
 // NewDateRangeOf assembles a new isodate range from a start time and a duration, discarding
 // the precise time-of-day information. The start time includes a location, which is not
 // necessarily UTC. The duration can be negative.
 func NewDateRangeOf(start time.Time, duration time.Duration) DateRange {
-	sd := isodate.NewAt(start)
-	ed := isodate.NewAt(start.Add(duration))
-	return DateRange{sd, isodate.PeriodOfDays(ed.Sub(sd))}
+	sd := date.NewAt(start)
+	ed := date.NewAt(start.Add(duration))
+	return DateRange{sd, date.PeriodOfDays(ed.Sub(sd))}
 }
 
 // NewDateRange assembles a new isodate range from two isodates. These are half-open, so
 // if start and end are the same, the range spans zero (not one) day. Similarly, if they
 // are on subsequent days, the range is one isodate (not two).
 // The result is normalised.
-func NewDateRange(start, end isodate.Date) DateRange {
+func NewDateRange(start, end date.Date) DateRange {
 	if end.Before(start) {
-		return DateRange{end, isodate.PeriodOfDays(start.Sub(end))}
+		return DateRange{end, date.PeriodOfDays(start.Sub(end))}
 	}
-	return DateRange{start, isodate.PeriodOfDays(end.Sub(start))}
+	return DateRange{start, date.PeriodOfDays(end.Sub(start))}
 }
 
 // NewYearOf constructs the range encompassing the whole year specified.
 func NewYearOf(year int) DateRange {
-	start := isodate.New(year, time.January, 1)
-	end := isodate.New(year+1, time.January, 1)
-	return DateRange{start, isodate.PeriodOfDays(end.Sub(start))}
+	start := date.New(year, time.January, 1)
+	end := date.New(year+1, time.January, 1)
+	return DateRange{start, date.PeriodOfDays(end.Sub(start))}
 }
 
 // NewMonthOf constructs the range encompassing the whole month specified for a given year.
 // It handles leap years correctly.
 func NewMonthOf(year int, month time.Month) DateRange {
-	start := isodate.New(year, month, 1)
+	start := date.New(year, month, 1)
 	endT := time.Date(year, month+1, 1, 0, 0, 0, 0, time.UTC)
-	end := isodate.NewAt(endT)
-	return DateRange{start, isodate.PeriodOfDays(end.Sub(start))}
+	end := date.NewAt(endT)
+	return DateRange{start, date.PeriodOfDays(end.Sub(start))}
 }
 
 // EmptyRange constructs an empty range. This is often a useful basis for
 // further operations but note that the end isodate is undefined.
-func EmptyRange(day isodate.Date) DateRange {
+func EmptyRange(day date.Date) DateRange {
 	return DateRange{day, 0}
 }
 
 // OneDayRange constructs a range of exactly one day. This is often a useful basis for
 // further operations. Note that the last isodate is the same as the start isodate.
-func OneDayRange(day isodate.Date) DateRange {
+func OneDayRange(day date.Date) DateRange {
 	return DateRange{day, 1}
 }
 
@@ -73,7 +73,7 @@ func OneDayRange(day isodate.Date) DateRange {
 // Note that n can be negative. In this case, the specified day will be the end day,
 // which is outside of the half-open range; the last day will be the day before the
 // day specified.
-func DayRange(day isodate.Date, n isodate.PeriodOfDays) DateRange {
+func DayRange(day date.Date, n date.PeriodOfDays) DateRange {
 	if n < 0 {
 		return DateRange{day.Add(n), -n}
 	}
@@ -81,7 +81,7 @@ func DayRange(day isodate.Date, n isodate.PeriodOfDays) DateRange {
 }
 
 // Days returns the period represented by this range. This will never be negative.
-func (dateRange DateRange) Days() isodate.PeriodOfDays {
+func (dateRange DateRange) Days() date.PeriodOfDays {
 	if dateRange.days < 0 {
 		return -dateRange.days
 	}
@@ -100,9 +100,9 @@ func (dateRange DateRange) IsEmpty() bool {
 }
 
 // Start returns the earliest isodate represented by this range.
-func (dateRange DateRange) Start() isodate.Date {
+func (dateRange DateRange) Start() date.Date {
 	if dateRange.days < 0 {
-		return dateRange.mark.Add(isodate.PeriodOfDays(1 + dateRange.days))
+		return dateRange.mark.Add(date.PeriodOfDays(1 + dateRange.days))
 	}
 	return dateRange.mark
 }
@@ -111,11 +111,11 @@ func (dateRange DateRange) Start() isodate.Date {
 // if the range is empty (i.e. has zero days), then the last is undefined so an empty isodate
 // is returned. Therefore it is often more useful to use End() instead of Last().
 // See also IsEmpty().
-func (dateRange DateRange) Last() isodate.Date {
+func (dateRange DateRange) Last() date.Date {
 	if dateRange.days < 0 {
 		return dateRange.mark // because mark is at the end
 	} else if dateRange.days == 0 {
-		return isodate.Date{}
+		return date.Date{}
 	}
 	return dateRange.mark.Add(dateRange.days - 1)
 }
@@ -126,7 +126,7 @@ func (dateRange DateRange) Last() isodate.Date {
 // If the range is empty (i.e. has zero days), then the start isodate is returned, this being
 // also the (half-open) end value in that case. This is more useful than the undefined result
 // returned by Last() for empty ranges.
-func (dateRange DateRange) End() isodate.Date {
+func (dateRange DateRange) End() date.Date {
 	if dateRange.days < 0 {
 		return dateRange.mark.Add(1) // because mark is at the end
 	}
@@ -145,7 +145,7 @@ func (dateRange DateRange) Normalise() DateRange {
 
 // ShiftBy moves the isodate range by moving both the start and end isodates similarly.
 // A negative parameter is allowed.
-func (dateRange DateRange) ShiftBy(days isodate.PeriodOfDays) DateRange {
+func (dateRange DateRange) ShiftBy(days date.PeriodOfDays) DateRange {
 	if days == 0 {
 		return dateRange
 	}
@@ -156,7 +156,7 @@ func (dateRange DateRange) ShiftBy(days isodate.PeriodOfDays) DateRange {
 // ExtendBy extends (or reduces) the isodate range by moving the end isodate.
 // A negative parameter is allowed and this may cause the range to become inverted
 // (i.e. the mark isodate becomes the end isodate instead of the start isodate).
-func (dateRange DateRange) ExtendBy(days isodate.PeriodOfDays) DateRange {
+func (dateRange DateRange) ExtendBy(days date.PeriodOfDays) DateRange {
 	if days == 0 {
 		return dateRange
 	}
@@ -210,7 +210,7 @@ func (dateRange DateRange) String() string {
 
 // Contains tests whether the isodate range contains a specified isodate.
 // Empty isodate ranges (i.e. zero days) never contain anything.
-func (dateRange DateRange) Contains(d isodate.Date) bool {
+func (dateRange DateRange) Contains(d date.Date) bool {
 	if dateRange.days == 0 {
 		return false
 	}

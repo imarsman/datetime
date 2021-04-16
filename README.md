@@ -23,6 +23,8 @@ formatting of parsed input as long as the compliance issues do allow acceptance
 of ambiguous input. The library takes the approach of initially trying to
 tokenize ISO-8601 format timestamps. If that step fails a number of non-ISO-8601
 formats are tried in a loop in a best effort to parse the incoming timestamp.
+Finally, if the incoming timestamp is in a Unix timestamp format an attempt is
+made to parse it as such.
 
 None of the ISO-8601 time types are comprehensive in their handling of the
 possible formats and variations in formats. The ISO-8601 standard is a large one.

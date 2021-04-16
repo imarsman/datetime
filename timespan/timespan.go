@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/imarsman/datetime/isodate"
+	"github.com/imarsman/datetime/date"
 	"github.com/imarsman/datetime/period"
 	"github.com/imarsman/datetime/timestamp"
 )
@@ -123,8 +123,8 @@ func (ts TimeSpan) In(loc *time.Location) TimeSpan {
 // The result is normalised.
 func (ts TimeSpan) DateRangeIn(loc *time.Location) DateRange {
 	no := ts.Normalise()
-	startDate := isodate.NewAt(no.mark.In(loc))
-	endDate := isodate.NewAt(no.End().In(loc))
+	startDate := date.NewAt(no.mark.In(loc))
+	endDate := date.NewAt(no.End().In(loc))
 	return NewDateRange(startDate, endDate)
 }
 
