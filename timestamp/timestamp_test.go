@@ -310,6 +310,8 @@ func TestOrdering(t *testing.T) {
 	is.True(timestamp.StartTimeIsBeforeEndTime(t1, t2))  // Start before end
 	is.True(!timestamp.StartTimeIsBeforeEndTime(t2, t1)) // Start not before end
 }
+
+// Test how long it take to parse a timestamp 1,000 times
 func TestTime(t *testing.T) {
 	is := is.New(t)
 
@@ -354,7 +356,9 @@ var locations = []string{
 }
 
 // TestOffsetForZones test to get the offset for dates with a named zone. This
-// could be more accurately done by removing the zone inf
+// could be more accurately done by removing the zone information from the
+// timestamp string but normally this sort of opperation would be needed when
+// timetamps were available without zone information but the location was known.
 func TestOffsetForZones(t *testing.T) {
 	is := is.New(t)
 
@@ -375,6 +379,7 @@ func TestOffsetForZones(t *testing.T) {
 	}
 }
 
+// Test how long it takes to get timezone information 1,000 times.
 func TestZoneTime(t *testing.T) {
 	is := is.New(t)
 
@@ -393,6 +398,7 @@ func TestZoneTime(t *testing.T) {
 	t.Logf("start zone %s offset %s hours %d minutes %d offset %s error %v", zone, offset, hours, minutes, offset, err)
 }
 
+// Test seprate call to parse a Unix timestamp.
 func TestParseUnixTimestamp(t *testing.T) {
 	is := is.New(t)
 
