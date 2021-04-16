@@ -25,14 +25,14 @@ func execute() {
 }
 
 // checkDate for use in parse checking
-func checkDate(t *testing.T, input string, compare string, location *time.Location) {
+func checkDate(t *testing.T, input string, compare string, location *time.Location) (string, string) {
 	is := is.New(t)
 	v, err := timestamp.ParseInLocation(input, location)
 	is.NoErr(err)
 
 	ts := timestamp.ISO8601Msec(v)
 	fmt.Printf("Input %s, Expected %s, Got %s UTC In Location %s\n", input, compare, ts, location.String())
-	is.Equal(compare, ts)
+	return compare, ts
 }
 
 // TestParse parse all patterns anc compare with expected values
@@ -41,17 +41,16 @@ func TestParse(t *testing.T) {
 
 	mst, err := time.LoadLocation("MST")
 	is.NoErr(err)
-	t.Log("Trying", mst.String())
 
 	test, err := time.LoadLocation("EST")
 	is.NoErr(err)
 	est, err := time.LoadLocation("America/Toronto")
 	is.NoErr(err)
 	is.True(test != est)
-	t.Log("Trying", est.String())
 
 	start := time.Now()
-	// It is possible to have a strring which is just digits that will be parsed
+
+	// It is possible to have a string which is just digits that will be parsed
 	// as a timestamp, incorrectly.
 	t.Log(timestamp.ParseInUTC("2006010247"))
 
@@ -63,133 +62,206 @@ func TestParse(t *testing.T) {
 	unixBase, err := timestamp.ParseInUTC("2006-01-02T15:04:05.000+00:00")
 	is.NoErr(err)
 
+	var expected, got string
 	// Use parsed reference time to create unix timestamp and nanosecond timestamp
-	checkDate(t, fmt.Sprint(unixBase.UnixNano()), "2006-01-02T15:04:05.000+00:00", time.UTC)
-	checkDate(t, fmt.Sprint(unixBase.Unix()), "2006-01-02T15:04:05.000+00:00", time.UTC)
+	expected, got = checkDate(t, fmt.Sprint(unixBase.UnixNano()), "2006-01-02T15:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, fmt.Sprint(unixBase.Unix()), "2006-01-02T15:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
 
 	// Short ISO-8601 timestamps with numerical zone offsets
-	checkDate(t, "20060102T150405-0700", "2006-01-02T22:04:05.000+00:00", time.UTC)
-	checkDate(t, "20060102T150405-0700", "2006-01-02T22:04:05.000+00:00", time.UTC)
-	checkDate(t, "20060102T150405-07", "2006-01-02T22:04:05.000+00:00", time.UTC)
-	checkDate(t, "20060102T150405.000+0000", "2006-01-02T15:04:05.000+00:00", time.UTC)
-	checkDate(t, "20060102T150405.000-0000", "2006-01-02T15:04:05.000+00:00", time.UTC)
-	checkDate(t, "20060102T150405.000-0700", "2006-01-02T22:04:05.000+00:00", time.UTC)
-	checkDate(t, "20060102T150405.000+0700", "2006-01-02T08:04:05.000+00:00", time.UTC)
-	checkDate(t, "20060102T150405.000000-0700", "2006-01-02T22:04:05.000+00:00", time.UTC)
-	checkDate(t, "20060102T150405.999999999-0700", "2006-01-02T22:04:05.999+00:00", time.UTC)
+	expected, got = checkDate(t, "20060102T150405-0700", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "20060102T150405-0700", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "20060102T150405-07", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "20060102T150405.000+0000", "2006-01-02T15:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "20060102T150405.000-0000", "2006-01-02T15:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "20060102T150405.000-0700", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "20060102T150405.000+0700", "2006-01-02T08:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "20060102T150405.000000-0700", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "20060102T150405.999999999-0700", "2006-01-02T22:04:05.999+00:00", time.UTC)
+	is.Equal(expected, got)
 
 	// Long ISO-8601 timestamps with numerical zone offsets
-	checkDate(t, "2006-01-02T15:04:05-07:00", "2006-01-02T22:04:05.000+00:00", time.UTC)
-	checkDate(t, "2006-01-02T15:04:05-07", "2006-01-02T22:04:05.000+00:00", time.UTC)
-	checkDate(t, "2006-01-02T15:04:05.000-07:00", "2006-01-02T22:04:05.000+00:00", time.UTC)
-	checkDate(t, "2006-01-02T15:04:05.000-07", "2006-01-02T22:04:05.000+00:00", time.UTC)
-	checkDate(t, "2006-01-02T15:04:05.000000-07:00", "2006-01-02T22:04:05.000+00:00", time.UTC)
-	checkDate(t, "2006-01-02T15:04:05.001000-07", "2006-01-02T22:04:05.001+00:00", time.UTC)
-	checkDate(t, "2006-01-02T15:04:05.001000000-07:00", "2006-01-02T22:04:05.001+00:00", time.UTC)
-	checkDate(t, "2006-01-02T15:04:05.999999999-07", "2006-01-02T22:04:05.999+00:00", time.UTC)
+	expected, got = checkDate(t, "2006-01-02T15:04:05-07:00", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006-01-02T15:04:05-07", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006-01-02T15:04:05.000-07:00", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006-01-02T15:04:05.000-07", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006-01-02T15:04:05.000000-07:00", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006-01-02T15:04:05.001000-07", "2006-01-02T22:04:05.001+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006-01-02T15:04:05.001000000-07:00", "2006-01-02T22:04:05.001+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006-01-02T15:04:05.999999999-07", "2006-01-02T22:04:05.999+00:00", time.UTC)
+	is.Equal(expected, got)
 
 	// Short  ISO-8601 timestamps with UTC zone offsets
-	checkDate(t, "20060102T150405Z", "2006-01-02T15:04:05.000+00:00", time.UTC)
-	checkDate(t, "20060102T150405.000Z", "2006-01-02T15:04:05.000+00:00", time.UTC)
-	checkDate(t, "20060102T150405.000000Z", "2006-01-02T15:04:05.000+00:00", time.UTC)
-	checkDate(t, "20060102T150405.000000000Z", "2006-01-02T15:04:05.000+00:00", time.UTC)
-	checkDate(t, "20060102T150405.001000000Z", "2006-01-02T15:04:05.001+00:00", time.UTC)
-	checkDate(t, "20060102T150405.000100000Z", "2006-01-02T15:04:05.000+00:00", time.UTC)
-	checkDate(t, "20060102T150405.999999999Z", "2006-01-02T15:04:05.999+00:00", time.UTC)
+	expected, got = checkDate(t, "20060102T150405Z", "2006-01-02T15:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "20060102T150405.000Z", "2006-01-02T15:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "20060102T150405.000000Z", "2006-01-02T15:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "20060102T150405.000000000Z", "2006-01-02T15:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "20060102T150405.001000000Z", "2006-01-02T15:04:05.001+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "20060102T150405.000100000Z", "2006-01-02T15:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "20060102T150405.999999999Z", "2006-01-02T15:04:05.999+00:00", time.UTC)
+	is.Equal(expected, got)
 
 	// Long date time with UTC zone offsets
-	checkDate(t, "2006-01-02T15:04:05Z", "2006-01-02T15:04:05.000+00:00", time.UTC)
-	checkDate(t, "2006-01-02T15:04:05.000Z", "2006-01-02T15:04:05.000+00:00", time.UTC)
-	checkDate(t, "2006-01-02T15:04:05.000000Z", "2006-01-02T15:04:05.000+00:00", time.UTC)
-	checkDate(t, "2006-01-02T15:04:05.999999999Z", "2006-01-02T15:04:05.999+00:00", time.UTC)
+	expected, got = checkDate(t, "2006-01-02T15:04:05Z", "2006-01-02T15:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006-01-02T15:04:05.000Z", "2006-01-02T15:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006-01-02T15:04:05.000000Z", "2006-01-02T15:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006-01-02T15:04:05.999999999Z", "2006-01-02T15:04:05.999+00:00", time.UTC)
+	is.Equal(expected, got)
 
 	// Just in case
-	checkDate(t, "2006-01-02 15-04-05", "2006-01-02T15:04:05.000+00:00", time.UTC)
-	checkDate(t, "20060102150405", "2006-01-02T15:04:05.000+00:00", time.UTC)
+	expected, got = checkDate(t, "2006-01-02 15-04-05", "2006-01-02T15:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "20060102150405", "2006-01-02T15:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
 
 	// Short ISO-8601 timestamps with no zone offset. Assume UTC.
-	checkDate(t, "20060102T150405", "2006-01-02T15:04:05.000+00:00", time.UTC)
-	checkDate(t, "20060102T150405.000", "2006-01-02T15:04:05.000+00:00", time.UTC)
-	checkDate(t, "20060102T150405.000000", "2006-01-02T15:04:05.000+00:00", time.UTC)
-	checkDate(t, "20060102T150405.999999999", "2006-01-02T15:04:05.999+00:00", time.UTC)
+	expected, got = checkDate(t, "20060102T150405", "2006-01-02T15:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "20060102T150405.000", "2006-01-02T15:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "20060102T150405.000000", "2006-01-02T15:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "20060102T150405.999999999", "2006-01-02T15:04:05.999+00:00", time.UTC)
+	is.Equal(expected, got)
 
 	// SQL
-	checkDate(t, "2006-01-02 22:04:05", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	expected, got = checkDate(t, "2006-01-02 22:04:05", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
 	// MST is -0700 from UTC, so UTC will be 7 hours ahead
-	checkDate(t, "2006-01-02 22:04:05", "2006-01-03T05:04:05.000+00:00", mst)
+	expected, got = checkDate(t, "2006-01-02 22:04:05", "2006-01-03T05:04:05.000+00:00", mst)
+	is.Equal(expected, got)
 	// MST is -0500 from UTC, so UTC will be 5 hours ahead
-	checkDate(t, "2006-01-02 22:04:05", "2006-01-03T03:04:05.000+00:00", est)
-	checkDate(t, "2006-01-02 22:04:05 -00", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	expected, got = checkDate(t, "2006-01-02 22:04:05", "2006-01-03T03:04:05.000+00:00", est)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006-01-02 22:04:05 -00", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
 	// The input has a timestamp so EST will not be applied
-	checkDate(t, "2006-01-02 22:04:05 -00", "2006-01-02T22:04:05.000+00:00", est)
-	checkDate(t, "2006-01-02 22:04:05 +00", "2006-01-02T22:04:05.000+00:00", time.UTC)
-	checkDate(t, "2006-01-02 22:04:05 -00:00", "2006-01-02T22:04:05.000+00:00", time.UTC)
-	checkDate(t, "2006-01-02 22:04:05 +00:00", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	expected, got = checkDate(t, "2006-01-02 22:04:05 -00", "2006-01-02T22:04:05.000+00:00", est)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006-01-02 22:04:05 +00", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006-01-02 22:04:05 -00:00", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006-01-02 22:04:05 +00:00", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
 
 	// Hopefully less likely to be found. Assume UTC.
-	checkDate(t, "20060102", "2006-01-02T00:00:00.000+00:00", time.UTC)
-	checkDate(t, "2006-01-02", "2006-01-02T00:00:00.000+00:00", time.UTC)
-	checkDate(t, "2006/01/02", "2006-01-02T00:00:00.000+00:00", time.UTC)
-	checkDate(t, "01/02/2006", "2006-01-02T00:00:00.000+00:00", time.UTC)
-	checkDate(t, "1/2/2006", "2006-01-02T00:00:00.000+00:00", time.UTC)
+	expected, got = checkDate(t, "20060102", "2006-01-02T00:00:00.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006-01-02", "2006-01-02T00:00:00.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006/01/02", "2006-01-02T00:00:00.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "01/02/2006", "2006-01-02T00:00:00.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "1/2/2006", "2006-01-02T00:00:00.000+00:00", time.UTC)
+	is.Equal(expected, got)
 
 	// Weird ones with improper separators
-	checkDate(t, "2006-01-02T15-04-05-0700", "2006-01-02T22:04:05.000+00:00", time.UTC)
-	checkDate(t, "2006-01-02T15-04-05.000-0700", "2006-01-02T22:04:05.000+00:00", time.UTC)
-	checkDate(t, "2006-01-02T15-04-05.000000-0700", "2006-01-02T22:04:05.000+00:00", time.UTC)
-	checkDate(t, "2006-01-02T15-04-05.999999999-0700", "2006-01-02T22:04:05.999+00:00", time.UTC)
+	expected, got = checkDate(t, "2006-01-02T15-04-05-0700", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006-01-02T15-04-05.000-0700", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006-01-02T15-04-05.000000-0700", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006-01-02T15-04-05.999999999-0700", "2006-01-02T22:04:05.999+00:00", time.UTC)
+	is.Equal(expected, got)
 
-	checkDate(t, "2006-01-02T15-04-05-07:00", "2006-01-02T22:04:05.000+00:00", time.UTC)
-	checkDate(t, "2006-01-02T15-04-05.000-07:00", "2006-01-02T22:04:05.000+00:00", time.UTC)
-	checkDate(t, "2006-01-02T15-04-05.000000-07:00", "2006-01-02T22:04:05.000+00:00", time.UTC)
-	checkDate(t, "2006-01-02T15-04-05.999999999-07:00", "2006-01-02T22:04:05.999+00:00", time.UTC)
+	expected, got = checkDate(t, "2006-01-02T15-04-05-07:00", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006-01-02T15-04-05.000-07:00", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006-01-02T15-04-05.000000-07:00", "2006-01-02T22:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "2006-01-02T15-04-05.999999999-07:00", "2006-01-02T22:04:05.999+00:00", time.UTC)
+	is.Equal(expected, got)
 
 	// RFC7232 - used in HTTP protocol
-	checkDate(t, "Mon, 02 Jan 2006 15:04:05 GMT", "2006-01-02T15:04:05.000+00:00", time.UTC)
+	expected, got = checkDate(t, "Mon, 02 Jan 2006 15:04:05 GMT", "2006-01-02T15:04:05.000+00:00", time.UTC)
+	is.Equal(expected, got)
 
 	// // RFC850
-	// checkDate(t, "Monday, 02-Jan-06 15:04:05 MST", "2006-01-02T22:04:05.000+00:00")
+	// expected, got = checkDate(t, "Monday, 02-Jan-06 15:04:05 MST", "2006-01-02T22:04:05.000+00:00")
 
 	// // RFC1123
-	// checkDate(t, "Mon, 02 Jan 2006 15:04:05 MST", "2006-01-02T22:04:05.000+00:00")
+	// expected, got = checkDate(t, "Mon, 02 Jan 2006 15:04:05 MST", "2006-01-02T22:04:05.000+00:00")
 
 	// RFC1123Z
-	checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", "2006-01-02T22:04:05.000+00:00", mst)
-	checkDate(t, "Mon, 02 Jan 2006 15:04:05", "2006-01-02T22:04:05.000+00:00", mst)
+	expected, got = checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", "2006-01-02T22:04:05.000+00:00", mst)
+	is.Equal(expected, got)
+	expected, got = checkDate(t, "Mon, 02 Jan 2006 15:04:05", "2006-01-02T22:04:05.000+00:00", mst)
+	is.Equal(expected, got)
 	// MST not used because a different offset is in the timestamp
-	checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0600", "2006-01-02T21:04:05.000+00:00", mst)
+	expected, got = checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0600", "2006-01-02T21:04:05.000+00:00", mst)
+	is.Equal(expected, got)
 
 	// RFC822Z
-	checkDate(t, "02 Jan 06 15:04 -0700", "2006-01-02T22:04:00.000+00:00", time.UTC)
+	expected, got = checkDate(t, "02 Jan 06 15:04 -0700", "2006-01-02T22:04:00.000+00:00", time.UTC)
+	is.Equal(expected, got)
 
 	// Just in case
 	// Will be offset 7 hours to get UTC
-	checkDate(t, "2006-01-02 15-04-05", "2006-01-02T22:04:05.000+00:00", mst)
+	expected, got = checkDate(t, "2006-01-02 15-04-05", "2006-01-02T22:04:05.000+00:00", mst)
+	is.Equal(expected, got)
 	// Will be offset 7 hours to get UTC
-	checkDate(t, "20060102150405", "2006-01-02T22:04:05.000+00:00", mst)
+	expected, got = checkDate(t, "20060102150405", "2006-01-02T22:04:05.000+00:00", mst)
+	is.Equal(expected, got)
 
 	// Try modifying zone
 	// Will be offset 7 hours to get UTC
-	checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", "2006-01-02T22:04:05.000+00:00", mst)
+	expected, got = checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", "2006-01-02T22:04:05.000+00:00", mst)
+	is.Equal(expected, got)
 	// Will be offset 7 hours to get UTC
-	checkDate(t, "2006-01-02 15-04-05", "2006-01-02T22:04:05.000+00:00", mst)
+	expected, got = checkDate(t, "2006-01-02 15-04-05", "2006-01-02T22:04:05.000+00:00", mst)
+	is.Equal(expected, got)
 
 	// Try modifying zone
 	// Will be offset 5 hours to get UTC
-	checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", "2006-01-02T22:04:05.000+00:00", est)
+	expected, got = checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", "2006-01-02T22:04:05.000+00:00", est)
+	is.Equal(expected, got)
 	// Will be offset 5 hours to get UTC
-	checkDate(t, "2006-01-02 15-04-05", "2006-01-02T20:04:05.000+00:00", est)
+	expected, got = checkDate(t, "2006-01-02 15-04-05", "2006-01-02T20:04:05.000+00:00", est)
+	is.Equal(expected, got)
 	// EST not used because a different offset is in the timestamp
-	checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0600", "2006-01-02T21:04:05.000+00:00", mst)
+	expected, got = checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0600", "2006-01-02T21:04:05.000+00:00", mst)
+	is.Equal(expected, got)
 
 	// RFC822Z
-	checkDate(t, "02 Jan 06 15:04 -0700", "2006-01-02T22:04:00.000+00:00", est)
+	expected, got = checkDate(t, "02 Jan 06 15:04 -0700", "2006-01-02T22:04:00.000+00:00", est)
+	is.Equal(expected, got)
 
 	// Just in case
 	// Will be offset 5 hours to get UTC
-	checkDate(t, "2006-01-02 15-04-05", "2006-01-02T20:04:05.000+00:00", est)
+	expected, got = checkDate(t, "2006-01-02 15-04-05", "2006-01-02T20:04:05.000+00:00", est)
+	is.Equal(expected, got)
 	// Will be offset 5 hours to get UTC
-	checkDate(t, "20060102150405", "2006-01-02T20:04:05.000+00:00", est)
+	expected, got = checkDate(t, "20060102150405", "2006-01-02T20:04:05.000+00:00", est)
+	is.Equal(expected, got)
 
 	t.Logf("Took %v to check", time.Since(start))
 }
