@@ -96,7 +96,7 @@ var nonISOTimeFormats = []string{
 var timeFormats = []string{}
 
 func init() {
-	reDigits = regexp.MustCompile("^\\d+\\.?\\d+$")
+	reDigits = regexp.MustCompile(`^\d+\.?\d+$`)
 	timeFormats = append(timeFormats, nonISOTimeFormats...)
 }
 
@@ -104,15 +104,15 @@ func init() {
 // needint to supply a location when parsing.
 //
 // If the zone is not recognized in Go's tzdata database an error will be returned.
-func LocationForZone(zone string) (*time.Location, error) {
-	location, err := time.LoadLocation(strings.TrimSpace(zone))
-	if err != nil {
-		return nil, err
-	}
-	return location, nil
-}
+// func LocationForZone(zone string) (*time.Location, error) {
+// 	location, err := time.LoadLocation(strings.TrimSpace(zone))
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return location, nil
+// }
 
-// OffsetForZone get offset data for a named zone such a America/Tornto or EST
+// OffsetForLocation get offset data for a named zone such a America/Tornto or EST
 // or MST. Based on date the offset for a zone can differ, with, for example, an
 // offset of -0500 for EST in the summer and -0400 for EST in the winter. This
 // assumes that a year, month, and day is available and have been used to create
@@ -132,13 +132,13 @@ func LocationForZone(zone string) (*time.Location, error) {
 //  255 % 60 = 15 minutes
 //
 // If the zone is not recognized in Go's tzdata database an error will be returned.
-func OffsetForZone(year int, month time.Month, day int, zone string) (hours, minutes int, err error) {
-	location, err := LocationForZone(zone)
+func OffsetForLocation(year int, month time.Month, day int, location string) (hours, minutes int, err error) {
+	l, err := time.LoadLocation(location)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	t := time.Date(year, month, day, 0, 0, 0, 0, location)
+	t := time.Date(year, month, day, 0, 0, 0, 0, l)
 	_, tzOffset := t.Zone()
 
 	d, err := time.ParseDuration(fmt.Sprint(tzOffset) + "s")
@@ -149,7 +149,7 @@ func OffsetForZone(year int, month time.Month, day int, zone string) (hours, min
 	return hours, minutes, nil
 }
 
-// ZoneOffsetString get an offset in HHMM format based on hours and minutes
+// LocationOffsetString get an offset in HHMM format based on hours and minutes
 // offset from UTC.
 //
 // For 5 hours and 30 minutes
@@ -157,11 +157,11 @@ func OffsetForZone(year int, month time.Month, day int, zone string) (hours, min
 //
 // For -5 hours and 30 minutes
 //  -0500
-func ZoneOffsetString(hours, minutes int) string {
-	return zoneOffsetString(hours, minutes, false)
+func LocationOffsetString(hours, minutes int) string {
+	return locationOffsetString(hours, minutes, false)
 }
 
-// ZoneOffsetStringDelimited get an offset in HHMM format based on hours and
+// LocationOffsetStringDelimited get an offset in HHMM format based on hours and
 // minutes offset from UTC.
 //
 // For 5 hours and 30 minutes
@@ -169,8 +169,8 @@ func ZoneOffsetString(hours, minutes int) string {
 //
 // For -5 hours and 30 minutes
 //  -05:00
-func ZoneOffsetStringDelimited(hours, minutes int) string {
-	return zoneOffsetString(hours, minutes, true)
+func LocationOffsetStringDelimited(hours, minutes int) string {
+	return locationOffsetString(hours, minutes, true)
 }
 
 // OffsetString get an offset in HHMM format based on hours and minutes offset
@@ -181,7 +181,7 @@ func ZoneOffsetStringDelimited(hours, minutes int) string {
 //
 // For -5 hours and 30 minutes
 //  -0500
-func zoneOffsetString(hours, minutes int, delimited bool) string {
+func locationOffsetString(hours, minutes int, delimited bool) string {
 	if delimited == false {
 		return fmt.Sprintf("%+03d%02d", hours, minutes)
 	}
@@ -293,6 +293,9 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 	timeStr = strings.TrimSpace(timeStr)
 	original := timeStr
 
+	// Check to see if the incoming data is a series of digits or digits with a
+	// single decimal place.
+
 	// Try ISO parsing first. The lexer is tolerant of some inconsistency in
 	// format that is not ISO-8601 compliant, such as dashes where there should
 	// be colons and a space instead of a T to separate date and time.
@@ -303,49 +306,49 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 
 	// If only iso format patterns should be tried leave now
 	if isoOnly == true {
-		return time.Time{}, fmt.Errorf("No ISO format matched %s", err)
+		return time.Time{}, err
 	}
-
-	// Check to see if the incoming data is a series of digits or digits with a
-	// single decimal place.
-	match := reDigits.MatchString(timeStr)
 
 	// If not a unix type timestamp try alternate non-iso timestamp formats
-	if match == false {
-		s := nonISOTimeFormats
-		for _, format := range s {
-			// If no zone in timestamp use location
-			t, err := time.ParseInLocation(format, original, location)
-			if err == nil {
-				t = t.In(time.UTC)
-				return t, nil
-			}
+	s := nonISOTimeFormats
+	for _, format := range s {
+		// If no zone in timestamp use location
+		t, err := time.ParseInLocation(format, original, location)
+		if err == nil {
+			t = t.In(time.UTC)
+			return t, nil
 		}
-		return time.Time{}, fmt.Errorf("Could not parse time %s", timeStr)
 	}
 
-	// Don't support timestamps less than 7 characters in length
-	// to avoid strange date formats from being parsed.
-	// Max would be 9999999, or Sun Apr 26 1970 17:46:39 GMT+0000
-	if len(timeStr) > 6 {
-		toSend := timeStr
-		// Break it into a format that has a period between second and
-		// millisecond portions for the function.
-		if len(timeStr) > 10 {
-			sec, nsec := timeStr[0:10], timeStr[11:len(timeStr)-1]
-			toSend = sec + "." + nsec
-		}
-		// Get seconds, nanoseconds, and error if there was a problem
-		s, n, err := parseUnixTS(toSend)
-		if err != nil {
-			return time.Time{}, err
-		}
-		// If it was a unix seconds timestamp n will be zero. If it was a
-		// nanoseconds timestamp there will be a nanoseconds portion that is not
-		// zero.
-		t := time.Unix(s, n).In(location)
+	match := reDigits.MatchString(timeStr)
 
-		return t, nil
+	// Only proceed if the incoming timestamp is a number with up to one
+	// decimaal place. Otherwise return an error.
+	if match == true {
+
+		// Don't support timestamps less than 7 characters in length
+		// to avoid strange date formats from being parsed.
+		// Max would be 9999999, or Sun Apr 26 1970 17:46:39 GMT+0000
+		if len(timeStr) > 6 {
+			toSend := timeStr
+			// Break it into a format that has a period between second and
+			// millisecond portions for the function.
+			if len(timeStr) > 10 {
+				sec, nsec := timeStr[0:10], timeStr[11:len(timeStr)-1]
+				toSend = sec + "." + nsec
+			}
+			// Get seconds, nanoseconds, and error if there was a problem
+			s, n, err := parseUnixTS(toSend)
+			if err != nil {
+				return time.Time{}, err
+			}
+			// If it was a unix seconds timestamp n will be zero. If it was a
+			// nanoseconds timestamp there will be a nanoseconds portion that is not
+			// zero.
+			t := time.Unix(s, n).In(location)
+
+			return t, nil
+		}
 	}
 
 	return time.Time{}, fmt.Errorf("Could not parse time %s", timeStr)
