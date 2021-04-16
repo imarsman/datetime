@@ -313,3 +313,26 @@ func TestZoneTime(t *testing.T) {
 	offset := timestamp.LocationOffsetStringDelimited(hours, minutes)
 	t.Logf("start zone %s offset %s hours %d minutes %d offset %s error %v", zone, offset, hours, minutes, offset, err)
 }
+
+func TestUnixTimestamp(t *testing.T) {
+	is := is.New(t)
+
+	var err error
+	var t1, t2 time.Time
+
+	now := time.Now()
+	ts1 := fmt.Sprint(now.UnixNano())
+	t.Logf("Nano timestamp string %s len %d", ts1, len(ts1))
+	ts2 := fmt.Sprint(now.Unix())
+
+	count := 1000
+	defer track(runningtime(fmt.Sprintf("Time to parse two timestamps %dx", count*2)))
+	// var utcTime time.Time
+	for i := 0; i < count; i++ {
+		t1, err = timestamp.ParseUnixTS(ts1)
+		t2, err = timestamp.ParseUnixTS(ts2)
+	}
+	is.True(t1 != time.Time{})
+	is.True(t2 != time.Time{})
+	is.NoErr(err)
+}

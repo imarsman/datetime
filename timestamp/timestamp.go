@@ -264,6 +264,45 @@ func parseUnixTS(value string) (int64, int64, error) {
 	return s, n, nil
 }
 
+// ParseUnixTS parse a timestamp directly, assuming input is some sort of UNIX
+// timestamp. If the input is known to be a timestamp this will be faster than
+// first trying to parse as other forms of timestamp. This function will handle
+// timestamps in the form of seconds and nanoseconds delimited by a period.
+//   e.g. 113621424536300000 becomes 1136214245.36300000
+func ParseUnixTS(timeStr string) (time.Time, error) {
+	match := reDigits.MatchString(timeStr)
+
+	// Only proceed if the incoming timestamp is a number with up to one
+	// decimaal place. Otherwise return an error.
+	if match == true {
+
+		// Don't support timestamps less than 7 characters in length
+		// to avoid strange date formats from being parsed.
+		// Max would be 9999999, or Sun Apr 26 1970 17:46:39 GMT+0000
+		if len(timeStr) > 6 {
+			toSend := timeStr
+			// Break it into a format that has a period between second and
+			// millisecond portions for the function.
+			if len(timeStr) > 10 {
+				sec, nsec := timeStr[0:10], timeStr[11:len(timeStr)-1]
+				toSend = sec + "." + nsec
+			}
+			// Get seconds, nanoseconds, and error if there was a problem
+			s, n, err := parseUnixTS(toSend)
+			if err != nil {
+				return time.Time{}, err
+			}
+			// If it was a unix seconds timestamp n will be zero. If it was a
+			// nanoseconds timestamp there will be a nanoseconds portion that is not
+			// zero.
+			t := time.Unix(s, n).In(time.UTC)
+
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("Could not parse time %s", timeStr)
+}
+
 // ParseInUTC parse for all timestamps, defaulting to UTC, and return UTC zoned time
 func ParseInUTC(timeStr string) (time.Time, error) {
 	return parseTimestamp(timeStr, time.UTC, false)
@@ -301,7 +340,7 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 	// be colons and a space instead of a T to separate date and time.
 	t, err := lex.ParseInLocation([]byte(timeStr), location)
 	if err == nil {
-		return t, nil
+		return t.In(time.UTC), nil
 	}
 
 	// If only iso format patterns should be tried leave now
@@ -320,38 +359,7 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 		}
 	}
 
-	match := reDigits.MatchString(timeStr)
-
-	// Only proceed if the incoming timestamp is a number with up to one
-	// decimaal place. Otherwise return an error.
-	if match == true {
-
-		// Don't support timestamps less than 7 characters in length
-		// to avoid strange date formats from being parsed.
-		// Max would be 9999999, or Sun Apr 26 1970 17:46:39 GMT+0000
-		if len(timeStr) > 6 {
-			toSend := timeStr
-			// Break it into a format that has a period between second and
-			// millisecond portions for the function.
-			if len(timeStr) > 10 {
-				sec, nsec := timeStr[0:10], timeStr[11:len(timeStr)-1]
-				toSend = sec + "." + nsec
-			}
-			// Get seconds, nanoseconds, and error if there was a problem
-			s, n, err := parseUnixTS(toSend)
-			if err != nil {
-				return time.Time{}, err
-			}
-			// If it was a unix seconds timestamp n will be zero. If it was a
-			// nanoseconds timestamp there will be a nanoseconds portion that is not
-			// zero.
-			t := time.Unix(s, n).In(location)
-
-			return t, nil
-		}
-	}
-
-	return time.Time{}, fmt.Errorf("Could not parse time %s", timeStr)
+	return ParseUnixTS(timeStr)
 }
 
 // RFC7232 get format used for http headers
