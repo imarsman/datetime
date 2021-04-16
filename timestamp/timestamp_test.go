@@ -346,11 +346,10 @@ func BenchmarkUnixTimestampTest(b *testing.B) {
 	is := is.New(b)
 
 	var err error
-	var t1, t2 time.Time
+	var t1 time.Time
 
 	now := time.Now()
-	ts1 := fmt.Sprint(now.UnixNano())
-	ts2 := fmt.Sprint(now.Unix())
+	ts1 := fmt.Sprint(now.Unix())
 
 	b.SetBytes(2)
 	b.ReportAllocs()
@@ -358,13 +357,40 @@ func BenchmarkUnixTimestampTest(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			t1, err = timestamp.ParseUnixTS(ts1)
-			t2, err = timestamp.ParseUnixTS(ts2)
 			if err != nil {
 				b.Log(err)
 			}
 		}
 	})
 	is.True(t1 != time.Time{})
-	is.True(t2 != time.Time{})
+	is.NoErr(err)
+}
+
+// Run as
+//  go test -run=XXX -bench=.
+//  go test -bench=. -benchmem -memprofile memprofile.out -cpuprofile cpuprofile.out
+//  go tool pprof -http=:8080 memprofile.out
+//  go tool pprof -http=:8080 cpuprofile.out
+func BenchmarkUnixTimestampNanoTest(b *testing.B) {
+	is := is.New(b)
+
+	var err error
+	var t1 time.Time
+
+	now := time.Now()
+	ts1 := fmt.Sprint(now.UnixNano())
+
+	b.SetBytes(2)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			t1, err = timestamp.ParseUnixTS(ts1)
+			if err != nil {
+				b.Log(err)
+			}
+		}
+	})
+	is.True(t1 != time.Time{})
 	is.NoErr(err)
 }
