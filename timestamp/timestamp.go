@@ -606,6 +606,10 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return time.Time{}, fmt.Errorf("Input %s has second length %d needs %d", timeStr, len(secParts), secLen)
 	}
 
+	// We already only put digits into the parts so Atoi should be fine in all
+	// cases. The problem would have been with an incorrect number of digits in
+	// a part, which would have been caught above.
+
 	var ss int = 0
 	y, err := strconv.Atoi(string(yearParts))
 	if err != nil {
@@ -615,6 +619,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	if err != nil {
 		return time.Time{}, err
 	}
+	// Look for incorrect number for month
 	if m > 12 {
 		return time.Time{}, fmt.Errorf("month exceeds 12")
 	}
@@ -622,6 +627,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	if err != nil {
 		return time.Time{}, err
 	}
+	// Look for incorrect number of days in month for year
 	daysIn := gregorian.DaysIn(y, time.Month(m))
 	if d > daysIn {
 		return time.Time{}, fmt.Errorf("%d days in month %d incorrect for year %d", d, m, y)
@@ -630,6 +636,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	if err != nil {
 		return time.Time{}, err
 	}
+	// Look for incorrect number of hours
 	if h > 23 {
 		return time.Time{}, fmt.Errorf("hours exceeds 23")
 	}
@@ -638,6 +645,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		fmt.Println("error", err)
 		return time.Time{}, nil
 	}
+	// Look for incorrect number of minutes
 	if mn > 59 {
 		return time.Time{}, fmt.Errorf("minutes exceeds 59")
 	}
@@ -646,6 +654,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		fmt.Println("error", err)
 		return time.Time{}, nil
 	}
+	// Look for incorrect number of seconds
 	if s > 60 {
 		return time.Time{}, fmt.Errorf("seconds exceeds 60")
 	}
@@ -655,11 +664,13 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			fmt.Println("error", err)
 			return time.Time{}, nil
 		}
+		// Calculate subseconds in terms of nanosecond
 		if len(subsecParts) < subsecLen {
 			ss = int(float64(ss) * (math.Pow(10, (float64(subsecLen) - float64(len(subsecParts))))))
 		}
 	}
 
+	// Handle offset no matter what
 	offsetH, err := strconv.Atoi(string(zoneParts[0:2]))
 	if err != nil {
 		return time.Time{}, err
