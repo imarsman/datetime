@@ -441,23 +441,36 @@ func TestParsISOTimestamp(t *testing.T) {
 		"2006-01-02T18:01:01+01:00",
 		"2006-01-02T18-01-01+0100",
 		"2006/01/02T18.01.01+01:00",
+		// Let 29th on leap year through
+		"2000-02-29T12-01-01+0100",
 	}
 
 	badFormats := []string{
+		// Bad month
+		"2006-13-02T40-01-01+0100",
+		// bad day
+		"2006-02-30T12-01-01+0100",
+		// Bad hours
+		"2006-01-02T40-01-01+0100",
+		// Bad minutes
+		"2006-01-02T11-60-01+0100",
+		// Bad seconds
+		"2006-01-02T11-30-61+0100",
+		"20060102T010101-04000",
 		"2006w01s02T18a01b01c01:00",
 		"2006-01-02T18:01:01b01:00",
 	}
 
 	for _, in := range formats {
 		ts, err = timestamp.ParseISOTimestamp(in, time.UTC)
-		is.NoErr(err)
 		t.Logf("input %s ts %v", in, ts)
+		is.NoErr(err)
 	}
 
 	for _, in := range badFormats {
 		ts, err = timestamp.ParseISOTimestamp(in, time.UTC)
-		is.True(err != nil)
 		t.Logf("input %s error %v", in, err)
+		is.True(err != nil)
 	}
 
 	defer track(runningtime(fmt.Sprintf("Time to process ISO timestamp %dx", count*2)))

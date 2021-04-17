@@ -10,6 +10,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/imarsman/datetime/gregorian"
 	"github.com/imarsman/datetime/timestamp/lex"
 	// https://golang.org/pkg/time/tzdata/
 	/*
@@ -425,6 +426,7 @@ func StartTimeIsBeforeEndTime(t1 time.Time, t2 time.Time) bool {
 func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, error) {
 	var t time.Time
 
+	// Define sections
 	type section string
 	var currentSection section = ""
 	var emptySection section = ""
@@ -439,6 +441,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	var zoneSection section = "zone"
 	var afterSection section = "after"
 
+	// Define required lengths for sections
 	var yearLen int = 4
 	var monLen int = 2
 	var dayLen int = 2
@@ -448,8 +451,10 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	var subsecLen int = 9
 	var zoneLen int = 4
 
+	// Define whether offset is positive for later offset calculation
 	var offsetPositive bool = false
 
+	// Define the varous part to hold values for year, month, etc.
 	var yearParts []rune
 	var monParts []rune
 	var dayParts []rune
@@ -457,8 +462,12 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	var minParts []rune
 	var secParts []rune
 	var subsecParts []rune
-	var zone []rune
+	var zoneParts []rune
 
+	var unparsed string
+
+	// A function to handle adding to a slice if it is not above capacity and
+	// flagging when it has reached capacity. Runs same speed when inline.
 	var addIf = func(part *[]rune, add rune, max int) bool {
 		if len(*part) < max {
 			*part = append(*part, add)
@@ -469,9 +478,12 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return false
 	}
 
-	notAllocated := 0
+	// // A count of characters not spoken for to allow for erroring with bad input.
+	// notAllocated := 0
 
+	// Loop through runes in time string and decide what to do with each.
 	for _, r := range timeStr {
+		orig := r
 		r = unicode.ToUpper(r)
 		if unicode.IsDigit(r) {
 			switch currentSection {
@@ -517,19 +529,22 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 					currentSection = zoneSection
 				}
 			case zoneSection:
-				done := addIf(&zone, r, zoneLen)
+				done := addIf(&zoneParts, r, zoneLen)
 				if done == true {
 					currentSection = afterSection
 				}
 			default:
-				notAllocated = notAllocated + 1
+				// notAllocated++
+				unparsed = unparsed + string(orig)
 			}
 		} else if r == '.' {
+			// There could be extraneous decimal characters.
 			if currentSection != subsecondSection {
 				continue
 			}
 			currentSection = subsecondSection
 		} else if r == '-' || r == '+' {
+			// Selectively define offset possitivity
 			if currentSection == subsecondSection {
 				if r == '-' {
 					offsetPositive = false
@@ -538,76 +553,101 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 				}
 				currentSection = zoneSection
 			}
+			// Valid but not useful for parsing
 		} else if r == 'T' || r == ':' || r == '/' {
 			continue
+			// Zulu offset
 		} else if r == 'Z' {
-			zone = []rune{'0', '0', '0', '0'}
+			// define offset as zero for hours and minutes
+			zoneParts = []rune{'0', '0', '0', '0'}
 			break
 		} else {
-			notAllocated = notAllocated + 1
+			// We haven't dealt with valid characters so prepare for erroor
+			// notAllocated = notAllocated + 1
+			unparsed = unparsed + string(orig)
 		}
 	}
 
-	if notAllocated > 0 {
-		return time.Time{}, fmt.Errorf("got unparsed caracters in input %s", timeStr)
+	// If we've found characters not allocated, error.
+	if len(unparsed) > 0 {
+		return time.Time{}, fmt.Errorf("got unparsed caracters %s in input %s",
+			strings.Join(strings.Split(unparsed, ""), ","), timeStr)
 	}
 
-	if len(zone) < zoneLen {
-		count := zoneLen - len(zone)
+	// Pad out the zone if not  length of four
+	if len(zoneParts) < zoneLen {
+		count := zoneLen - len(zoneParts)
 		for i := 0; i < count; i++ {
-			zone = append(zone, '0')
+			zoneParts = append(zoneParts, '0')
 		}
 	}
 
+	// Error if any part does not contain enough characters. This could happen
+	// easily if for instance a year had 2 digits instead of 4. If this happened
+	// year would take 4 digits, month would take 2, day would take 2, hour
+	// would take 2, minute would take 2, and second would get none.
+	// We are thus requiring that all date and time parts be fully allocated.
 	if len(yearParts) != yearLen {
 		return time.Time{}, fmt.Errorf("Input %s has year length %d needs %d", timeStr, len(yearParts), yearLen)
 	}
 	if len(monParts) != monLen {
-		return time.Time{}, fmt.Errorf("Input %s has year length %d needs %d", timeStr, len(monParts), monLen)
+		return time.Time{}, fmt.Errorf("Input %s has month length %d needs %d", timeStr, len(monParts), monLen)
 	}
 	if len(dayParts) != dayLen {
-		return time.Time{}, fmt.Errorf("Input %s has year length %d needs %d", timeStr, len(dayParts), dayLen)
+		return time.Time{}, fmt.Errorf("Input %s has day length %d needs %d", timeStr, len(dayParts), dayLen)
 	}
 	if len(hourParts) != hourLen {
-		return time.Time{}, fmt.Errorf("Input %s has year length %d needs %d", timeStr, len(yearParts), yearLen)
+		return time.Time{}, fmt.Errorf("Input %s has hour length %d needs %d", timeStr, len(hourParts), hourLen)
 	}
 	if len(minParts) != minLen {
-		return time.Time{}, fmt.Errorf("Input %s has year length %d needs %d", timeStr, len(yearParts), yearLen)
+		return time.Time{}, fmt.Errorf("Input %s has minute length %d needs %d", timeStr, len(minParts), minLen)
 	}
 	if len(secParts) != secLen {
-		return time.Time{}, fmt.Errorf("Input %s has year length %d needs %d", timeStr, len(yearParts), yearLen)
+		return time.Time{}, fmt.Errorf("Input %s has second length %d needs %d", timeStr, len(secParts), secLen)
 	}
 
 	var ss int = 0
 	y, err := strconv.Atoi(string(yearParts))
 	if err != nil {
-		fmt.Println("error", err)
-		return time.Time{}, nil
+		return time.Time{}, err
 	}
 	m, err := strconv.Atoi(string(monParts))
 	if err != nil {
-		fmt.Println("error", err)
-		return time.Time{}, nil
+		return time.Time{}, err
+	}
+	if m > 12 {
+		return time.Time{}, fmt.Errorf("month exceeds 12")
 	}
 	d, err := strconv.Atoi(string(dayParts))
 	if err != nil {
-		fmt.Println("error", err)
-		return time.Time{}, nil
+		return time.Time{}, err
+	}
+	daysIn := gregorian.DaysIn(y, time.Month(m))
+	if d > daysIn {
+		return time.Time{}, fmt.Errorf("%d days in month %d incorrect for year %d", d, m, y)
 	}
 	h, err := strconv.Atoi(string(hourParts))
 	if err != nil {
-		fmt.Println("error", err)
-		return time.Time{}, nil
+		return time.Time{}, err
+	}
+	if h > 23 {
+		return time.Time{}, fmt.Errorf("hours exceeds 23")
 	}
 	mn, err := strconv.Atoi(string(minParts))
 	if err != nil {
 		fmt.Println("error", err)
 		return time.Time{}, nil
 	}
+	if mn > 59 {
+		return time.Time{}, fmt.Errorf("minutes exceeds 59")
+	}
 	s, err := strconv.Atoi(string(secParts))
 	if err != nil {
 		fmt.Println("error", err)
 		return time.Time{}, nil
+	}
+	if s > 60 {
+		return time.Time{}, fmt.Errorf("seconds exceeds 60")
 	}
 	if len(subsecParts) > 0 {
 		ss, err = strconv.Atoi(string(subsecParts))
@@ -620,11 +660,11 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		}
 	}
 
-	offsetH, err := strconv.Atoi(string(zone[0:2]))
+	offsetH, err := strconv.Atoi(string(zoneParts[0:2]))
 	if err != nil {
 		return time.Time{}, err
 	}
-	offsetM, err := strconv.Atoi(string(zone[2 : len(zone)-1]))
+	offsetM, err := strconv.Atoi(string(zoneParts[2 : len(zoneParts)-1]))
 
 	offset := time.Duration(float64(offsetH)*float64(time.Hour) + float64(offsetM)*float64(time.Minute))
 	if err != nil {
