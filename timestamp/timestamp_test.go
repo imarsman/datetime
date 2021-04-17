@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/imarsman/datetime/timestamp"
+	"github.com/imarsman/datetime/timestamp/lex"
 	"github.com/matryer/is"
 )
 
@@ -422,6 +423,52 @@ func TestParseUnixTimestamp(t *testing.T) {
 	is.NoErr(err)
 }
 
+func TestParsISOTimestamp(t *testing.T) {
+	is := is.New(t)
+
+	var err error
+	count := 1000
+	var ts time.Time
+
+	formats := []string{
+		"20060102T010101",
+		"20060102T010101.123456789",
+		"20060102T010101-0400",
+		"20060102t010101-0400",
+		"20060102T010101+0400",
+		"2006-01-02T01:01:01-04:00",
+		"2006-01-02T01:01:01-06:00",
+		"2006-01-02T18:01:01+01:00",
+		"2006-01-02T18-01-01+0100",
+		"2006/01/02T18.01.01+01:00",
+	}
+
+	badFormats := []string{
+		"2006w01s02T18a01b01c01:00",
+		"2006-01-02T18:01:01b01:00",
+	}
+
+	for _, in := range formats {
+		ts, err = timestamp.ParseISOTimestamp(in, time.UTC)
+		is.NoErr(err)
+		t.Logf("input %s ts %v", in, ts)
+	}
+
+	for _, in := range badFormats {
+		ts, err = timestamp.ParseISOTimestamp(in, time.UTC)
+		is.True(err != nil)
+		t.Logf("input %s error %v", in, err)
+	}
+
+	defer track(runningtime(fmt.Sprintf("Time to process ISO timestamp %dx", count*2)))
+	for i := 0; i < count; i++ {
+		ts, err = timestamp.ParseISOTimestamp("20060102T010101.", time.UTC)
+		is.NoErr(err)
+	}
+	is.NoErr(err)
+	t.Log("ts", ts)
+}
+
 // Run as
 //  go test -run=XXX -bench=.
 //  go test -bench=. -benchmem -memprofile memprofile.out -cpuprofile cpuprofile.out
@@ -471,6 +518,50 @@ func BenchmarkUnixTimestampNanoTest(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			t1, err = timestamp.ParseUnixTS(ts1)
+			if err != nil {
+				b.Log(err)
+			}
+		}
+	})
+	is.True(t1 != time.Time{})
+	is.NoErr(err)
+}
+
+func BenchmarkIterativeISOTimestampTest(b *testing.B) {
+	is := is.New(b)
+
+	var err error
+	var t1 time.Time
+
+	b.SetBytes(2)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			t1, err = timestamp.ParseISOTimestamp("20060102T010101.", time.UTC)
+			if err != nil {
+				b.Log(err)
+			}
+		}
+	})
+	is.True(t1 != time.Time{})
+	is.NoErr(err)
+}
+func BenchmarkLexedISOTimestampTest(b *testing.B) {
+	is := is.New(b)
+
+	var err error
+	var t1 time.Time
+
+	// now := time.Now()
+	// ts1 := fmt.Sprint(now.UnixNano())
+
+	b.SetBytes(2)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			t1, err = lex.ParseInLocation([]byte("20060102T010101"), time.UTC)
 			if err != nil {
 				b.Log(err)
 			}

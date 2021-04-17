@@ -8,7 +8,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
+	"github.com/imarsman/datetime/timestamp/lex"
 	// https://golang.org/pkg/time/tzdata/
 	/*
 		    Package tzdata provides an embedded copy of the timezone database.
@@ -25,12 +27,9 @@ import (
 
 			This package will be automatically imported if you build with
 			  -tags timetzdata
-	*/
-	// This will explicitly include tzdata in a build. See above for build flag.
+	*/// This will explicitly include tzdata in a build. See above for build flag.
 	// You can do this in the main package if you choose.
 	// _ "time/tzdata"
-
-	"github.com/imarsman/datetime/timestamp/lex"
 )
 
 var reDigits *regexp.Regexp
@@ -332,16 +331,23 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 	timeStr = strings.TrimSpace(timeStr)
 	original := timeStr
 
+	t, err := lex.ParseInLocation([]byte(timeStr), location)
+	if err == nil {
+		return t.In(time.UTC), nil
+	}
+
+	t, err = ParseUnixTS(timeStr)
+	if err == nil {
+		return t.In(time.UTC), nil
+	}
 	// Check to see if the incoming data is a series of digits or digits with a
 	// single decimal place.
 
 	// Try ISO parsing first. The lexer is tolerant of some inconsistency in
 	// format that is not ISO-8601 compliant, such as dashes where there should
 	// be colons and a space instead of a T to separate date and time.
-	t, err := lex.ParseInLocation([]byte(timeStr), location)
-	if err == nil {
-		return t.In(time.UTC), nil
-	}
+
+	// t, err = ParseISOTimestamp(timeStr, location)
 
 	// If only iso format patterns should be tried leave now
 	if isoOnly == true {
@@ -359,7 +365,7 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 		}
 	}
 
-	return ParseUnixTS(timeStr)
+	return time.Time{}, fmt.Errorf("Could not parse %s", timeStr)
 }
 
 // RFC7232 get format used for http headers
@@ -413,4 +419,235 @@ func StartTimeIsBeforeEndTime(t1 time.Time, t2 time.Time) bool {
 	t2 = t2.In(time.UTC)
 
 	return t2.Unix()-t1.Unix() > 0
+}
+
+// ParseISOTimestamp parse an ISO timetamp iteratively
+func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, error) {
+	var t time.Time
+
+	type section string
+	var currentSection section = ""
+	var emptySection section = ""
+
+	var yearSection section = "year"
+	var monthSection section = "month"
+	var daySection section = "day"
+	var hourSection section = "hour"
+	var minuteSection section = "minute"
+	var secondSection section = "second"
+	var subsecondSection section = "subseconds"
+	var zoneSection section = "zone"
+	var afterSection section = "after"
+
+	var yearLen int = 4
+	var monLen int = 2
+	var dayLen int = 2
+	var hourLen int = 2
+	var minLen int = 2
+	var secLen int = 2
+	var subsecLen int = 9
+	var zoneLen int = 4
+
+	var offsetPositive bool = false
+
+	var yearParts []rune
+	var monParts []rune
+	var dayParts []rune
+	var hourParts []rune
+	var minParts []rune
+	var secParts []rune
+	var subsecParts []rune
+	var zone []rune
+
+	var addIf = func(part *[]rune, add rune, max int) bool {
+		if len(*part) < max {
+			*part = append(*part, add)
+		}
+		if len(*part) == max {
+			return true
+		}
+		return false
+	}
+
+	notAllocated := 0
+
+	for _, r := range timeStr {
+		r = unicode.ToUpper(r)
+		if unicode.IsDigit(r) {
+			switch currentSection {
+			case emptySection:
+				currentSection = yearSection
+				done := addIf(&yearParts, r, yearLen)
+				if done == true {
+					currentSection = monthSection
+				}
+			case yearSection:
+				done := addIf(&yearParts, r, yearLen)
+				if done == true {
+					currentSection = monthSection
+				}
+			case monthSection:
+				done := addIf(&monParts, r, monLen)
+				if done == true {
+					currentSection = daySection
+				}
+			case daySection:
+				done := addIf(&dayParts, r, dayLen)
+				if done == true {
+					currentSection = hourSection
+				}
+			case hourSection:
+				done := addIf(&hourParts, r, hourLen)
+				if done == true {
+					currentSection = minuteSection
+				}
+			case minuteSection:
+				done := addIf(&minParts, r, minLen)
+				if done == true {
+					currentSection = secondSection
+				}
+			case secondSection:
+				done := addIf(&secParts, r, secLen)
+				if done == true {
+					currentSection = subsecondSection
+				}
+			case subsecondSection:
+				done := addIf(&subsecParts, r, subsecLen)
+				if done == true {
+					currentSection = zoneSection
+				}
+			case zoneSection:
+				done := addIf(&zone, r, zoneLen)
+				if done == true {
+					currentSection = afterSection
+				}
+			default:
+				notAllocated = notAllocated + 1
+			}
+		} else if r == '.' {
+			if currentSection != subsecondSection {
+				continue
+			}
+			currentSection = subsecondSection
+		} else if r == '-' || r == '+' {
+			if currentSection == subsecondSection {
+				if r == '-' {
+					offsetPositive = false
+				} else {
+					offsetPositive = true
+				}
+				currentSection = zoneSection
+			}
+		} else if r == 'T' || r == ':' || r == '/' {
+			continue
+		} else if r == 'Z' {
+			zone = []rune{'0', '0', '0', '0'}
+			break
+		} else {
+			notAllocated = notAllocated + 1
+		}
+	}
+
+	if notAllocated > 0 {
+		return time.Time{}, fmt.Errorf("got unparsed caracters in input %s", timeStr)
+	}
+
+	if len(zone) < zoneLen {
+		count := zoneLen - len(zone)
+		for i := 0; i < count; i++ {
+			zone = append(zone, '0')
+		}
+	}
+
+	if len(yearParts) != yearLen {
+		return time.Time{}, fmt.Errorf("Input %s has year length %d needs %d", timeStr, len(yearParts), yearLen)
+	}
+	if len(monParts) != monLen {
+		return time.Time{}, fmt.Errorf("Input %s has year length %d needs %d", timeStr, len(monParts), monLen)
+	}
+	if len(dayParts) != dayLen {
+		return time.Time{}, fmt.Errorf("Input %s has year length %d needs %d", timeStr, len(dayParts), dayLen)
+	}
+	if len(hourParts) != hourLen {
+		return time.Time{}, fmt.Errorf("Input %s has year length %d needs %d", timeStr, len(yearParts), yearLen)
+	}
+	if len(minParts) != minLen {
+		return time.Time{}, fmt.Errorf("Input %s has year length %d needs %d", timeStr, len(yearParts), yearLen)
+	}
+	if len(secParts) != secLen {
+		return time.Time{}, fmt.Errorf("Input %s has year length %d needs %d", timeStr, len(yearParts), yearLen)
+	}
+
+	var ss int = 0
+	y, err := strconv.Atoi(string(yearParts))
+	if err != nil {
+		fmt.Println("error", err)
+		return time.Time{}, nil
+	}
+	m, err := strconv.Atoi(string(monParts))
+	if err != nil {
+		fmt.Println("error", err)
+		return time.Time{}, nil
+	}
+	d, err := strconv.Atoi(string(dayParts))
+	if err != nil {
+		fmt.Println("error", err)
+		return time.Time{}, nil
+	}
+	h, err := strconv.Atoi(string(hourParts))
+	if err != nil {
+		fmt.Println("error", err)
+		return time.Time{}, nil
+	}
+	mn, err := strconv.Atoi(string(minParts))
+	if err != nil {
+		fmt.Println("error", err)
+		return time.Time{}, nil
+	}
+	s, err := strconv.Atoi(string(secParts))
+	if err != nil {
+		fmt.Println("error", err)
+		return time.Time{}, nil
+	}
+	if len(subsecParts) > 0 {
+		ss, err = strconv.Atoi(string(subsecParts))
+		if err != nil {
+			fmt.Println("error", err)
+			return time.Time{}, nil
+		}
+		if len(subsecParts) < subsecLen {
+			ss = int(float64(ss) * (math.Pow(10, (float64(subsecLen) - float64(len(subsecParts))))))
+		}
+	}
+
+	offsetH, err := strconv.Atoi(string(zone[0:2]))
+	if err != nil {
+		return time.Time{}, err
+	}
+	offsetM, err := strconv.Atoi(string(zone[2 : len(zone)-1]))
+
+	offset := time.Duration(float64(offsetH)*float64(time.Hour) + float64(offsetM)*float64(time.Minute))
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	// When iterating is complete offsetFound is set to false if no zone offset
+	// was in the timestamp.
+	// if offsetFound == true {
+	// nanoseconds offset would be 0 for UTC.
+	if offset.Nanoseconds() == 0 {
+		t = time.Date(y, time.Month(m), d, h, mn, s, int(ss), time.UTC)
+	} else {
+		// Offset by the number of seconds defined by the HHMM offset in
+		// timestamp, either positive or negative
+		t = time.Date(y, time.Month(m), d, h, mn, s, int(ss), time.UTC)
+		if offsetPositive == true {
+			// fmt.Println("positive offset")
+			t = t.Add(-offset)
+		} else {
+			t = t.Add(offset)
+		}
+	}
+
+	return t, nil
 }
