@@ -25,33 +25,17 @@ func execute() {
 	time.Sleep(3 * time.Second)
 }
 
-// checkDate for use in parse checking
-// Get result in the location passed in. If the timestamp has no zone use the
-// location passed in. In this case, a timestamp with no zone will be parsed in
-// whatever zone is passed in then converted to UTC.
-// In the case of a zoneless timestamp passed in with an MST location, the zone
-// will first be set back 7 hours (MST), then converted to UTC.
-//
-// This is confusing and may be changed to NOT convert to UTC for comparison.
+// checkDate for use in parse checking. If the timestamp has no zone use the
+// location passed in. Compare expected to the parssed value in the location
+// pased in.
 func checkDate(t *testing.T, input string, compare string, location *time.Location) (string, string) {
 	is := is.New(t)
 	// v, err := timestamp.ParseISOTimestamp(input, location)
 	v, err := timestamp.ParseInLocation(input, location)
 	is.NoErr(err)
 
-	ts := timestamp.ISO8601Msec(v)
-	fmt.Printf("Input %s, Expected %s, Got %s UTC In Location %s\n", input, compare, ts, location.String())
-	return compare, ts
-}
-
-// checkDate for use in parse checking
-func checkNewDate(t *testing.T, input string, compare string, location *time.Location) (string, string) {
-	is := is.New(t)
-	v, err := timestamp.ParseInLocation(input, location)
-	is.NoErr(err)
-
-	ts := timestamp.ISO8601Msec(v)
-	fmt.Printf("Input %s, Expected %s, Got %s UTC In Location %s\n", input, compare, ts, location.String())
+	ts := timestamp.ISO8601MsecInLocation(v, location)
+	fmt.Printf("Input %s, Expected %s, Got %s In Location %s\n", input, compare, ts, location.String())
 	return compare, ts
 }
 
@@ -182,16 +166,16 @@ func TestParse(t *testing.T) {
 	is.Equal(expected, got)
 
 	// MST is -0700 from UTC, so UTC will be 7 hours ahead
-	expected, got = checkDate(t, "2006-01-02 22:04:05", "2006-01-02T22:04:05.000+00:00", mst)
+	expected, got = checkDate(t, "2006-01-02 22:04:05", "2006-01-02T15:04:05.000-07:00", mst)
 	is.Equal(expected, got)
 
 	// MST is -0500 from UTC, so UTC will be 5 hours ahead
-	expected, got = checkDate(t, "2006-01-02 22:04:05", "2006-01-02T22:04:05.000+00:00", est)
+	expected, got = checkDate(t, "2006-01-02 22:04:05", "2006-01-02T17:04:05.000-05:00", est)
 	is.Equal(expected, got)
 	expected, got = checkDate(t, "2006-01-02 22:04:05 -00", "2006-01-02T22:04:05.000+00:00", time.UTC)
 	is.Equal(expected, got)
 	// The input has a timestamp so EST will not be applied
-	expected, got = checkDate(t, "2006-01-02 22:04:05 -00", "2006-01-02T22:04:05.000+00:00", est)
+	expected, got = checkDate(t, "2006-01-02 22:04:05 -00", "2006-01-02T17:04:05.000-05:00", est)
 	is.Equal(expected, got)
 	expected, got = checkDate(t, "2006-01-02 22:04:05 +00", "2006-01-02T22:04:05.000+00:00", time.UTC)
 	is.Equal(expected, got)
@@ -242,12 +226,12 @@ func TestParse(t *testing.T) {
 	// expected, got = checkDate(t, "Mon, 02 Jan 2006 15:04:05 MST", "2006-01-02T22:04:05.000+00:00")
 
 	// RFC1123Z
-	expected, got = checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", "2006-01-02T22:04:05.000+00:00", mst)
+	expected, got = checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", "2006-01-02T15:04:05.000-07:00", mst)
 	is.Equal(expected, got)
-	expected, got = checkDate(t, "Mon, 02 Jan 2006 15:04:05", "2006-01-02T20:04:05.000+00:00", est)
+	expected, got = checkDate(t, "Mon, 02 Jan 2006 15:04:05", "2006-01-02T15:04:05.000-05:00", est)
 	is.Equal(expected, got)
 	// MST not used because a different offset is in the timestamp
-	expected, got = checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0600", "2006-01-02T21:04:05.000+00:00", mst)
+	expected, got = checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0600", "2006-01-02T14:04:05.000-07:00", mst)
 	is.Equal(expected, got)
 
 	// RFC822Z
@@ -256,42 +240,43 @@ func TestParse(t *testing.T) {
 
 	// Just in case
 	// Will be offset 7 hours to get UTC
-	expected, got = checkDate(t, "2006-01-02 15-04-05", "2006-01-02T15:04:05.000+00:00", mst)
+	expected, got = checkDate(t, "2006-01-02 15-04-05", "2006-01-02T08:04:05.000-07:00", mst)
 	is.Equal(expected, got)
 	// Will be offset 7 hours to get UTC
-	expected, got = checkDate(t, "20060102150405", "2006-01-02T15:04:05.000+00:00", mst)
+	expected, got = checkDate(t, "20060102150405", "2006-01-02T08:04:05.000-07:00", mst)
 	is.Equal(expected, got)
 
 	// Try modifying zone
 	// Will be offset 7 hours to get UTC
-	expected, got = checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", "2006-01-02T22:04:05.000+00:00", mst)
+	expected, got = checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", "2006-01-02T15:04:05.000-07:00", mst)
 	is.Equal(expected, got)
+
 	// Will be offset 7 hours to get UTC
-	expected, got = checkDate(t, "2006-01-02 15-04-05", "2006-01-02T15:04:05.000+00:00", mst)
+	expected, got = checkDate(t, "2006-01-02 15-04-05", "2006-01-02T08:04:05.000-07:00", mst)
 	is.Equal(expected, got)
 
 	// Try modifying zone
 	// Will be offset 5 hours to get UTC
-	expected, got = checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", "2006-01-02T22:04:05.000+00:00", est)
+	expected, got = checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", "2006-01-02T17:04:05.000-05:00", est)
 	is.Equal(expected, got)
 	// Will be offset 5 hours to get UTC
-	expected, got = checkDate(t, "2006-01-02 15-04-05", "2006-01-02T15:04:05.000+00:00", est)
+	expected, got = checkDate(t, "2006-01-02 15-04-05", "2006-01-02T10:04:05.000-05:00", est)
 	is.Equal(expected, got)
 	// EST not used because a different offset is in the timestamp
-	expected, got = checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0600", "2006-01-02T21:04:05.000+00:00", mst)
+	expected, got = checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0600", "2006-01-02T14:04:05.000-07:00", mst)
 	is.Equal(expected, got)
 
 	// RFC822Z
-	expected, got = checkDate(t, "02 Jan 06 15:04 -0700", "2006-01-02T22:04:00.000+00:00", est)
+	expected, got = checkDate(t, "02 Jan 06 15:04 -0700", "2006-01-02T17:04:00.000-05:00", est)
 	is.Equal(expected, got)
 
 	// Just in case
 	// Will be offset 5 hours to get UTC
-	expected, got = checkDate(t, "2006-01-02 15-04-05", "2006-01-02T15:04:05.000+00:00", est)
+	expected, got = checkDate(t, "2006-01-02 15-04-05", "2006-01-02T10:04:05.000-05:00", est)
 	is.Equal(expected, got)
 
 	// Will be offset 5 hours to get UTC
-	expected, got = checkDate(t, "20060102150405", "2006-01-02T15:04:05.000+00:00", est)
+	expected, got = checkDate(t, "20060102150405", "2006-01-02T10:04:05.000-05:00", est)
 	is.Equal(expected, got)
 
 	t.Logf("Took %v to check", time.Since(start))
@@ -354,7 +339,7 @@ func TestTime(t *testing.T) {
 		unixBase, err = timestamp.ParseInUTC("2006-01-02T15:04:05.000+00:00")
 	}
 	is.NoErr(err) // Should parse with no error
-	t.Logf("Timestamp %s", timestamp.ISO8601Msec(unixBase))
+	t.Logf("Timestamp %s", timestamp.ISO8601MsecUTC(unixBase))
 }
 
 func TestFormat(t *testing.T) {
@@ -368,7 +353,7 @@ func TestFormat(t *testing.T) {
 	count := 1000
 	defer track(runningtime(fmt.Sprintf("Time to format timestamp %dx", count)))
 	for i := 0; i < count; i++ {
-		s = timestamp.ISO8601Msec(ts)
+		s = timestamp.ISO8601MsecUTC(ts)
 	}
 	t.Logf("Timestamp %s", s)
 }
