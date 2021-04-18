@@ -11,7 +11,6 @@ import (
 	"unicode"
 
 	"github.com/imarsman/datetime/gregorian"
-	"github.com/imarsman/datetime/timestamp/lex"
 	// https://golang.org/pkg/time/tzdata/
 	/*
 		    Package tzdata provides an embedded copy of the timezone database.
@@ -332,7 +331,8 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 	timeStr = strings.TrimSpace(timeStr)
 	original := timeStr
 
-	t, err := lex.ParseInLocation([]byte(timeStr), location)
+	t, err := ParseISOTimestamp(timeStr, location)
+	// t, err := lex.ParseInLocation([]byte(timeStr), location)
 	if err == nil {
 		return t.In(time.UTC), nil
 	}
@@ -429,29 +429,34 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// Define sections
 	type section string
 	var currentSection section = ""
-	var emptySection section = ""
+	const emptySection section = ""
 
-	var yearSection section = "year"
-	var monthSection section = "month"
-	var daySection section = "day"
-	var hourSection section = "hour"
-	var minuteSection section = "minute"
-	var secondSection section = "second"
-	var subsecondSection section = "subseconds"
-	var zoneSection section = "zone"
-	var afterSection section = "after"
+	// defined as section type. This is not a guarantee of not accidentally
+	// comparing to another string variable but it does help define here instead
+	// of using string literals later.
+	const yearSection section = "YEAR"
+	const monthSection section = "MONTH"
+	const daySection section = "DAY"
+	const hourSection section = "HOUR"
+	const minuteSection section = "MINUTE"
+	const secondSection section = "SECOND"
+	const subsecondSection section = "SUBSECOND"
+	const zoneSection section = "ZONE"
+	const afterSection section = "AFTER"
 
-	// Define required lengths for sections
-	var yearLen int = 4
-	var monLen int = 2
-	var dayLen int = 2
-	var hourLen int = 2
-	var minLen int = 2
-	var secLen int = 2
-	var subsecLen int = 9
-	var zoneLen int = 4
+	// Define required lengths for sections. Used quite a bit to both stop
+	// allocating to a timestamp part and to ensure that parts are fully
+	// allocated.
+	const yearLen int = 4
+	const monLen int = 2
+	const dayLen int = 2
+	const hourLen int = 2
+	const minLen int = 2
+	const secLen int = 2
+	const subsecLen int = 9
+	const zoneLen int = 4
 
-	// Define whether offset is positive for later offset calculation
+	// Define whether offset is positive for later offset calculation.
 	var offsetPositive bool = false
 
 	// Define the varous part to hold values for year, month, etc.
@@ -467,7 +472,9 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	var unparsed string
 
 	// A function to handle adding to a slice if it is not above capacity and
-	// flagging when it has reached capacity. Runs same speed when inline.
+	// flagging when it has reached capacity. Runs same speed when inline and is
+	// only used here. Return a flag indicating if a timestamp part has reached
+	// its max capacity.
 	var addIf = func(part *[]rune, add rune, max int) bool {
 		if len(*part) < max {
 			*part = append(*part, add)
@@ -478,13 +485,9 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return false
 	}
 
-	// // A count of characters not spoken for to allow for erroring with bad input.
-	// notAllocated := 0
-
 	// Loop through runes in time string and decide what to do with each.
 	for _, r := range timeStr {
 		orig := r
-		r = unicode.ToUpper(r)
 		if unicode.IsDigit(r) {
 			switch currentSection {
 			case emptySection:
@@ -531,10 +534,11 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			case zoneSection:
 				done := addIf(&zoneParts, r, zoneLen)
 				if done == true {
+					// We could exit here but we can continue to more accurately
+					// report bad date parts if we allow things to continue.
 					currentSection = afterSection
 				}
 			default:
-				// notAllocated++
 				unparsed = unparsed + string(orig)
 			}
 		} else if r == '.' {
@@ -546,21 +550,20 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		} else if r == '-' || r == '+' {
 			// Selectively define offset possitivity
 			if currentSection == subsecondSection {
-				if r == '-' {
-					offsetPositive = false
-				} else {
-					offsetPositive = true
-				}
+				offsetPositive = (r == '+')
 				currentSection = zoneSection
 			}
 			// Valid but not useful for parsing
-		} else if r == 'T' || r == ':' || r == '/' {
+		} else if unicode.ToUpper(r) == 'T' || r == ':' || r == '/' {
 			continue
 			// Zulu offset
-		} else if r == 'Z' {
+		} else if unicode.ToUpper(r) == 'Z' {
 			// define offset as zero for hours and minutes
 			zoneParts = []rune{'0', '0', '0', '0'}
 			break
+			// Ignore spaces
+		} else if unicode.IsSpace(r) {
+			continue
 		} else {
 			// We haven't dealt with valid characters so prepare for erroor
 			// notAllocated = notAllocated + 1
@@ -570,7 +573,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 
 	// If we've found characters not allocated, error.
 	if len(unparsed) > 0 {
-		return time.Time{}, fmt.Errorf("got unparsed caracters %s in input %s",
+		return time.Time{}, fmt.Errorf(
+			"got unparsed caracters %s in input %s",
 			strings.Join(strings.Split(unparsed, ""), ","), timeStr)
 	}
 
@@ -582,11 +586,23 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		}
 	}
 
+	// Allow for just dates and convert to timestamp with zero valued time
+	// parts. Since we are fixing it here it will pass the next tests if nothing
+	// else is wrong or missing.
+	if len(hourParts) == 0 && len(minParts) == 0 && len(secParts) == 0 {
+		for i := 0; i < 2; i++ {
+			hourParts = append(hourParts, '0')
+			minParts = append(minParts, '0')
+			secParts = append(secParts, '0')
+		}
+	}
+
 	// Error if any part does not contain enough characters. This could happen
 	// easily if for instance a year had 2 digits instead of 4. If this happened
 	// year would take 4 digits, month would take 2, day would take 2, hour
-	// would take 2, minute would take 2, and second would get none.
-	// We are thus requiring that all date and time parts be fully allocated.
+	// would take 2, minute would take 2, and second would get none. We are thus
+	// requiring that all date and time parts be fully allocated event if we
+	// can't tell where the problem started.
 	if len(yearParts) != yearLen {
 		return time.Time{}, fmt.Errorf("Input %s has year length %d needs %d", timeStr, len(yearParts), yearLen)
 	}
@@ -610,23 +626,29 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// cases. The problem would have been with an incorrect number of digits in
 	// a part, which would have been caught above.
 
-	var ss int = 0
+	// All 4 digit years should be accepted
 	y, err := strconv.Atoi(string(yearParts))
 	if err != nil {
 		return time.Time{}, err
 	}
+	// We will verify month is is within bounds later
 	m, err := strconv.Atoi(string(monParts))
 	if err != nil {
 		return time.Time{}, err
 	}
-	// Look for incorrect number for month
-	if m > 12 {
+
+	// Look for out of bounds number for month
+	if m == 0 || m > 12 {
+		if m == 0 {
+			return time.Time{}, fmt.Errorf("month cannot be 00")
+		}
 		return time.Time{}, fmt.Errorf("month exceeds 12")
 	}
 	d, err := strconv.Atoi(string(dayParts))
 	if err != nil {
 		return time.Time{}, err
 	}
+
 	// Look for incorrect number of days in month for year
 	daysIn := gregorian.DaysIn(y, time.Month(m))
 	if d > daysIn {
@@ -636,16 +658,20 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	if err != nil {
 		return time.Time{}, err
 	}
-	// Look for incorrect number of hours
-	if h > 23 {
-		return time.Time{}, fmt.Errorf("hours exceeds 23")
+
+	// Look for incorrect number of hours. Go will just roll the day value etc.
+	// over if you do this but so far this parser is strict in that regard.
+	if h > 24 {
+		return time.Time{}, fmt.Errorf("hours exceeds 24")
 	}
 	mn, err := strconv.Atoi(string(minParts))
 	if err != nil {
 		fmt.Println("error", err)
 		return time.Time{}, nil
 	}
-	// Look for incorrect number of minutes
+
+	// Look for incorrect number of minutes. Go will just roll the hour value
+	// etc. over if you do this but so far this parser is strict in that regard.
 	if mn > 59 {
 		return time.Time{}, fmt.Errorf("minutes exceeds 59")
 	}
@@ -654,38 +680,68 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		fmt.Println("error", err)
 		return time.Time{}, nil
 	}
-	// Look for incorrect number of seconds
+
+	// Look for incorrect number of seconds. 60 seconds is the case with leap
+	// second. The Go time library will roll over the second to zero and the
+	// minute to the next minute if the value is 60.
 	if s > 60 {
 		return time.Time{}, fmt.Errorf("seconds exceeds 60")
 	}
+
+	// hour 24 equivalent to hour 00
+	if h == 24 {
+		if mn != 0 || s != 0 {
+			return time.Time{}, fmt.Errorf("hour is 24 but minute and/or second not 0 ")
+		}
+
+		// Have to double check this logic
+		// Day incremented by 1. This is oddball but OK.
+		// 1995-02-04 24:00 = 1995-02-05 00:00
+		// Go should roll this over when converted to timestamp if it exceeds the max
+		// https://www.cl.cam.ac.uk/~mgk25/iso-time.html
+		d = d + 1
+	}
+
+	// Handle subseconds if that slice is nonempty
+	var ss int = 0
 	if len(subsecParts) > 0 {
 		ss, err = strconv.Atoi(string(subsecParts))
 		if err != nil {
 			fmt.Println("error", err)
 			return time.Time{}, nil
 		}
-		// Calculate subseconds in terms of nanosecond
+		// Calculate subseconds in terms of nanosecond if the length is less
+		// than the full length for nanoseconds since that is what the time.Date
+		// function is expecting.
 		if len(subsecParts) < subsecLen {
+			// 10^ whatever extra decimal place count is missing from 9
 			ss = int(float64(ss) * (math.Pow(10, (float64(subsecLen) - float64(len(subsecParts))))))
 		}
 	}
 
-	// Handle offset no matter what
+	// Handle offset no matter what. We have above ensured that hour and minute
+	// parts both take up 2 of the 4 runes in the zoneParts slice.
 	offsetH, err := strconv.Atoi(string(zoneParts[0:2]))
 	if err != nil {
 		return time.Time{}, err
 	}
-	offsetM, err := strconv.Atoi(string(zoneParts[2 : len(zoneParts)-1]))
+	offsetM, err := strconv.Atoi(string(zoneParts[2:]))
 
-	offset := time.Duration(float64(offsetH)*float64(time.Hour) + float64(offsetM)*float64(time.Minute))
-	if err != nil {
-		return time.Time{}, err
+	var offset time.Duration
+
+	// Calculate offset duration in nanoseconds from UTC.
+	// e.g. 0730 is
+	//   7 x nanoseconds per hour plus
+	//   30 x nanoseconds per minute
+	// Save a tiny amount of processing for hour and minute zero offset
+	if offsetH != 0 || offsetM != 0 {
+		offset = time.Duration(float64(offsetH)*float64(time.Hour) + float64(offsetM)*float64(time.Minute))
+		if err != nil {
+			return time.Time{}, err
+		}
 	}
 
-	// When iterating is complete offsetFound is set to false if no zone offset
-	// was in the timestamp.
-	// if offsetFound == true {
-	// nanoseconds offset would be 0 for UTC.
+	// Create timestamp based on parts with proper offsset
 	if offset.Nanoseconds() == 0 {
 		t = time.Date(y, time.Month(m), d, h, mn, s, int(ss), time.UTC)
 	} else {
@@ -698,7 +754,13 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		} else {
 			t = t.Add(offset)
 		}
+		// Standardize to UTC
+		t = t.In(time.UTC)
 	}
 
+	// if h == 24 {
+	// 	fmt.Println(t)
+	// }
+	// A UTC standardized time after being offset to incoming zone if necessary
 	return t, nil
 }
