@@ -346,14 +346,27 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 	timeStr = strings.TrimSpace(timeStr)
 	original := timeStr
 
-	t, err := ParseISOTimestamp(timeStr, location)
-	// t, err := lex.ParseInLocation([]byte(timeStr), location)
-	if err == nil {
-		return t, nil
-		// return t.In(time.UTC), nil
+	isTS := false
+	if reDigits.MatchString(timeStr) {
+		// A 20060101 date will have 10 digits
+		// A 20060102060708 timestamp will have 14 digits
+		// A Unix timetamp will have 10 digits
+		// A Unix nanosecond timestamp will have 19 digits
+		l := len(timeStr)
+		if l != 8 && l != 14 {
+			isTS = true
+		}
 	}
 
-	t, err = ParseUnixTS(timeStr)
+	if isTS == false {
+		t, err := ParseISOTimestamp(timeStr, location)
+		// t, err := lex.ParseInLocation([]byte(timeStr), location)
+		if err == nil {
+			return t, nil
+		}
+	}
+
+	t, err := ParseUnixTS(timeStr)
 	if err == nil {
 		return t.In(location), nil
 	}
@@ -478,23 +491,23 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	var t time.Time
 
 	// Define sections
-	type section string
-	var currentSection section = ""
+	// type section int
+	var currentSection int = 0
+	var emptySection int = 0
 
 	// defined as section type. This is not a guarantee of not accidentally
 	// comparing to another string variable but it does help define here instead
 	// of using string literals later.
 	const (
-		emptySection     section = ""
-		yearSection      section = "YEAR"
-		monthSection     section = "MONTH"
-		daySection       section = "DAY"
-		hourSection      section = "HOUR"
-		minuteSection    section = "MINUTE"
-		secondSection    section = "SECOND"
-		subsecondSection section = "SUBSECOND"
-		zoneSection      section = "ZONE"
-		afterSection     section = "AFTER"
+		yearSection = iota + 1
+		monthSection
+		daySection
+		hourSection
+		minuteSection
+		secondSection
+		subsecondSection
+		zoneSection
+		afterSection
 	)
 
 	// Define required lengths for sections. Used quite a bit to both stop
@@ -629,6 +642,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			// notAllocated = notAllocated + 1
 			unparsed = unparsed + string(orig)
 		}
+		// fmt.Println("current section", currentSection)
 	}
 
 	// If we've found characters not allocated, error.

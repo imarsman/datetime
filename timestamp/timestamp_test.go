@@ -85,23 +85,24 @@ func TestParse(t *testing.T) {
 
 	estDST, err := timestamp.ParseInUTC("2006-07-02T15:04:05.000+00:00")
 	is.NoErr(err)
-	estST = estDST.In(est)
-	offsetH, offsetM, err = timestamp.OffsetForLocation(estST.Year(), estST.Month(), estST.Day(), est.String())
+	estDST = estDST.In(est)
+	offsetH, offsetM, err = timestamp.OffsetForLocation(estDST.Year(), estDST.Month(), estDST.Day(), est.String())
 	is.NoErr(err)
-	estDSTOffsetDur := timestamp.OffsetDuration(offsetH, offsetM)
+	estDSTOffset := timestamp.OffsetDuration(offsetH, offsetM)
 
 	mstST, err := timestamp.ParseInUTC("2006-07-02T15:04:05.000+00:00")
 	is.NoErr(err)
 	mstST = mstST.In(mst)
 	offsetH, offsetM, err = timestamp.OffsetForLocation(mstST.Year(), mstST.Month(), mstST.Day(), mst.String())
 	is.NoErr(err)
-	mstSTOffset := timestamp.OffsetDuration(offsetH, offsetM)
+	mstOffset := timestamp.OffsetDuration(offsetH, offsetM)
 
 	start := time.Now()
 
 	// It is possible to have a string which is just digits that will be parsed
 	// as a timestamp, incorrectly.
-	t.Log(timestamp.ParseInUTC("2006010247"))
+	_, err = timestamp.ParseInUTC("2006010247")
+	is.NoErr(err)
 
 	// Get a unix timestamp we should not parse
 	_, err = timestamp.ParseInUTC("1")
@@ -114,12 +115,24 @@ func TestParse(t *testing.T) {
 	var sent, tStr string
 	var res time.Time
 	var resOffset, defOffset time.Duration
+	is.True(sent == "")
+	is.True(tStr == "")
+	is.True(res == time.Time{})
 
+	// This could be parsed as ISO-8601
 	sent, tStr, res, resOffset, defOffset = checkDate(t, fmt.Sprint(unixBase.UnixNano()), time.UTC)
-	t.Log(sent, tStr, res, resOffset, defOffset)
+	is.Equal(resOffset, defOffset)
+	// UTC timestamp stayed UTC
+	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, fmt.Sprint(unixBase.Unix()), time.UTC)
 	is.Equal(resOffset, defOffset)
+	// UTC timestamp converted to MST
+	is.Equal(utcOffset, resOffset)
+
+	sent, tStr, res, resOffset, defOffset = checkDate(t, fmt.Sprint(unixBase.Unix()), mst)
+	is.Equal(resOffset, defOffset)
+	is.Equal(mstOffset, resOffset)
 
 	// Handling of a leap second. The minute value rolls over to the next minute
 	// when the second value is 60.
@@ -129,292 +142,393 @@ func TestParse(t *testing.T) {
 	// Should be offset corresponding to Mountain Standard Time
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150460-0700", mst)
 	is.Equal(resOffset, defOffset)
+	is.Equal(mstOffset, resOffset)
 
 	// Should be offset corresponding to Eastern Standard time
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102240000-0500", est)
-	is.Equal(estSTOffset, defOffset)
+	is.Equal(resOffset, defOffset)
+	// Result offset is EST
+	is.Equal(estSTOffset, resOffset)
 
 	// Should be offset corresponding to Estern Daylight Savings Time
-	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060702240000-0500", est)
-	is.Equal(estDSTOffsetDur, defOffset)
+	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060702240000-0400", est)
+	// Is DST
+	is.Equal(estDSTOffset, resOffset)
 
 	// Short ISO-8601 timestamps with numerical zone offsets
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150405-0700", time.UTC)
 	is.True(resOffset != defOffset)
+	// Result is MST
+	is.Equal(mstOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150405-0700", time.UTC)
 	is.True(resOffset != defOffset)
+	// Result is MST
+	is.Equal(mstOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150405-07", time.UTC)
 	is.True(resOffset != defOffset)
+	// Result is MST
+	is.Equal(mstOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150405.000+0000", time.UTC)
 	is.Equal(utcOffset, defOffset)
+	// Result is UTC
+	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150405.000-0000", time.UTC)
 	is.Equal(utcOffset, defOffset)
+	// Result is UTC
+	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150405.000-0700", time.UTC)
 	is.True(resOffset != defOffset)
+	// Result is MST
+	is.Equal(mstOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150405.000+0700", time.UTC)
 	is.True(resOffset != defOffset)
+	// Result is not MST
+	is.True(mstOffset != resOffset)
+	// Result is UTC+07:00
+	d, err := time.ParseDuration("7h")
+	is.NoErr(err)
+	is.True(resOffset == d)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150405.000000-0700", time.UTC)
 	is.True(resOffset != defOffset)
+	// Result is MST
+	is.Equal(mstOffset, resOffset)
+
+	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150405.000000+0330", time.UTC)
+	is.True(resOffset != defOffset)
+	// Result is UTC+03:30
+	d, err = time.ParseDuration("3h30m")
+	is.NoErr(err)
+	is.True(resOffset == d)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150405.999999999-0700", time.UTC)
 	is.True(resOffset != defOffset)
+	// Result is MST
+	is.Equal(mstOffset, resOffset)
 
 	// Long ISO-8601 timestamps with numerical zone offsets
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02T15:04:05-07:00", time.UTC)
 	is.True(resOffset != defOffset)
+	// Result is MST
+	is.Equal(mstOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02T15:04:05-07", time.UTC)
 	is.True(resOffset != defOffset)
+	// Result is MST
+	is.Equal(mstOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02T15:04:05.000-07:00", time.UTC)
 	is.True(resOffset != defOffset)
+	// Result is MST
+	is.Equal(mstOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02T15:04:05.000-07", time.UTC)
 	is.True(resOffset != defOffset)
+	// Result is MST
+	is.Equal(mstOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02T15:04:05.000000-07:00", time.UTC)
 	is.True(resOffset != defOffset)
+	// Result is MST
+	is.Equal(mstOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02T15:04:05.001000-07", time.UTC)
 	is.True(resOffset != defOffset)
+	// Result is MST
+	is.Equal(mstOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02T15:04:05.001000000-07:00", time.UTC)
 	is.True(resOffset != defOffset)
+	// Result is MST
+	is.Equal(mstOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02T15:04:05.999999999-07", time.UTC)
 	is.True(resOffset != defOffset)
+	// Result is MST
+	is.Equal(mstOffset, resOffset)
 
 	// Short  ISO-8601 timestamps with UTC zone offsets
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150405Z", time.UTC)
 	is.Equal(utcOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150405.000Z", time.UTC)
 	is.Equal(utcOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150405.000000Z", time.UTC)
 	is.Equal(utcOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150405.000000000Z", time.UTC)
 	is.Equal(utcOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150405.001000000Z", time.UTC)
 	is.Equal(utcOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150405.000100000Z", time.UTC)
 	is.Equal(utcOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150405.999999999Z", time.UTC)
 	is.Equal(utcOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	// Long date time with UTC zone offsets
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02T15:04:05Z", time.UTC)
 	is.Equal(utcOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02T15:04:05.000Z", time.UTC)
 	is.Equal(utcOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02T15:04:05.000000Z", time.UTC)
 	is.Equal(utcOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02T15:04:05.999999999Z", time.UTC)
 	is.Equal(utcOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	// Just in case
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02 15-04-05", time.UTC)
 	is.Equal(utcOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102150405", time.UTC)
 	is.Equal(utcOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	// Short ISO-8601 timestamps with no zone offset. Assume UTC.
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150405", time.UTC)
 	is.Equal(utcOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150405.000", time.UTC)
 	is.Equal(utcOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150405.000000", time.UTC)
 	is.Equal(utcOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102T150405.999999999", time.UTC)
 	is.Equal(utcOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	// SQL
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02 22:04:05", time.UTC)
 	is.Equal(utcOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	// MST is -0700 from UTC, so UTC will be 7 hours ahead
 	// Should be offset corresponding to Mountain Standard Time
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02 22:04:05", mst)
 	is.Equal(resOffset, defOffset)
-	is.Equal(mstSTOffset, resOffset)
+	// Result is MST
+	is.Equal(mstOffset, resOffset)
 
 	// MST is -0500 from UTC, so UTC will be 5 hours ahead
 	// Should be offset corresponding to Eastern Daylight Savings Time
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02 22:04:05", est)
 	is.Equal(resOffset, defOffset)
+	// Result is EST
 	is.Equal(estSTOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02 22:04:05 -00", time.UTC)
 	is.Equal(resOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	// The input has a timestamp so EST will not be applied
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02 22:04:05 -00", est)
 	is.True(resOffset != defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02 22:04:05 +00", time.UTC)
 	is.Equal(resOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02 22:04:05 -00:00", time.UTC)
 	is.Equal(resOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02 22:04:05 +00:00", time.UTC)
 	is.Equal(resOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	// Hopefully less likely to be found. Assume UTC.
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102", time.UTC)
 	is.Equal(resOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02", time.UTC)
 	is.Equal(resOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006/01/02", time.UTC)
 	is.Equal(resOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "01/02/2006", time.UTC)
 	is.Equal(resOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "1/2/2006", time.UTC)
 	is.Equal(resOffset, defOffset)
+	// Result is UTC
 	is.Equal(utcOffset, resOffset)
 
 	// Weird ones with improper separators
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02T15-04-05-0700", time.UTC)
 	is.True(resOffset != defOffset)
-	is.Equal(resOffset, mstSTOffset)
+	// Result is MST
+	is.Equal(resOffset, mstOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02T15-04-05.000-0700", time.UTC)
 	is.True(resOffset != defOffset)
-	is.Equal(resOffset, mstSTOffset)
+	// Result is MST
+	is.Equal(resOffset, mstOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02T15-04-05.000000-0700", time.UTC)
 	is.True(resOffset != defOffset)
-	is.Equal(resOffset, mstSTOffset)
+	// Result is MST
+	is.Equal(resOffset, mstOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02T15-04-05.999999999-0700", time.UTC)
 	is.True(resOffset != defOffset)
-	is.Equal(resOffset, mstSTOffset)
+	// Result is MST
+	is.Equal(resOffset, mstOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02T15-04-05-07:00", time.UTC)
 	is.True(resOffset != defOffset)
-	is.Equal(resOffset, mstSTOffset)
+	// Result is MST
+	is.Equal(resOffset, mstOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02T15-04-05.000-07:00", time.UTC)
 	is.True(resOffset != defOffset)
-	is.Equal(resOffset, mstSTOffset)
+	// Result is MST
+	is.Equal(resOffset, mstOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02T15-04-05.000000-07:00", time.UTC)
 	is.True(resOffset != defOffset)
-	is.Equal(resOffset, mstSTOffset)
+	// Result is MST
+	is.Equal(resOffset, mstOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02T15-04-05.999999999-07:00", time.UTC)
 	is.True(resOffset != defOffset)
-	is.Equal(resOffset, mstSTOffset)
+	// Result is MST
+	is.Equal(resOffset, mstOffset)
 
 	// RFC7232 - used in HTTP protocol
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "Mon, 02 Jan 2006 15:04:05 GMT", time.UTC)
 	is.Equal(resOffset, defOffset)
+	// Result is MST
 	is.Equal(utcOffset, resOffset)
 
 	// RFC1123Z
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", mst)
-	is.Equal(mstSTOffset, resOffset)
+	is.Equal(mstOffset, resOffset)
+	// Result is MST
 	is.Equal(resOffset, defOffset)
 
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "Mon, 02 Jan 2006 15:04:05", est)
 	is.Equal(estSTOffset, resOffset)
+	// Result is EST
 	is.Equal(resOffset, defOffset)
 
 	// RFC822Z
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "02 Jan 06 15:04 -0700", time.UTC)
-	is.Equal(mstSTOffset, resOffset)
+	is.Equal(mstOffset, resOffset)
+	// Result is MST
 	is.True(resOffset != defOffset)
 
 	// Just in case
 	// Will be offset 7 hours to get UTC
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02 15-04-05", mst)
-	is.Equal(mstSTOffset, resOffset)
+	is.Equal(mstOffset, resOffset)
+	// Result is MST
 	is.Equal(resOffset, defOffset)
 
 	// Will be offset 7 hours to get UTC
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102150405", mst)
-	is.Equal(mstSTOffset, resOffset)
+	is.Equal(mstOffset, resOffset)
+	// Result is MST
 	is.Equal(resOffset, defOffset)
 
 	// Try modifying zone
 	// Will be offset 7 hours to get UTC
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", mst)
-	is.Equal(mstSTOffset, resOffset)
+	is.Equal(mstOffset, resOffset)
+	// Result is MST
 	is.Equal(resOffset, defOffset)
 
 	// Will be offset 7 hours to get UTC
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02 15-04-05", mst)
-	is.Equal(mstSTOffset, resOffset)
+	is.Equal(mstOffset, resOffset)
+	// Result is MST
 	is.Equal(resOffset, defOffset)
 
 	// Try modifying zone
 	// Will be offset 5 hours to get UTC
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0700", est)
 	is.True(resOffset != defOffset)
-	is.Equal(mstSTOffset, resOffset)
+	// Result is MST
+	is.Equal(mstOffset, resOffset)
 
 	// Will be offset 5 hours to get UTC
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "2006-01-02 15-04-05", est)
 	is.Equal(estSTOffset, resOffset)
+	// Result is EST
 	is.Equal(resOffset, defOffset)
 
 	// EST not used because a different offset is in the timestamp
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "Mon, 02 Jan 2006 15:04:05 -0600", mst)
 	is.True(resOffset != defOffset)
+	// Result is UTC-06:00
+	d, err = time.ParseDuration("-6h")
+	is.NoErr(err)
+	is.True(resOffset == d)
 
 	// RFC822Z
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "02 Jan 06 15:04 -0700", est)
 	is.True(resOffset != defOffset)
-	is.Equal(mstSTOffset, resOffset)
+	is.Equal(mstOffset, resOffset)
 
 	// Just in case
 	// Will be offset 5 hours to get UTC
