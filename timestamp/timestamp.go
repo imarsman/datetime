@@ -490,14 +490,12 @@ func StartTimeIsBeforeEndTime(t1 time.Time, t2 time.Time) bool {
 func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, error) {
 	var t time.Time
 
-	// Define sections
-	// type section int
+	// Define sections that can change.
 	var currentSection int = 0
 	var emptySection int = 0
 
-	// defined as section type. This is not a guarantee of not accidentally
-	// comparing to another string variable but it does help define here instead
-	// of using string literals later.
+	// Defined sections. Use iota since the incrementing values correspond to
+	// the incremental section processing.
 	const (
 		yearSection = iota + 1
 		monthSection
@@ -514,27 +512,23 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// allocating to a timestamp part and to ensure that parts are fully
 	// allocated.
 	const (
-		yearLen   int = 4
-		monLen    int = 2
-		dayLen    int = 2
-		hourLen   int = 2
-		minLen    int = 2
-		secLen    int = 2
-		subsecLen int = 9
-		zoneLen   int = 4
+		yearMax      int = 4
+		monthMax     int = 2
+		dayMax       int = 2
+		hourMax      int = 2
+		minuteMax    int = 2
+		secondMax    int = 2
+		subsecondMax int = 9
+		zoneMax      int = 4
 	)
 
 	// Define whether offset is positive for later offset calculation.
 	var offsetPositive bool = false
 
 	// Define the varous part to hold values for year, month, etc.
-	var yearParts []rune
-	var monParts []rune
-	var dayParts []rune
-	var hourParts []rune
-	var minParts []rune
-	var secParts []rune
-	var subsecParts []rune
+	var yearParts, monthParts, dayParts []rune
+	var hourParts, minuteParts, secondParts []rune
+	var subsecondParts []rune
 	var zoneParts []rune
 
 	var unparsed string
@@ -560,47 +554,47 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			switch currentSection {
 			case emptySection:
 				currentSection = yearSection
-				done := addIf(&yearParts, r, yearLen)
+				done := addIf(&yearParts, r, yearMax)
 				if done == true {
 					currentSection = monthSection
 				}
 			case yearSection:
-				done := addIf(&yearParts, r, yearLen)
+				done := addIf(&yearParts, r, yearMax)
 				if done == true {
 					currentSection = monthSection
 				}
 			case monthSection:
-				done := addIf(&monParts, r, monLen)
+				done := addIf(&monthParts, r, monthMax)
 				if done == true {
 					currentSection = daySection
 				}
 			case daySection:
-				done := addIf(&dayParts, r, dayLen)
+				done := addIf(&dayParts, r, dayMax)
 				if done == true {
 					currentSection = hourSection
 				}
 			case hourSection:
-				done := addIf(&hourParts, r, hourLen)
+				done := addIf(&hourParts, r, hourMax)
 				if done == true {
 					currentSection = minuteSection
 				}
 			case minuteSection:
-				done := addIf(&minParts, r, minLen)
+				done := addIf(&minuteParts, r, minuteMax)
 				if done == true {
 					currentSection = secondSection
 				}
 			case secondSection:
-				done := addIf(&secParts, r, secLen)
+				done := addIf(&secondParts, r, secondMax)
 				if done == true {
 					currentSection = subsecondSection
 				}
 			case subsecondSection:
-				done := addIf(&subsecParts, r, subsecLen)
+				done := addIf(&subsecondParts, r, subsecondMax)
 				if done == true {
 					currentSection = zoneSection
 				}
 			case zoneSection:
-				done := addIf(&zoneParts, r, zoneLen)
+				done := addIf(&zoneParts, r, zoneMax)
 				if done == true {
 					// We could exit here but we can continue to more accurately
 					// report bad date parts if we allow things to continue.
@@ -620,7 +614,6 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			if currentSection == subsecondSection {
 				offsetPositive = (r == '+')
 				currentSection = zoneSection
-				// fmt.Println("offset positive", offsetPositive)
 			}
 			// Valid but not useful for parsing
 		} else if unicode.ToUpper(r) == 'T' || r == ':' || r == '/' {
@@ -642,7 +635,6 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			// notAllocated = notAllocated + 1
 			unparsed = unparsed + string(orig)
 		}
-		// fmt.Println("current section", currentSection)
 	}
 
 	// If we've found characters not allocated, error.
@@ -653,38 +645,31 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	}
 
 	zoneFound := false
-	// Pad out the zone if not  length of four
-	if len(zoneParts) < zoneLen {
-		// A zone of length 1 or 3 is ambiguous
-		if len(zoneParts) == 1 || len(zoneParts) == 3 {
-			return time.Time{}, fmt.Errorf("Zone is of length %d wich is not enough to detect zone", len(zoneParts))
-		}
-		zoneFound = true
+	zoneLen := len(zoneParts)
 
-		// No zone found if there is nothing
-		if len(zoneParts) == 0 {
+	// If length < 4
+	if zoneLen < zoneMax {
+		zoneFound = true
+		if zoneLen == 1 || zoneLen == 3 {
+			return time.Time{}, fmt.Errorf("Zone is of length %d wich is not enough to detect zone", len(zoneParts))
+		} else if zoneLen == 0 {
 			zoneFound = false
-		}
-		count := zoneLen - len(zoneParts)
-		for i := 0; i < count; i++ {
-			zoneParts = append(zoneParts, '0')
+			zoneParts = append(zoneParts, '0', '0', '0', '0')
+		} else if zoneLen == 2 {
+			zoneParts = append(zoneParts, '0', '0')
 		}
 	} else {
 		zoneFound = true
 	}
 
-	if timeStr == "2006-01-02 22:04:05 -00" {
-
-	}
-
 	// Allow for just dates and convert to timestamp with zero valued time
 	// parts. Since we are fixing it here it will pass the next tests if nothing
 	// else is wrong or missing.
-	if len(hourParts) == 0 && len(minParts) == 0 && len(secParts) == 0 {
+	if len(hourParts) == 0 && len(minuteParts) == 0 && len(secondParts) == 0 {
 		for i := 0; i < 2; i++ {
 			hourParts = append(hourParts, '0')
-			minParts = append(minParts, '0')
-			secParts = append(secParts, '0')
+			minuteParts = append(minuteParts, '0')
+			secondParts = append(secondParts, '0')
 		}
 	}
 
@@ -694,66 +679,64 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// would take 2, minute would take 2, and second would get none. We are thus
 	// requiring that all date and time parts be fully allocated event if we
 	// can't tell where the problem started.
-	if len(yearParts) != yearLen {
-		return time.Time{}, fmt.Errorf("Input %s has year length %d needs %d", timeStr, len(yearParts), yearLen)
+	if len(yearParts) != yearMax {
+		return time.Time{}, fmt.Errorf("Input %s has year length %d needs %d", timeStr, len(yearParts), yearMax)
 	}
-	if len(monParts) != monLen {
-		return time.Time{}, fmt.Errorf("Input %s has month length %d needs %d", timeStr, len(monParts), monLen)
+	if len(monthParts) != monthMax {
+		return time.Time{}, fmt.Errorf("Input %s has month length %d needs %d", timeStr, len(monthParts), monthMax)
 	}
-	if len(dayParts) != dayLen {
-		return time.Time{}, fmt.Errorf("Input %s has day length %d needs %d", timeStr, len(dayParts), dayLen)
+	if len(dayParts) != dayMax {
+		return time.Time{}, fmt.Errorf("Input %s has day length %d needs %d", timeStr, len(dayParts), dayMax)
 	}
-	if len(hourParts) != hourLen {
-		return time.Time{}, fmt.Errorf("Input %s has hour length %d needs %d", timeStr, len(hourParts), hourLen)
+	if len(hourParts) != hourMax {
+		return time.Time{}, fmt.Errorf("Input %s has hour length %d needs %d", timeStr, len(hourParts), hourMax)
 	}
-	if len(minParts) != minLen {
-		return time.Time{}, fmt.Errorf("Input %s has minute length %d needs %d", timeStr, len(minParts), minLen)
+	if len(minuteParts) != minuteMax {
+		return time.Time{}, fmt.Errorf("Input %s has minute length %d needs %d", timeStr, len(minuteParts), minuteMax)
 	}
-	if len(secParts) != secLen {
-		return time.Time{}, fmt.Errorf("Input %s has second length %d needs %d", timeStr, len(secParts), secLen)
+	if len(secondParts) != secondMax {
+		return time.Time{}, fmt.Errorf("Input %s has second length %d needs %d", timeStr, len(secondParts), secondMax)
 	}
 
 	// We already only put digits into the parts so Atoi should be fine in all
 	// cases. The problem would have been with an incorrect number of digits in
 	// a part, which would have been caught above.
 
-	// All 4 digit years should be accepted
+	// Get year int value from yearParts rune slice
 	y, err := strconv.Atoi(string(yearParts))
 	if err != nil {
 		return time.Time{}, err
 	}
-	// We will verify month is is within bounds later
-	m, err := strconv.Atoi(string(monParts))
+	// Get month int value from monthParts rune slice
+	m, err := strconv.Atoi(string(monthParts))
 	if err != nil {
 		return time.Time{}, err
 	}
-
+	// Get day int value from dayParts rune slice
 	d, err := strconv.Atoi(string(dayParts))
 	if err != nil {
 		return time.Time{}, err
 	}
-
+	// Get hour int value from hourParts rune slice
 	h, err := strconv.Atoi(string(hourParts))
 	if err != nil {
 		return time.Time{}, err
 	}
-
-	mn, err := strconv.Atoi(string(minParts))
+	// Get minute int value from minParts rune slice
+	mn, err := strconv.Atoi(string(minuteParts))
 	if err != nil {
-		fmt.Println("error", err)
-		return time.Time{}, nil
+		return time.Time{}, err
 	}
-
-	s, err := strconv.Atoi(string(secParts))
+	// Get second int value from secondParts rune slice
+	s, err := strconv.Atoi(string(secondParts))
 	if err != nil {
-		fmt.Println("error", err)
-		return time.Time{}, nil
+		return time.Time{}, err
 	}
 
 	// Handle subseconds if that slice is nonempty
-	var subsec int = 0
-	if len(subsecParts) > 0 {
-		subsec, err = strconv.Atoi(string(subsecParts))
+	var subsecond int = 0
+	if len(subsecondParts) > 0 {
+		subsecond, err = strconv.Atoi(string(subsecondParts))
 		if err != nil {
 			fmt.Println("error", err)
 			return time.Time{}, nil
@@ -761,9 +744,9 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		// Calculate subseconds in terms of nanosecond if the length is less
 		// than the full length for nanoseconds since that is what the time.Date
 		// function is expecting.
-		if len(subsecParts) < subsecLen {
+		if len(subsecondParts) < subsecondMax {
 			// 10^ whatever extra decimal place count is missing from 9
-			subsec = int(float64(subsec) * (math.Pow(10, (float64(subsecLen) - float64(len(subsecParts))))))
+			subsecond = int(float64(subsecond) * (math.Pow(10, (float64(subsecondMax) - float64(len(subsecondParts))))))
 		}
 	}
 
@@ -779,7 +762,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 
 	// If no zone was found in scan use default location
 	if zoneFound == false {
-		t = time.Date(y, time.Month(m), d, h, mn, s, int(subsec), location)
+		t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), location)
 	} else {
 		// Evaluate offset from the timestamp value
 		offsetH, err := strconv.Atoi(string(zoneParts[0:2]))
@@ -797,19 +780,19 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 
 		// If offset is 00:00 use UTC
 		if offsetSec == 0 {
-			t = time.Date(y, time.Month(m), d, h, mn, s, int(subsec), time.UTC)
+			t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), time.UTC)
 		} else {
 			// The +/- in the timestamp was used to set offsetPositive
 			if offsetPositive == true {
 				// Create fixed zone with seconds offset
 				fixedZone := time.FixedZone("FIXEDZONE", offsetSec)
 				// Offset by the fixed offset zone created above
-				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsec), fixedZone)
+				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), fixedZone)
 			} else {
 				// Create fixed zone with negative seconds offset
 				fixedZone := time.FixedZone("FIXEDZONE", int(-offsetSec))
 				// Offset by the fixed offset zone created above
-				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsec), fixedZone)
+				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), fixedZone)
 			}
 		}
 	}
