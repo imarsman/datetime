@@ -40,7 +40,7 @@ func checkDate(t *testing.T, input string, location *time.Location) (
 
 	parsed = timestamp.ISO8601MsecInLocation(calculated, calculated.Location())
 
-	calculatedOffset = timestamp.OffsetDurationForTime(calculated)
+	calculatedOffset = timestamp.OffsetForTime(calculated)
 
 	inLoc := calculated.In(location)
 	defaultOffset, err = timestamp.OffsetForLocation(
@@ -641,7 +641,7 @@ var locations = []string{
 func TestOffsetForZones(t *testing.T) {
 	is := is.New(t)
 
-	var hours, minutes int
+	// var hours, minutes int
 	var err error
 	t1, err := timestamp.ParseInUTC("20200101T000000Z")
 	is.NoErr(err) // Timestamp should parse without error
@@ -652,9 +652,9 @@ func TestOffsetForZones(t *testing.T) {
 		for _, tNext := range []time.Time{t1, t2} {
 			d, err := timestamp.OffsetForLocation(tNext.Year(), tNext.Month(), tNext.Day(), location)
 			is.NoErr(err) // Should be no error getting offset for location
-			hours = int(d.Hours())
-			minutes = int(d.Minutes())
-			offset := timestamp.LocationOffsetString(hours, minutes)
+			// hours = int(d.Hours())
+			// minutes = int(d.Minutes())
+			offset := timestamp.LocationOffsetString(d)
 			fmt.Printf("zone %s time %v offset %s\n", location, tNext, offset)
 		}
 	}
@@ -676,10 +676,10 @@ func TestZoneTime(t *testing.T) {
 	for i := 0; i < count; i++ {
 		d, err = timestamp.OffsetForLocation(2006, 1, 1, zone)
 		is.NoErr(err) // There should not have been an error
-		_ = timestamp.LocationOffsetString(int(d.Hours()), int(d.Minutes()))
+		_ = timestamp.LocationOffsetString(d)
 	}
 
-	offset := timestamp.LocationOffsetStringDelimited(int(d.Hours()), int(d.Minutes()))
+	offset := timestamp.LocationOffsetStringDelimited(d)
 
 	t.Logf("start zone %s offset %s hours %d minutes %d offset %s error %v",
 		zone, offset, int(d.Hours()), int(d.Minutes()), offset, err)

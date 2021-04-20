@@ -141,11 +141,18 @@ func OffsetForLocation(year int, month time.Month, day int, location string) (d 
 	return time.Duration(offset) * time.Second, nil
 }
 
-// OffsetDurationForTime the duration of the offset from UTC
-func OffsetDurationForTime(t time.Time) time.Duration {
+// OffsetForTime the duration of the offset from UTC
+func OffsetForTime(t time.Time) time.Duration {
 	_, offset := t.Zone()
 
 	return time.Duration(offset) * time.Second
+}
+
+// OffsetHM get hours and minutes for location offset
+func OffsetHM(d time.Duration) (int, int) {
+	hours := int(d.Hours())
+	minutes := math.Abs(float64(int(d.Minutes()) % 60))
+	return hours, int(minutes)
 }
 
 // LocationOffsetString get an offset in HHMM format based on hours and minutes
@@ -156,8 +163,8 @@ func OffsetDurationForTime(t time.Time) time.Duration {
 //
 // For -5 hours and 30 minutes
 //  -0500
-func LocationOffsetString(hours, minutes int) string {
-	return locationOffsetString(hours, minutes, false)
+func LocationOffsetString(d time.Duration) string {
+	return locationOffsetString(d, false)
 }
 
 // LocationOffsetStringDelimited get an offset in HHMM format based on hours and
@@ -168,8 +175,8 @@ func LocationOffsetString(hours, minutes int) string {
 //
 // For -5 hours and 30 minutes
 //  -05:00
-func LocationOffsetStringDelimited(hours, minutes int) string {
-	return locationOffsetString(hours, minutes, true)
+func LocationOffsetStringDelimited(d time.Duration) string {
+	return locationOffsetString(d, true)
 }
 
 // OffsetString get an offset in HHMM format based on hours and minutes offset
@@ -180,7 +187,8 @@ func LocationOffsetStringDelimited(hours, minutes int) string {
 //
 // For -5 hours and 30 minutes
 //  -0500
-func locationOffsetString(hours, minutes int, delimited bool) string {
+func locationOffsetString(d time.Duration, delimited bool) string {
+	hours, minutes := OffsetHM(d)
 	if delimited == false {
 		return fmt.Sprintf("%+03d%02d", hours, minutes)
 	}
@@ -773,7 +781,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), fixedZone)
 			} else {
 				// Create fixed zone using negative seconds offset
-				fixedZone := time.FixedZone("FIXEDZONE", int(-offsetSec))
+				fixedZone := time.FixedZone("FIXEDZONE", -offsetSec)
 				// Offset by fixed offset zone
 				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), fixedZone)
 			}
