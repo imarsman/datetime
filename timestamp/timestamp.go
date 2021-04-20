@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 	"unicode"
-
-	"github.com/imarsman/datetime/gregorian"
 	// https://golang.org/pkg/time/tzdata/
 	/*
 		    Package tzdata provides an embedded copy of the timezone database.
@@ -146,6 +144,22 @@ func OffsetForLocation(year int, month time.Month, day int, location string) (ho
 	minutes = int(math.Abs(float64(m)))
 
 	return hours, minutes, nil
+}
+
+func OffsetForTime(t time.Time) (hours, minutes int, err error) {
+	// _, tzOffset := t.Zone()
+	_, offset := t.Zone()
+
+	d, err := time.ParseDuration(fmt.Sprint(offset) + "s")
+	hours = int(d.Hours())
+	m := int(int64(d.Minutes()) % 60)
+	minutes = int(math.Abs(float64(m)))
+
+	return hours, minutes, nil
+}
+
+func OffsetDuration(hours, minutes int) time.Duration {
+	return time.Duration(float64(hours)*float64(time.Hour) + float64(minutes)*float64(time.Minute))
 }
 
 // LocationOffsetString get an offset in HHMM format based on hours and minutes
@@ -294,12 +308,12 @@ func ParseUnixTS(timeStr string) (time.Time, error) {
 			// If it was a unix seconds timestamp n will be zero. If it was a
 			// nanoseconds timestamp there will be a nanoseconds portion that is not
 			// zero.
-			t := time.Unix(s, n).In(time.UTC)
+			t := time.Unix(s, n)
 
 			return t, nil
 		}
 	}
-	return time.Time{}, fmt.Errorf("Could not parse time %s", timeStr)
+	return time.Time{}, fmt.Errorf("Could not parse as UNIX timestamp %s", timeStr)
 }
 
 // ParseInUTC parse for all timestamps, defaulting to UTC, and return UTC zoned time
@@ -326,7 +340,8 @@ func ParseISOInLocation(timeStr string, location *time.Location) (time.Time, err
 }
 
 // ParseTimestampInLocation parse timestamp, defaulting to location if there is
-// no zone in the incoming timestamp, and return time ajusted to UTC.
+// no zone in the incoming timestamp, and return time ajusted to the incoming
+// location.
 func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time.Time, error) {
 	timeStr = strings.TrimSpace(timeStr)
 	original := timeStr
@@ -334,12 +349,13 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 	t, err := ParseISOTimestamp(timeStr, location)
 	// t, err := lex.ParseInLocation([]byte(timeStr), location)
 	if err == nil {
-		return t.In(time.UTC), nil
+		return t, nil
+		// return t.In(time.UTC), nil
 	}
 
 	t, err = ParseUnixTS(timeStr)
 	if err == nil {
-		return t.In(time.UTC), nil
+		return t.In(location), nil
 	}
 	// Check to see if the incoming data is a series of digits or digits with a
 	// single decimal place.
@@ -361,12 +377,12 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 		// If no zone in timestamp use location
 		t, err := time.ParseInLocation(format, original, location)
 		if err == nil {
-			t = t.In(time.UTC)
+			// t = t.In(time.UTC)
 			return t, nil
 		}
 	}
 
-	return time.Time{}, fmt.Errorf("Could not parse %s", timeStr)
+	return time.Time{}, fmt.Errorf("Could not parse as UNIX timestamp %s", timeStr)
 }
 
 // RFC7232 get format used for http headers
@@ -584,6 +600,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			if currentSection == subsecondSection {
 				offsetPositive = (r == '+')
 				currentSection = zoneSection
+				// fmt.Println("offset positive", offsetPositive)
 			}
 			// Valid but not useful for parsing
 		} else if unicode.ToUpper(r) == 'T' || r == ':' || r == '/' {
@@ -610,12 +627,29 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			strings.Join(strings.Split(unparsed, ""), ","), timeStr)
 	}
 
+	zoneFound := false
 	// Pad out the zone if not  length of four
 	if len(zoneParts) < zoneLen {
+		// A zone of length 1 or 3 is ambiguous
+		if len(zoneParts) == 1 || len(zoneParts) == 3 {
+			return time.Time{}, fmt.Errorf("Zone is of length %d wich is not enough to detect zone", len(zoneParts))
+		}
+		zoneFound = true
+
+		// No zone found if there is nothing
+		if len(zoneParts) == 0 {
+			zoneFound = false
+		}
 		count := zoneLen - len(zoneParts)
 		for i := 0; i < count; i++ {
 			zoneParts = append(zoneParts, '0')
 		}
+	} else {
+		zoneFound = true
+	}
+
+	if timeStr == "2006-01-02 22:04:05 -00" {
+
 	}
 
 	// Allow for just dates and convert to timestamp with zero valued time
@@ -669,75 +703,32 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return time.Time{}, err
 	}
 
-	// Look for out of bounds number for month
-	if m == 0 || m > 12 {
-		if m == 0 {
-			return time.Time{}, fmt.Errorf("month cannot be 00")
-		}
-		return time.Time{}, fmt.Errorf("month exceeds 12")
-	}
 	d, err := strconv.Atoi(string(dayParts))
 	if err != nil {
 		return time.Time{}, err
 	}
 
-	// Look for incorrect number of days in month for year
-	daysIn := gregorian.DaysIn(y, time.Month(m))
-	if d > daysIn {
-		return time.Time{}, fmt.Errorf("%d days in month %d incorrect for year %d", d, m, y)
-	}
 	h, err := strconv.Atoi(string(hourParts))
 	if err != nil {
 		return time.Time{}, err
 	}
 
-	// Look for incorrect number of hours. Go will just roll the day value etc.
-	// over if you do this but so far this parser is strict in that regard.
-	if h > 24 {
-		return time.Time{}, fmt.Errorf("hours exceeds 24")
-	}
 	mn, err := strconv.Atoi(string(minParts))
 	if err != nil {
 		fmt.Println("error", err)
 		return time.Time{}, nil
 	}
 
-	// Look for incorrect number of minutes. Go will just roll the hour value
-	// etc. over if you do this but so far this parser is strict in that regard.
-	if mn > 59 {
-		return time.Time{}, fmt.Errorf("minutes exceeds 59")
-	}
 	s, err := strconv.Atoi(string(secParts))
 	if err != nil {
 		fmt.Println("error", err)
 		return time.Time{}, nil
 	}
 
-	// Look for incorrect number of seconds. 60 seconds is the case with leap
-	// second. The Go time library will roll over the second to zero and the
-	// minute to the next minute if the value is 60.
-	if s > 60 {
-		return time.Time{}, fmt.Errorf("seconds exceeds 60")
-	}
-
-	// hour 24 equivalent to hour 00
-	if h == 24 {
-		if mn != 0 || s != 0 {
-			return time.Time{}, fmt.Errorf("hour is 24 but minute and/or second not 0 ")
-		}
-
-		// Have to double check this logic
-		// Day incremented by 1. This is oddball but OK.
-		// 1995-02-04 24:00 = 1995-02-05 00:00
-		// Go should roll this over when converted to timestamp if it exceeds the max
-		// https://www.cl.cam.ac.uk/~mgk25/iso-time.html
-		d = d + 1
-	}
-
 	// Handle subseconds if that slice is nonempty
-	var ss int = 0
+	var subsec int = 0
 	if len(subsecParts) > 0 {
-		ss, err = strconv.Atoi(string(subsecParts))
+		subsec, err = strconv.Atoi(string(subsecParts))
 		if err != nil {
 			fmt.Println("error", err)
 			return time.Time{}, nil
@@ -747,52 +738,43 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		// function is expecting.
 		if len(subsecParts) < subsecLen {
 			// 10^ whatever extra decimal place count is missing from 9
-			ss = int(float64(ss) * (math.Pow(10, (float64(subsecLen) - float64(len(subsecParts))))))
-		}
-	}
-
-	// Handle offset no matter what. We have above ensured that hour and minute
-	// parts both take up 2 of the 4 runes in the zoneParts slice.
-	offsetH, err := strconv.Atoi(string(zoneParts[0:2]))
-	if err != nil {
-		return time.Time{}, err
-	}
-	offsetM, err := strconv.Atoi(string(zoneParts[2:]))
-
-	var offset time.Duration
-
-	// Calculate offset duration in nanoseconds from UTC.
-	// e.g. 0730 is
-	//   7 x nanoseconds per hour plus
-	//   30 x nanoseconds per minute
-	// Save a tiny amount of processing for hour and minute zero offset
-	if offsetH != 0 || offsetM != 0 {
-		offset = time.Duration(float64(offsetH)*float64(time.Hour) + float64(offsetM)*float64(time.Minute))
-		if err != nil {
-			return time.Time{}, err
+			subsec = int(float64(subsec) * (math.Pow(10, (float64(subsecLen) - float64(len(subsecParts))))))
 		}
 	}
 
 	// Create timestamp based on parts with proper offsset
-	if offset.Nanoseconds() == 0 {
-		t = time.Date(y, time.Month(m), d, h, mn, s, int(ss), time.UTC)
+	// if offset.Nanoseconds() == 0 {
+	if zoneFound == false {
+		t = time.Date(y, time.Month(m), d, h, mn, s, int(subsec), location)
 	} else {
-		// Offset by the number of seconds defined by the HHMM offset in
-		// timestamp, either positive or negative
-		t = time.Date(y, time.Month(m), d, h, mn, s, int(ss), time.UTC)
-		if offsetPositive == true {
-			// fmt.Println("positive offset")
-			t = t.Add(-offset)
-		} else {
-			t = t.Add(offset)
+		offsetH, err := strconv.Atoi(string(zoneParts[0:2]))
+		if err != nil {
+			return time.Time{}, err
 		}
-		// Standardize to UTC
-		t = t.In(time.UTC)
+
+		offsetM, err := strconv.Atoi(string(zoneParts[2:]))
+		if err != nil {
+			return time.Time{}, err
+		}
+
+		offsetSec := offsetH*60*60 + offsetM*60
+
+		if offsetSec == 0 {
+			t = time.Date(y, time.Month(m), d, h, mn, s, int(subsec), time.UTC)
+		} else {
+			if offsetPositive == true {
+				fixedZone := time.FixedZone("FIXEDZONE", offsetSec)
+				// Offset by the number of seconds defined by the HHMM offset in
+				// timestamp, either positive or negative
+				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsec), fixedZone)
+			} else {
+				fixedZone := time.FixedZone("FIXEDZONE", int(-offsetSec))
+				// Offset by the number of seconds defined by the HHMM offset in
+				// timestamp, either positive or negative
+				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsec), fixedZone)
+			}
+		}
 	}
 
-	// if h == 24 {
-	// 	fmt.Println(t)
-	// }
-	// A UTC standardized time after being offset to incoming zone if necessary
 	return t, nil
 }
