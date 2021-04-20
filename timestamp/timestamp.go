@@ -480,32 +480,36 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// Define sections
 	type section string
 	var currentSection section = ""
-	const emptySection section = ""
 
 	// defined as section type. This is not a guarantee of not accidentally
 	// comparing to another string variable but it does help define here instead
 	// of using string literals later.
-	const yearSection section = "YEAR"
-	const monthSection section = "MONTH"
-	const daySection section = "DAY"
-	const hourSection section = "HOUR"
-	const minuteSection section = "MINUTE"
-	const secondSection section = "SECOND"
-	const subsecondSection section = "SUBSECOND"
-	const zoneSection section = "ZONE"
-	const afterSection section = "AFTER"
+	const (
+		emptySection     section = ""
+		yearSection      section = "YEAR"
+		monthSection     section = "MONTH"
+		daySection       section = "DAY"
+		hourSection      section = "HOUR"
+		minuteSection    section = "MINUTE"
+		secondSection    section = "SECOND"
+		subsecondSection section = "SUBSECOND"
+		zoneSection      section = "ZONE"
+		afterSection     section = "AFTER"
+	)
 
 	// Define required lengths for sections. Used quite a bit to both stop
 	// allocating to a timestamp part and to ensure that parts are fully
 	// allocated.
-	const yearLen int = 4
-	const monLen int = 2
-	const dayLen int = 2
-	const hourLen int = 2
-	const minLen int = 2
-	const secLen int = 2
-	const subsecLen int = 9
-	const zoneLen int = 4
+	const (
+		yearLen   int = 4
+		monLen    int = 2
+		dayLen    int = 2
+		hourLen   int = 2
+		minLen    int = 2
+		secLen    int = 2
+		subsecLen int = 9
+		zoneLen   int = 4
+	)
 
 	// Define whether offset is positive for later offset calculation.
 	var offsetPositive bool = false
@@ -610,9 +614,13 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			continue
 			// Zulu offset
 		} else if unicode.ToUpper(r) == 'Z' {
-			// define offset as zero for hours and minutes
-			zoneParts = []rune{'0', '0', '0', '0'}
-			break
+			if currentSection == zoneSection || currentSection == subsecondSection {
+				// define offset as zero for hours and minutes
+				zoneParts = []rune{'0', '0', '0', '0'}
+				break
+			} else {
+				unparsed = unparsed + string(orig)
+			}
 			// Ignore spaces
 		} else if unicode.IsSpace(r) {
 			continue
