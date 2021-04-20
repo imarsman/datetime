@@ -129,37 +129,23 @@ func init() {
 //  255 % 60 = 15 minutes
 //
 // If the zone is not recognized in Go's tzdata database an error will be returned.
-func OffsetForLocation(year int, month time.Month, day int, location string) (hours, minutes int, err error) {
+func OffsetForLocation(year int, month time.Month, day int, location string) (d time.Duration, err error) {
 	l, err := time.LoadLocation(location)
 	if err != nil {
-		return 0, 0, err
+		return 0, err
 	}
 
 	t := time.Date(year, month, day, 0, 0, 0, 0, l)
-	_, tzOffset := t.Zone()
-
-	d, err := time.ParseDuration(fmt.Sprint(tzOffset) + "s")
-	hours = int(d.Hours())
-	m := int(int64(d.Minutes()) % 60)
-	minutes = int(math.Abs(float64(m)))
-
-	return hours, minutes, nil
-}
-
-func OffsetForTime(t time.Time) (hours, minutes int, err error) {
-	// _, tzOffset := t.Zone()
 	_, offset := t.Zone()
 
-	d, err := time.ParseDuration(fmt.Sprint(offset) + "s")
-	hours = int(d.Hours())
-	m := int(int64(d.Minutes()) % 60)
-	minutes = int(math.Abs(float64(m)))
-
-	return hours, minutes, nil
+	return time.Duration(offset) * time.Second, nil
 }
 
-func OffsetDuration(hours, minutes int) time.Duration {
-	return time.Duration(float64(hours)*float64(time.Hour) + float64(minutes)*float64(time.Minute))
+// OffsetDurationForTime the duration of the offset from UTC
+func OffsetDurationForTime(t time.Time) time.Duration {
+	_, offset := t.Zone()
+
+	return time.Duration(offset) * time.Second
 }
 
 // LocationOffsetString get an offset in HHMM format based on hours and minutes
@@ -377,8 +363,6 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 	// format that is not ISO-8601 compliant, such as dashes where there should
 	// be colons and a space instead of a T to separate date and time.
 
-	// t, err = ParseISOTimestamp(timeStr, location)
-
 	// If only iso format patterns should be tried leave now
 	if isoOnly == true {
 		return time.Time{}, err
@@ -477,8 +461,8 @@ func ISO8601CompactMsecInLocation(t time.Time, location *time.Location) string {
 
 // StartTimeIsBeforeEndTime if time 1 is before time 2 return true, else false
 func StartTimeIsBeforeEndTime(t1 time.Time, t2 time.Time) bool {
-	t1 = t1.In(time.UTC)
-	t2 = t2.In(time.UTC)
+	// t1 = t1.In(time.UTC)
+	// t2 = t2.In(time.UTC)
 
 	return t2.Unix()-t1.Unix() > 0
 }
@@ -495,7 +479,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	var emptySection int = 0
 
 	// Defined sections. Use iota since the incrementing values correspond to
-	// the incremental section processing.
+	// the incremental section processing and give each const a separate value.
 	const (
 		yearSection = iota + 1
 		monthSection
@@ -738,8 +722,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	if len(subsecondParts) > 0 {
 		subsecond, err = strconv.Atoi(string(subsecondParts))
 		if err != nil {
-			fmt.Println("error", err)
-			return time.Time{}, nil
+			return time.Time{}, err
 		}
 		// Calculate subseconds in terms of nanosecond if the length is less
 		// than the full length for nanoseconds since that is what the time.Date
@@ -755,8 +738,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// don't worry about ensuring that the values of months, days, hours,
 	// minutes, etc. are being too large within their digit span. The Go time
 	// package increments higher values as appropriate. For instance a value of
-	// 60 seconds would force an addition to the minute and potentially all the
-	// way up to the year for 2020-12-31T59:59:60-0000.
+	// 60 seconds would force an addition to the minute and all the way up to
+	// the year for 2020-12-31T59:59:60-0000.
 
 	// Create timestamp based on parts with proper offsset
 
@@ -784,14 +767,14 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		} else {
 			// The +/- in the timestamp was used to set offsetPositive
 			if offsetPositive == true {
-				// Create fixed zone with seconds offset
+				// Create fixed zone using seconds offset
 				fixedZone := time.FixedZone("FIXEDZONE", offsetSec)
-				// Offset by the fixed offset zone created above
+				// Offset by fixed offset zone
 				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), fixedZone)
 			} else {
-				// Create fixed zone with negative seconds offset
+				// Create fixed zone using negative seconds offset
 				fixedZone := time.FixedZone("FIXEDZONE", int(-offsetSec))
-				// Offset by the fixed offset zone created above
+				// Offset by fixed offset zone
 				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), fixedZone)
 			}
 		}
