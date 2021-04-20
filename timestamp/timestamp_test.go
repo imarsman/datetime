@@ -37,19 +37,16 @@ func checkDate(t *testing.T, input string, location *time.Location) (
 		t.Logf("Got error on parsing %v", err)
 	}
 	is.NoErr(err)
-	// t.Log(calculated)
 
 	parsed = timestamp.ISO8601MsecInLocation(calculated, calculated.Location())
 
 	calculatedOffset = timestamp.OffsetDurationForTime(calculated)
 
 	inLoc := calculated.In(location)
-	d, err := timestamp.OffsetForLocation(
+	defaultOffset, err = timestamp.OffsetForLocation(
 		inLoc.Year(), inLoc.Month(), inLoc.Day(), inLoc.Location().String())
-	// defaultHours := d.Hours()
-	// defaultMinutes := d.Minutes()
-	// defaultOffset = timestamp.OffsetDuration(defaultHours, defaultMinutes)
-	defaultOffset = d
+	is.NoErr(err)
+
 	fmt.Printf("Input %s, calculated %v calculatedOffset %v defaultOffset %v\n", input, parsed, calculatedOffset, defaultOffset)
 
 	return input, parsed, calculated, calculatedOffset, defaultOffset
@@ -73,42 +70,26 @@ func TestParse(t *testing.T) {
 	utcST, err := timestamp.ParseInUTC("2006-01-02T15:04:05.000+00:00")
 	is.NoErr(err)
 	utcST = utcST.In(time.UTC)
-	d, err := timestamp.OffsetForLocation(utcST.Year(), utcST.Month(), utcST.Day(), time.UTC.String())
+	utcOffset, err := timestamp.OffsetForLocation(utcST.Year(), utcST.Month(), utcST.Day(), time.UTC.String())
 	is.NoErr(err)
-	// offsetH := d.Hours()
-	// offsetM := d.Minutes()
-	// utcOffset := timestamp.OffsetDuration(offsetH, offsetM)
-	utcOffset := d
 
 	estST, err := timestamp.ParseInUTC("2006-01-02T15:04:05.000+00:00")
 	is.NoErr(err)
 	estST = estST.In(est)
-	// offsetH, offsetM, err = timestamp.OffsetForLocation(estST.Year(), estST.Month(), estST.Day(), est.String())
-	// is.NoErr(err)
-	// estSTOffset := timestamp.OffsetDuration(offsetH, offsetM)
-	d, err = timestamp.OffsetForLocation(estST.Year(), estST.Month(), estST.Day(), est.String())
+	estSTOffset, err := timestamp.OffsetForLocation(estST.Year(), estST.Month(), estST.Day(), est.String())
 	is.NoErr(err)
-	estSTOffset := d
 
 	estDST, err := timestamp.ParseInUTC("2006-07-02T15:04:05.000+00:00")
 	is.NoErr(err)
 	estDST = estDST.In(est)
-	// offsetH, offsetM, err = timestamp.OffsetForLocation(estDST.Year(), estDST.Month(), estDST.Day(), est.String())
-	// is.NoErr(err)
-	// estDSTOffset := timestamp.OffsetDuration(offsetH, offsetM)
-	d, err = timestamp.OffsetForLocation(estDST.Year(), estDST.Month(), estDST.Day(), est.String())
+	estDSTOffset, err := timestamp.OffsetForLocation(estDST.Year(), estDST.Month(), estDST.Day(), est.String())
 	is.NoErr(err)
-	estDSTOffset := d
 
 	mstST, err := timestamp.ParseInUTC("2006-07-02T15:04:05.000+00:00")
 	is.NoErr(err)
 	mstST = mstST.In(mst)
-	// offsetH, offsetM, err = timestamp.OffsetForLocation(mstST.Year(), mstST.Month(), mstST.Day(), mst.String())
-	// is.NoErr(err)
-	// mstOffset := timestamp.OffsetDuration(offsetH, offsetM)
-	d, err = timestamp.OffsetForLocation(mstST.Year(), mstST.Month(), mstST.Day(), mst.String())
+	mstOffset, err := timestamp.OffsetForLocation(mstST.Year(), mstST.Month(), mstST.Day(), mst.String())
 	is.NoErr(err)
-	mstOffset := d
 
 	start := time.Now()
 
@@ -127,7 +108,8 @@ func TestParse(t *testing.T) {
 
 	var sent, tStr string
 	var res time.Time
-	var resOffset, defOffset time.Duration
+	var resOffset, defOffset, d time.Duration
+
 	is.True(sent == "")
 	is.True(tStr == "")
 	is.True(res == time.Time{})
@@ -572,7 +554,7 @@ func TestISOCompare(t *testing.T) {
 	for i := 0; i < count; i++ {
 		// Get a unix timestamp we should not parse
 		_, err := timestamp.ParseInUTC(ts)
-		is.NoErr(err) // Should parse with no error
+		is.NoErr(err) // Timestamp should parse with no error
 	}
 
 	t.Logf("Took %v to parse %s %d times", time.Since(start), ts, count)
@@ -580,11 +562,13 @@ func TestISOCompare(t *testing.T) {
 	start = time.Now()
 
 	ts = "20060102T150405-0700"
+
 	for i := 0; i < count; i++ {
 		// Get a unix timestamp we should not parse
 		_, err := timestamp.ParseInUTC(ts)
-		is.NoErr(err) // Should parse with no error
+		is.NoErr(err) // Timestamp should parse with no error
 	}
+
 	t.Logf("Took %v to parse %s %d times", time.Since(start), ts, count)
 }
 
@@ -598,8 +582,8 @@ func TestOrdering(t *testing.T) {
 	t2, err2 := timestamp.ParseInUTC("20201211T223900-0500")
 	is.NoErr(err2) // Should parse with no error
 
-	is.True(timestamp.StartTimeIsBeforeEndTime(t1, t2))  // Start before end
-	is.True(!timestamp.StartTimeIsBeforeEndTime(t2, t1)) // Start not before end
+	is.True(timestamp.StartTimeIsBeforeEndTime(t1, t2))  // Start is before end
+	is.True(!timestamp.StartTimeIsBeforeEndTime(t2, t1)) // Start is not before end
 }
 
 // Test how long it take to parse a timestamp 1,000 times
@@ -609,27 +593,31 @@ func TestTime(t *testing.T) {
 	var unixBase time.Time
 	var err error
 	count := 1000
+
 	defer track(runningtime(fmt.Sprintf("Time to parse timestamp %dx", count)))
+
 	for i := 0; i < count; i++ {
 		unixBase, err = timestamp.ParseInUTC("2006-01-02T15:04:05.000+00:00")
 	}
-	is.NoErr(err) // Should parse with no error
+
+	is.NoErr(err) // Timestamp should parse with no error
 	t.Logf("Timestamp %s", timestamp.ISO8601MsecUTC(unixBase))
 }
 
 func TestFormat(t *testing.T) {
 	is := is.New(t)
 	ts, err := timestamp.ParseInUTC("2006-01-02T15:04:05.000+00:00")
-	is.NoErr(err) // Should parse with no error
+	is.NoErr(err) // Timestamp should parse with no error
 
-	// var unixBase time.Time
 	var s string
-	// var err error
 	count := 1000
+
 	defer track(runningtime(fmt.Sprintf("Time to format timestamp %dx", count)))
+
 	for i := 0; i < count; i++ {
 		s = timestamp.ISO8601MsecUTC(ts)
 	}
+
 	t.Logf("Timestamp %s", s)
 }
 
@@ -656,16 +644,16 @@ func TestOffsetForZones(t *testing.T) {
 	var hours, minutes int
 	var err error
 	t1, err := timestamp.ParseInUTC("20200101T000000Z")
-	is.NoErr(err)
+	is.NoErr(err) // Timestamp should parse without error
 	t2, err := timestamp.ParseInUTC("20200701T000000Z")
-	is.NoErr(err)
+	is.NoErr(err) // Timestamp should parse without error
 	defer track(runningtime(fmt.Sprintf("Time to get offset information for %d locations/dates", len(locations)*2)))
 	for _, location := range locations {
 		for _, tNext := range []time.Time{t1, t2} {
 			d, err := timestamp.OffsetForLocation(tNext.Year(), tNext.Month(), tNext.Day(), location)
+			is.NoErr(err) // Should be no error getting offset for location
 			hours = int(d.Hours())
 			minutes = int(d.Minutes())
-			is.NoErr(err)
 			offset := timestamp.LocationOffsetString(hours, minutes)
 			fmt.Printf("zone %s time %v offset %s\n", location, tNext, offset)
 		}
@@ -678,20 +666,23 @@ func TestZoneTime(t *testing.T) {
 
 	zone := "Canada/Newfoundland"
 	count := 1000
+
 	defer track(runningtime(fmt.Sprintf("Time to get zone information %dx", count)))
-	// var utcTime time.Time
-	var hours, minutes int
+
+	// var hours, minutes int
+	var d time.Duration
 	var err error
+
 	for i := 0; i < count; i++ {
-		d, err := timestamp.OffsetForLocation(2006, 1, 1, zone)
-		is.NoErr(err)
-		hours = int(d.Hours())
-		minutes = int(d.Minutes())
-		_ = timestamp.LocationOffsetString(hours, minutes)
+		d, err = timestamp.OffsetForLocation(2006, 1, 1, zone)
+		is.NoErr(err) // There should not have been an error
+		_ = timestamp.LocationOffsetString(int(d.Hours()), int(d.Minutes()))
 	}
-	is.NoErr(err)
-	offset := timestamp.LocationOffsetStringDelimited(hours, minutes)
-	t.Logf("start zone %s offset %s hours %d minutes %d offset %s error %v", zone, offset, hours, minutes, offset, err)
+
+	offset := timestamp.LocationOffsetStringDelimited(int(d.Hours()), int(d.Minutes()))
+
+	t.Logf("start zone %s offset %s hours %d minutes %d offset %s error %v",
+		zone, offset, int(d.Hours()), int(d.Minutes()), offset, err)
 }
 
 // Test seprate call to parse a Unix timestamp.
@@ -707,15 +698,18 @@ func TestParseUnixTimestamp(t *testing.T) {
 	ts2 := fmt.Sprint(now.Unix())
 
 	count := 1000
+
 	defer track(runningtime(fmt.Sprintf("Time to parse two timestamps %dx", count*2)))
-	// var utcTime time.Time
+
 	for i := 0; i < count; i++ {
 		t1, err = timestamp.ParseUnixTS(ts1)
+		is.NoErr(err) // Should have been no error
 		t2, err = timestamp.ParseUnixTS(ts2)
+		is.NoErr(err) // Should have been no error
 	}
-	is.True(t1 != time.Time{})
-	is.True(t2 != time.Time{})
-	is.NoErr(err)
+
+	is.True(t1 != time.Time{}) // Should not be empty time
+	is.True(t2 != time.Time{}) // Should not be empty time
 }
 
 func TestParseLocation(t *testing.T) {
@@ -809,8 +803,9 @@ func BenchmarkUnixTimestampTest(b *testing.B) {
 			}
 		}
 	})
-	is.True(t1 != time.Time{})
-	is.NoErr(err)
+
+	is.True(t1 != time.Time{}) // Should not have an empty time
+	is.NoErr(err)              // Parsing should not have caused an error
 }
 
 // Run as
@@ -838,8 +833,9 @@ func BenchmarkUnixTimestampNanoTest(b *testing.B) {
 			}
 		}
 	})
-	is.True(t1 != time.Time{})
-	is.NoErr(err)
+
+	is.True(t1 != time.Time{}) // Should not have an empty time
+	is.NoErr(err)              // Parsing should not have caused an error
 }
 
 func BenchmarkIterativeISOTimestampTest(b *testing.B) {
@@ -859,17 +855,15 @@ func BenchmarkIterativeISOTimestampTest(b *testing.B) {
 			}
 		}
 	})
-	is.True(t1 != time.Time{})
-	is.NoErr(err)
+
+	is.True(t1 != time.Time{}) // Should not have an empty time
+	is.NoErr(err)              // Parsing should not have caused an error
 }
 func BenchmarkLexedISOTimestampTest(b *testing.B) {
 	is := is.New(b)
 
 	var err error
 	var t1 time.Time
-
-	// now := time.Now()
-	// ts1 := fmt.Sprint(now.UnixNano())
 
 	b.SetBytes(2)
 	b.ReportAllocs()
@@ -882,6 +876,7 @@ func BenchmarkLexedISOTimestampTest(b *testing.B) {
 			}
 		}
 	})
-	is.True(t1 != time.Time{})
-	is.NoErr(err)
+
+	is.True(t1 != time.Time{}) // Should not have an empty time
+	is.NoErr(err)              // Parsing should not have caused an error
 }
