@@ -505,9 +505,22 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		afterSection                // after - when done
 	)
 
-	// Define required lengths for sections. Used quite a bit to both stop
-	// allocating to a timestamp part and to ensure that parts are fully
-	// allocated.
+	// Define whether offset is positive for later offset calculation.
+
+	var offsetPositive bool = false // is offset from UTC positive
+
+	// Define the varous part to hold values for year, month, etc.
+
+	var (
+		yearParts      = make([]rune, 0, 4) // year digit parts
+		monthParts     = make([]rune, 0, 2) // month digit parts
+		dayParts       = make([]rune, 0, 2) // day digit parts
+		hourParts      = make([]rune, 0, 2) // hour digit parts
+		minuteParts    = make([]rune, 0, 2) // minute digit parts
+		secondParts    = make([]rune, 0, 2) // second digit parts
+		subsecondParts = make([]rune, 0, 9) // subsecond digit parts
+		zoneParts      = make([]rune, 0, 4) // zone parts
+	)
 
 	const (
 		yearMax      int = 4 // max length for year
@@ -520,39 +533,23 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		zoneMax      int = 4 // max length for zone
 	)
 
-	// Define whether offset is positive for later offset calculation.
-
-	var offsetPositive bool = false // is offset from UTC positive
-
-	// Define the varous part to hold values for year, month, etc.
-
-	var (
-		yearParts      []rune // year digit parts
-		monthParts     []rune // month digit parts
-		dayParts       []rune // day digit parts
-		hourParts      []rune // hour digit parts
-		minuteParts    []rune // minute digit parts
-		secondParts    []rune // second digit parts
-		subsecondParts []rune // subsecond digit parts
-		zoneParts      []rune // zone parts
-	)
-
 	var unparsed []string // set of unparsed runes and their positions
 
 	// A function to handle adding to a slice if it is not above capacity and
 	// flagging when it has reached capacity. Runs same speed when inline and is
 	// only used here. Return a flag indicating if a timestamp part has reached
 	// its max capacity.
-	var addIf = func(part *[]rune, add rune, max int) bool {
-		if len(*part) < max {
-			*part = append(*part, add)
+	var addIf = func(part []rune, add rune, max int) ([]rune, bool) {
+		if len(part) < max {
+			part = append(part, add)
 		}
-		if len(*part) == max {
-			return true
+		if len(part) == max {
+			return part, true
 		}
-		return false
+		return part, false
 	}
 
+	var done bool
 	// Loop through runes in time string and decide what to do with each.
 	for i, r := range timeStr {
 		orig := r
@@ -560,47 +557,47 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			switch currentSection {
 			case emptySection:
 				currentSection = yearSection
-				done := addIf(&yearParts, r, yearMax)
+				yearParts, done = addIf(yearParts, r, yearMax)
 				if done == true {
 					currentSection = monthSection
 				}
 			case yearSection:
-				done := addIf(&yearParts, r, yearMax)
+				yearParts, done = addIf(yearParts, r, yearMax)
 				if done == true {
 					currentSection = monthSection
 				}
 			case monthSection:
-				done := addIf(&monthParts, r, monthMax)
+				monthParts, done = addIf(monthParts, r, monthMax)
 				if done == true {
 					currentSection = daySection
 				}
 			case daySection:
-				done := addIf(&dayParts, r, dayMax)
+				dayParts, done = addIf(dayParts, r, dayMax)
 				if done == true {
 					currentSection = hourSection
 				}
 			case hourSection:
-				done := addIf(&hourParts, r, hourMax)
+				hourParts, done = addIf(hourParts, r, hourMax)
 				if done == true {
 					currentSection = minuteSection
 				}
 			case minuteSection:
-				done := addIf(&minuteParts, r, minuteMax)
+				minuteParts, done = addIf(minuteParts, r, minuteMax)
 				if done == true {
 					currentSection = secondSection
 				}
 			case secondSection:
-				done := addIf(&secondParts, r, secondMax)
+				secondParts, done = addIf(secondParts, r, secondMax)
 				if done == true {
 					currentSection = subsecondSection
 				}
 			case subsecondSection:
-				done := addIf(&subsecondParts, r, subsecondMax)
+				subsecondParts, done = addIf(subsecondParts, r, subsecondMax)
 				if done == true {
 					currentSection = zoneSection
 				}
 			case zoneSection:
-				done := addIf(&zoneParts, r, zoneMax)
+				zoneParts, done = addIf(zoneParts, r, zoneMax)
 				if done == true {
 					// We could exit here but we can continue to more accurately
 					// report bad date parts if we allow things to continue.
