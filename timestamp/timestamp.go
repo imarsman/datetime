@@ -483,7 +483,7 @@ func StartTimeIsBeforeEndTime(t1 time.Time, t2 time.Time) bool {
 // further steps to standardize to a specific zone offset.
 func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, error) {
 
-	var t time.Time // the time to build for output
+	// var t time.Time // the time to build for output
 
 	// Define sections that can change.
 
@@ -766,42 +766,38 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 
 	// If no zone was found in scan use default location
 	if zoneFound == false {
-		t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), location)
-	} else {
-		// Evaluate offset from the timestamp value
-		offsetH, err := strconv.Atoi(string(zoneParts[0:2]))
-		if err != nil {
-			return time.Time{}, err
-		}
-
-		offsetM, err := strconv.Atoi(string(zoneParts[2:]))
-		if err != nil {
-			return time.Time{}, err
-		}
-
-		// If offset is 00:00 use UTC
-		if offsetH == 0 && offsetM == 0 {
-			t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), time.UTC)
-		} else {
-			// The +/- in the timestamp was used to set offsetPositive
-			switch offsetPositive {
-			case true:
-				// Get location inline to save small amount of time
-				offsetSec := offsetH*60*60 + offsetM*60
-				loc := time.FixedZone("FIXED", offsetSec)
-
-				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), loc)
-			case false:
-				// Get location inline to save small amount of time
-				offsetSec := -offsetH*60*60 + offsetM*60
-				loc := time.FixedZone("FIXED", offsetSec)
-
-				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), loc)
-			}
-		}
+		return time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), location), nil
 	}
 
-	// Note that the time returned will have the zone offset of the incoming
-	// timestamp or the default passed in if there was no offset in the timestamp.
-	return t, nil
+	// Evaluate offset from the timestamp value
+	offsetH, err := strconv.Atoi(string(zoneParts[0:2]))
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	offsetM, err := strconv.Atoi(string(zoneParts[2:]))
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	// If offset is 00:00 use UTC
+	if offsetH == 0 && offsetM == 0 {
+		return time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), time.UTC), nil
+	}
+
+	// The +/- in the timestamp was used to set offsetPositive
+	switch offsetPositive {
+	case true:
+		// Get location inline to save small amount of time
+		offsetSec := offsetH*60*60 + offsetM*60
+		loc := time.FixedZone("FIXED", offsetSec)
+
+		return time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), loc), nil
+	default:
+		// Get location inline to save small amount of time
+		offsetSec := -offsetH*60*60 + offsetM*60
+		loc := time.FixedZone("FIXED", offsetSec)
+
+		return time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), loc), nil
+	}
 }
