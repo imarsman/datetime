@@ -482,16 +482,14 @@ func StartTimeIsBeforeEndTime(t1 time.Time, t2 time.Time) bool {
 // timestamp the incoming location will bue used. It is the responsibility of
 // further steps to standardize to a specific zone offset.
 func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, error) {
-
-	// var t time.Time // the time to build for output
-
 	// Define sections that can change.
 
 	var currentSection int = 0 // value for current section
 	var emptySection int = 0   // value for empty section
 
-	// Defined sections. Use iota since the incrementing values correspond to
-	// the incremental section processing and give each const a separate value.
+	// Define sections that are constant. Use iota since the incrementing values
+	// correspond to the incremental section processing and give each const a
+	// separate value.
 
 	const (
 		yearSection      = iota + 1 // year - four digits
@@ -509,7 +507,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 
 	var offsetPositive bool = false // is offset from UTC positive
 
-	// Define the varous part to hold values for year, month, etc.
+	// Define the varous part to hold values for year, month, etc. Make initial
+	// size 0 and capacity enough to avoid shuffling when appending.
 
 	var (
 		yearParts      = make([]rune, 0, 4) // year digit parts
@@ -538,7 +537,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// A function to handle adding to a slice if it is not above capacity and
 	// flagging when it has reached capacity. Runs same speed when inline and is
 	// only used here. Return a flag indicating if a timestamp part has reached
-	// its max capacity.
+	// its max capacity plus the modified slice to avoid issues due to appending.
 	var addIf = func(part []rune, add rune, max int) ([]rune, bool) {
 		if len(part) < max {
 			part = append(part, add)
@@ -549,7 +548,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return part, false
 	}
 
-	var done bool
+	var partFilled bool
+
 	// Loop through runes in time string and decide what to do with each.
 	for i, r := range timeStr {
 		orig := r
@@ -557,54 +557,54 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			switch currentSection {
 			case emptySection:
 				currentSection = yearSection
-				yearParts, done = addIf(yearParts, r, yearMax)
-				if done == true {
+				yearParts, partFilled = addIf(yearParts, r, yearMax)
+				if partFilled == true {
 					currentSection = monthSection
 				}
 			case yearSection:
-				yearParts, done = addIf(yearParts, r, yearMax)
-				if done == true {
+				yearParts, partFilled = addIf(yearParts, r, yearMax)
+				if partFilled == true {
 					currentSection = monthSection
 				}
 			case monthSection:
-				monthParts, done = addIf(monthParts, r, monthMax)
-				if done == true {
+				monthParts, partFilled = addIf(monthParts, r, monthMax)
+				if partFilled == true {
 					currentSection = daySection
 				}
 			case daySection:
-				dayParts, done = addIf(dayParts, r, dayMax)
-				if done == true {
+				dayParts, partFilled = addIf(dayParts, r, dayMax)
+				if partFilled == true {
 					currentSection = hourSection
 				}
 			case hourSection:
-				hourParts, done = addIf(hourParts, r, hourMax)
-				if done == true {
+				hourParts, partFilled = addIf(hourParts, r, hourMax)
+				if partFilled == true {
 					currentSection = minuteSection
 				}
 			case minuteSection:
-				minuteParts, done = addIf(minuteParts, r, minuteMax)
-				if done == true {
+				minuteParts, partFilled = addIf(minuteParts, r, minuteMax)
+				if partFilled == true {
 					currentSection = secondSection
 				}
 			case secondSection:
-				secondParts, done = addIf(secondParts, r, secondMax)
-				if done == true {
+				secondParts, partFilled = addIf(secondParts, r, secondMax)
+				if partFilled == true {
 					currentSection = subsecondSection
 				}
 			case subsecondSection:
-				subsecondParts, done = addIf(subsecondParts, r, subsecondMax)
-				if done == true {
+				subsecondParts, partFilled = addIf(subsecondParts, r, subsecondMax)
+				if partFilled == true {
 					currentSection = zoneSection
 				}
 			case zoneSection:
-				zoneParts, done = addIf(zoneParts, r, zoneMax)
-				if done == true {
+				zoneParts, partFilled = addIf(zoneParts, r, zoneMax)
+				if partFilled == true {
 					// We could exit here but we can continue to more accurately
 					// report bad date parts if we allow things to continue.
 					currentSection = afterSection
 				}
 			default:
-				unparsed = append(unparsed, string(orig)+"("+fmt.Sprint(i)+")")
+				unparsed = append(unparsed, string(orig)+"@"+fmt.Sprint(i)+"")
 			}
 		} else if r == '.' {
 			// There could be extraneous decimal characters.
@@ -628,22 +628,21 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 				zoneParts = []rune{'0', '0', '0', '0'}
 				break
 			} else {
-				unparsed = append(unparsed, string(orig)+"("+fmt.Sprint(i)+")")
+				unparsed = append(unparsed, string(orig)+"@"+fmt.Sprint(i)+"")
 			}
 			// Ignore spaces
 		} else if unicode.IsSpace(r) {
 			continue
 		} else {
 			// We haven't dealt with valid characters so prepare for erroor
-			unparsed = append(unparsed, string(orig)+"("+fmt.Sprint(i)+")")
+			unparsed = append(unparsed, string(orig)+"@"+fmt.Sprint(i)+"")
 		}
 	}
 
 	// If we've found characters not allocated, error.
 	if len(unparsed) > 0 {
 		return time.Time{}, fmt.Errorf(
-			"got unparsed caracters %s in input %s",
-			strings.Join(unparsed, ","), timeStr)
+			"got unparsed caracters %s in input %s", strings.Join(unparsed, ","), timeStr)
 	}
 
 	zoneFound := false        // has time zone been found
@@ -654,7 +653,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		zoneFound = true
 		// A zone with 1 or 3 characters is ambiguous
 		if zoneLen == 1 || zoneLen == 3 {
-			return time.Time{}, fmt.Errorf("Zone is of length %d wich is not enough to detect zone", len(zoneParts))
+			return time.Time{}, fmt.Errorf("Zone is of length %d wich is not enough to detect zone", zoneLen)
 			// With no zone assume UTC
 		} else if zoneLen == 0 {
 			zoneFound = false
@@ -707,41 +706,47 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// a part, which would have been caught above.
 
 	// Get year int value from yearParts rune slice
+	// Should not error
 	y, err := strconv.Atoi(string(yearParts))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get month int value from monthParts rune slice
+	// Should not error
 	m, err := strconv.Atoi(string(monthParts))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get day int value from dayParts rune slice
+	// Should not error
 	d, err := strconv.Atoi(string(dayParts))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get hour int value from hourParts rune slice
+	// Should not error
 	h, err := strconv.Atoi(string(hourParts))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get minute int value from minParts rune slice
+	// Should not error
 	mn, err := strconv.Atoi(string(minuteParts))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get second int value from secondParts rune slice
+	// Should not error
 	s, err := strconv.Atoi(string(secondParts))
 	if err != nil {
 		return time.Time{}, err
 	}
 
-	var subsecond int = 0 // default subsecond value is 0
+	var subsec int = 0 // default subsecond value is 0
 
 	// Handle subseconds if that slice is nonempty
 	if len(subsecondParts) > 0 {
-		subsecond, err = strconv.Atoi(string(subsecondParts))
+		subsec, err = strconv.Atoi(string(subsecondParts))
 		if err != nil {
 			return time.Time{}, err
 		}
@@ -750,7 +755,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		// function is expecting.
 		if len(subsecondParts) < subsecondMax {
 			// 10^ whatever extra decimal place count is missing from 9
-			subsecond = int(float64(subsecond) * (math.Pow(10, (float64(subsecondMax) - float64(len(subsecondParts))))))
+			subsec = int(float64(subsec) * (math.Pow(10, (float64(subsecondMax) - float64(len(subsecondParts))))))
 		}
 	}
 
@@ -766,7 +771,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 
 	// If no zone was found in scan use default location
 	if zoneFound == false {
-		return time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), location), nil
+		return time.Date(y, time.Month(m), d, h, mn, s, subsec, location), nil
 	}
 
 	// Evaluate offset from the timestamp value
@@ -783,7 +788,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 
 	// If offset is 00:00 use UTC
 	if offsetH == 0 && offsetM == 0 {
-		return time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), time.UTC), nil
+		return time.Date(y, time.Month(m), d, h, mn, s, subsec, time.UTC), nil
 	}
 
 	var offsetSec int
@@ -796,5 +801,5 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		offsetSec = -offsetH*60*60 + offsetM*60
 	}
 
-	return time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), time.FixedZone("FIXED", offsetSec)), nil
+	return time.Date(y, time.Month(m), d, h, mn, s, subsec, time.FixedZone("FixedZone", offsetSec)), nil
 }
