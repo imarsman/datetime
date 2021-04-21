@@ -485,50 +485,62 @@ func StartTimeIsBeforeEndTime(t1 time.Time, t2 time.Time) bool {
 // timestamp the incoming location will bue used. It is the responsibility of
 // further steps to standardize to a specific zone offset.
 func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, error) {
-	var t time.Time
+
+	var t time.Time // the time to build for output
 
 	// Define sections that can change.
-	var currentSection int = 0
-	var emptySection int = 0
+
+	var currentSection int = 0 // value for current section
+	var emptySection int = 0   // value for empty section
 
 	// Defined sections. Use iota since the incrementing values correspond to
 	// the incremental section processing and give each const a separate value.
+
 	const (
-		yearSection = iota + 1
-		monthSection
-		daySection
-		hourSection
-		minuteSection
-		secondSection
-		subsecondSection
-		zoneSection
-		afterSection
+		yearSection      = iota + 1 // year - four digits
+		monthSection                // month - 2 digits
+		daySection                  // day - 2 digits
+		hourSection                 // hour - 2 digits
+		minuteSection               // minute - 2 digits
+		secondSection               // second - 2 digits
+		subsecondSection            // subsecond 1-9 digits
+		zoneSection                 // zone +/-HHMM or Z
+		afterSection                // after - when done
 	)
 
 	// Define required lengths for sections. Used quite a bit to both stop
 	// allocating to a timestamp part and to ensure that parts are fully
 	// allocated.
+
 	const (
-		yearMax      int = 4
-		monthMax     int = 2
-		dayMax       int = 2
-		hourMax      int = 2
-		minuteMax    int = 2
-		secondMax    int = 2
-		subsecondMax int = 9
-		zoneMax      int = 4
+		yearMax      int = 4 // max length for year
+		monthMax     int = 2 // max length for month number
+		dayMax       int = 2 // max length for day number
+		hourMax      int = 2 // max length for hour number
+		minuteMax    int = 2 // max length for minute number
+		secondMax    int = 2 // max length for second number
+		subsecondMax int = 9 // max length for subsecond number
+		zoneMax      int = 4 // max length for zone
 	)
 
 	// Define whether offset is positive for later offset calculation.
-	var offsetPositive bool = false
+
+	var offsetPositive bool = false // is offset from UTC positive
 
 	// Define the varous part to hold values for year, month, etc.
-	var yearParts, monthParts, dayParts []rune
-	var hourParts, minuteParts, secondParts []rune
-	var subsecondParts []rune
-	var zoneParts []rune
 
-	var unparsed []string
+	var (
+		yearParts      []rune // year digit parts
+		monthParts     []rune // month digit parts
+		dayParts       []rune // day digit parts
+		hourParts      []rune // hour digit parts
+		minuteParts    []rune // minute digit parts
+		secondParts    []rune // second digit parts
+		subsecondParts []rune // subsecond digit parts
+		zoneParts      []rune // zone parts
+	)
+
+	var unparsed []string // set of unparsed runes and their positions
 
 	// A function to handle adding to a slice if it is not above capacity and
 	// flagging when it has reached capacity. Runs same speed when inline and is
@@ -598,7 +610,6 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 					currentSection = afterSection
 				}
 			default:
-
 				unparsed = append(unparsed, string(orig)+"("+fmt.Sprint(i)+")")
 			}
 		} else if r == '.' {
@@ -624,15 +635,12 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 				break
 			} else {
 				unparsed = append(unparsed, string(orig)+"("+fmt.Sprint(i)+")")
-				// unparsed = unparsed + string(orig)
 			}
 			// Ignore spaces
 		} else if unicode.IsSpace(r) {
 			continue
 		} else {
 			// We haven't dealt with valid characters so prepare for erroor
-			// notAllocated = notAllocated + 1
-			// unparsed = unparsed + string(orig)
 			unparsed = append(unparsed, string(orig)+"("+fmt.Sprint(i)+")")
 		}
 	}
@@ -644,21 +652,25 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			strings.Join(unparsed, ","), timeStr)
 	}
 
-	zoneFound := false
-	zoneLen := len(zoneParts)
+	zoneFound := false        // has time zone been found
+	zoneLen := len(zoneParts) // length of the zone found
 
 	// If length < 4
 	if zoneLen < zoneMax {
 		zoneFound = true
+		// A zone with 1 or 3 characters is ambiguous
 		if zoneLen == 1 || zoneLen == 3 {
 			return time.Time{}, fmt.Errorf("Zone is of length %d wich is not enough to detect zone", len(zoneParts))
+			// With no zone assume UTC
 		} else if zoneLen == 0 {
 			zoneFound = false
 			zoneParts = append(zoneParts, '0', '0', '0', '0')
+			// Zone of length 2 needs padding to set minutes
 		} else if zoneLen == 2 {
 			zoneParts = append(zoneParts, '0', '0')
 		}
 	} else {
+		// Zone is found. Used later when setting location
 		zoneFound = true
 	}
 
@@ -666,11 +678,9 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// parts. Since we are fixing it here it will pass the next tests if nothing
 	// else is wrong or missing.
 	if len(hourParts) == 0 && len(minuteParts) == 0 && len(secondParts) == 0 {
-		for i := 0; i < 2; i++ {
-			hourParts = append(hourParts, '0')
-			minuteParts = append(minuteParts, '0')
-			secondParts = append(secondParts, '0')
-		}
+		hourParts = append(hourParts, '0', '0')
+		minuteParts = append(minuteParts, '0', '0')
+		secondParts = append(secondParts, '0', '0')
 	}
 
 	// Error if any part does not contain enough characters. This could happen
@@ -733,8 +743,9 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return time.Time{}, err
 	}
 
+	var subsecond int = 0 // default subsecond value is 0
+
 	// Handle subseconds if that slice is nonempty
-	var subsecond int = 0
 	if len(subsecondParts) > 0 {
 		subsecond, err = strconv.Atoi(string(subsecondParts))
 		if err != nil {
@@ -779,16 +790,11 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), time.UTC)
 		} else {
 			// The +/- in the timestamp was used to set offsetPositive
-			if offsetPositive == true {
-				// Get fixed zone using hours and minutes offset
-				fixedZone := ZoneFromHM(offsetH, offsetM)
-				// Offset by fixed offset zone
-				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), fixedZone)
-			} else {
-				// Get fixed zone using negative hours and minutes offset
-				fixedZone := ZoneFromHM(-offsetH, offsetM)
-				// Offset by fixed offset zone
-				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), fixedZone)
+			switch offsetPositive {
+			case true:
+				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), ZoneFromHM(offsetH, offsetM))
+			case false:
+				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), ZoneFromHM(-offsetH, offsetM))
 			}
 		}
 	}
