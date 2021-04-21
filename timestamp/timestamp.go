@@ -97,18 +97,6 @@ func init() {
 	timeFormats = append(timeFormats, nonISOTimeFormats...)
 }
 
-// LocationForZone get a location from a named zone. Could be useful when
-// needint to supply a location when parsing.
-//
-// If the zone is not recognized in Go's tzdata database an error will be returned.
-// func LocationForZone(zone string) (*time.Location, error) {
-// 	location, err := time.LoadLocation(strings.TrimSpace(zone))
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return location, nil
-// }
-
 // OffsetForLocation get offset data for a named zone such a America/Tornto or EST
 // or MST. Based on date the offset for a zone can differ, with, for example, an
 // offset of -0500 for EST in the summer and -0400 for EST in the winter. This
@@ -129,31 +117,37 @@ func init() {
 //  255 % 60 = 15 minutes
 //
 // If the zone is not recognized in Go's tzdata database an error will be returned.
-func OffsetForLocation(year int, month time.Month, day int, location string) (d time.Duration, hours, minutes int, err error) {
+func OffsetForLocation(year int, month time.Month, day int, location string) (d time.Duration, err error) {
 	l, err := time.LoadLocation(location)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, err
 	}
 
 	t := time.Date(year, month, day, 0, 0, 0, 0, l)
-	d, hours, minutes = OffsetForTime(t)
-	// _, offset := t.Zone()
+	d = OffsetForTime(t)
 
-	return d, hours, minutes, nil
+	return d, nil
 }
 
 // OffsetForTime the duration of the offset from UTC
-func OffsetForTime(t time.Time) (d time.Duration, hours, minutes int) {
+func OffsetForTime(t time.Time) (d time.Duration) {
 	_, offset := t.Zone()
 
 	d = time.Duration(offset) * time.Second
-	hours, minutes = offsetHM(d)
 
-	return d, hours, minutes
+	return d
 }
 
-// offsetHM get hours and minutes for location offset
-func offsetHM(d time.Duration) (hours, minutes int) {
+// OffsetFromHM get fixed zone from hour and minute offset
+func OffsetFromHM(offsetH, offsetM int) *time.Location {
+	offsetSec := offsetH*60*60 + offsetM*60
+	o := time.FixedZone("FIXED", offsetSec)
+
+	return o
+}
+
+// OffsetHM get hours and minutes for location offset from UTC
+func OffsetHM(d time.Duration) (hours, minutes int) {
 	hours = int(d.Hours())
 	minutes = int(math.Abs(float64(int(d.Minutes()) % 60)))
 
@@ -193,7 +187,7 @@ func LocationOffsetStringDelimited(d time.Duration) string {
 // For -5 hours and 30 minutes
 //  -0500
 func locationOffsetString(d time.Duration, delimited bool) string {
-	hours, minutes := offsetHM(d)
+	hours, minutes := OffsetHM(d)
 	if delimited == false {
 		return fmt.Sprintf("%+03d%02d", hours, minutes)
 	}
@@ -772,21 +766,23 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		}
 
 		// Evaluate seconds of offset from UTC
-		offsetSec := offsetH*60*60 + offsetM*60
+		// offsetSec := offsetH*60*60 + offsetM*60
 
 		// If offset is 00:00 use UTC
-		if offsetSec == 0 {
+		if offsetH == 0 && offsetM == 0 {
 			t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), time.UTC)
 		} else {
 			// The +/- in the timestamp was used to set offsetPositive
 			if offsetPositive == true {
 				// Create fixed zone using seconds offset
-				fixedZone := time.FixedZone("FIXEDZONE", offsetSec)
+				fixedZone := OffsetFromHM(offsetH, offsetM)
+				// fixedZone := time.FixedZone("FIXEDZONE", offsetSec)
 				// Offset by fixed offset zone
 				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), fixedZone)
 			} else {
 				// Create fixed zone using negative seconds offset
-				fixedZone := time.FixedZone("FIXEDZONE", -offsetSec)
+				fixedZone := OffsetFromHM(-offsetH, offsetM)
+				// fixedZone := time.FixedZone("FIXEDZONE", -offsetSec)
 				// Offset by fixed offset zone
 				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), fixedZone)
 			}
