@@ -770,6 +770,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	}
 
 	// Evaluate offset from the timestamp value
+	// Error is unlikely
 	offsetH, err := strconv.Atoi(string(zoneParts[0:2]))
 	if err != nil {
 		return time.Time{}, err
@@ -785,19 +786,15 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), time.UTC), nil
 	}
 
+	var offsetSec int
+
 	// The +/- in the timestamp was used to set offsetPositive
 	switch offsetPositive {
 	case true:
-		// Get location inline to save small amount of time
-		offsetSec := offsetH*60*60 + offsetM*60
-		loc := time.FixedZone("FIXED", offsetSec)
-
-		return time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), loc), nil
+		offsetSec = offsetH*60*60 + offsetM*60
 	default:
-		// Get location inline to save small amount of time
-		offsetSec := -offsetH*60*60 + offsetM*60
-		loc := time.FixedZone("FIXED", offsetSec)
-
-		return time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), loc), nil
+		offsetSec = -offsetH*60*60 + offsetM*60
 	}
+
+	return time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), time.FixedZone("FIXED", offsetSec)), nil
 }
