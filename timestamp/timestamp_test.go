@@ -59,6 +59,7 @@ func TestParse(t *testing.T) {
 	is := is.New(t)
 
 	mst, err := time.LoadLocation("MST")
+	jst, err := time.LoadLocation("Asia/Tokyo")
 	is.NoErr(err)
 
 	test, err := time.LoadLocation("EST")
@@ -89,6 +90,13 @@ func TestParse(t *testing.T) {
 	is.NoErr(err)
 	mstST = mstST.In(mst)
 	mstOffset, err := timestamp.OffsetForLocation(mstST.Year(), mstST.Month(), mstST.Day(), mst.String())
+	is.NoErr(err)
+
+	// Tokyo time test
+	jST, err := timestamp.ParseInUTC("2006-07-02T15:04:05.000+00:00")
+	is.NoErr(err)
+	jST = mstST.In(mst)
+	jstOffset, err := timestamp.OffsetForLocation(jST.Year(), jST.Month(), jST.Day(), jst.String())
 	is.NoErr(err)
 
 	start := time.Now()
@@ -144,6 +152,18 @@ func TestParse(t *testing.T) {
 	is.Equal(resOffset, defOffset)
 	// Result offset is EST
 	is.Equal(estSTOffset, resOffset)
+
+	// Should be offset corresponding to Tokyo time
+	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102240000+0900", jst)
+	is.Equal(resOffset, defOffset)
+	// Result offset is JST
+	is.Equal(jstOffset, resOffset)
+
+	// Should be offset corresponding to Tokyo time
+	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060102240000+0900", est)
+	is.True(resOffset != defOffset)
+	// Result offset is JST
+	is.Equal(jstOffset, resOffset)
 
 	// Should be offset corresponding to Estern Daylight Savings Time
 	sent, tStr, res, resOffset, defOffset = checkDate(t, "20060702240000-0400", est)
