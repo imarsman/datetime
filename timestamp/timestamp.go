@@ -129,34 +129,39 @@ func init() {
 //  255 % 60 = 15 minutes
 //
 // If the zone is not recognized in Go's tzdata database an error will be returned.
-func OffsetForLocation(year int, month time.Month, day int, location string) (d time.Duration, err error) {
+func OffsetForLocation(year int, month time.Month, day int, location string) (d time.Duration, hours, minutes int, err error) {
 	l, err := time.LoadLocation(location)
 	if err != nil {
-		return 0, err
+		return 0, 0, 0, err
 	}
 
 	t := time.Date(year, month, day, 0, 0, 0, 0, l)
-	_, offset := t.Zone()
+	d, hours, minutes = OffsetForTime(t)
+	// _, offset := t.Zone()
 
-	return time.Duration(offset) * time.Second, nil
+	return d, hours, minutes, nil
 }
 
 // OffsetForTime the duration of the offset from UTC
-func OffsetForTime(t time.Time) time.Duration {
+func OffsetForTime(t time.Time) (d time.Duration, hours, minutes int) {
 	_, offset := t.Zone()
 
-	return time.Duration(offset) * time.Second
+	d = time.Duration(offset) * time.Second
+	hours, minutes = offsetHM(d)
+
+	return d, hours, minutes
 }
 
-// OffsetHM get hours and minutes for location offset
-func OffsetHM(d time.Duration) (int, int) {
-	hours := int(d.Hours())
-	minutes := math.Abs(float64(int(d.Minutes()) % 60))
-	return hours, int(minutes)
+// offsetHM get hours and minutes for location offset
+func offsetHM(d time.Duration) (hours, minutes int) {
+	hours = int(d.Hours())
+	minutes = int(math.Abs(float64(int(d.Minutes()) % 60)))
+
+	return hours, minutes
 }
 
-// LocationOffsetString get an offset in HHMM format based on hours and minutes
-// offset from UTC.
+// LocationOffsetString get an offset in HHMM format based on hours and
+// minutes offset from UTC.
 //
 // For 5 hours and 30 minutes
 //  0530
@@ -188,7 +193,7 @@ func LocationOffsetStringDelimited(d time.Duration) string {
 // For -5 hours and 30 minutes
 //  -0500
 func locationOffsetString(d time.Duration, delimited bool) string {
-	hours, minutes := OffsetHM(d)
+	hours, minutes := offsetHM(d)
 	if delimited == false {
 		return fmt.Sprintf("%+03d%02d", hours, minutes)
 	}

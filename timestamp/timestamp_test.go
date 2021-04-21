@@ -40,10 +40,10 @@ func checkDate(t *testing.T, input string, location *time.Location) (
 
 	parsed = timestamp.ISO8601MsecInLocation(calculated, calculated.Location())
 
-	calculatedOffset = timestamp.OffsetForTime(calculated)
+	calculatedOffset, _, _ = timestamp.OffsetForTime(calculated)
 
 	inLoc := calculated.In(location)
-	defaultOffset, err = timestamp.OffsetForLocation(
+	defaultOffset, _, _, err = timestamp.OffsetForLocation(
 		inLoc.Year(), inLoc.Month(), inLoc.Day(), inLoc.Location().String())
 	is.NoErr(err)
 
@@ -70,25 +70,25 @@ func TestParse(t *testing.T) {
 	utcST, err := timestamp.ParseInUTC("2006-01-02T15:04:05.000+00:00")
 	is.NoErr(err)
 	utcST = utcST.In(time.UTC)
-	utcOffset, err := timestamp.OffsetForLocation(utcST.Year(), utcST.Month(), utcST.Day(), time.UTC.String())
+	utcOffset, _, _, err := timestamp.OffsetForLocation(utcST.Year(), utcST.Month(), utcST.Day(), time.UTC.String())
 	is.NoErr(err)
 
 	estST, err := timestamp.ParseInUTC("2006-01-02T15:04:05.000+00:00")
 	is.NoErr(err)
 	estST = estST.In(est)
-	estSTOffset, err := timestamp.OffsetForLocation(estST.Year(), estST.Month(), estST.Day(), est.String())
+	estSTOffset, _, _, err := timestamp.OffsetForLocation(estST.Year(), estST.Month(), estST.Day(), est.String())
 	is.NoErr(err)
 
 	estDST, err := timestamp.ParseInUTC("2006-07-02T15:04:05.000+00:00")
 	is.NoErr(err)
 	estDST = estDST.In(est)
-	estDSTOffset, err := timestamp.OffsetForLocation(estDST.Year(), estDST.Month(), estDST.Day(), est.String())
+	estDSTOffset, _, _, err := timestamp.OffsetForLocation(estDST.Year(), estDST.Month(), estDST.Day(), est.String())
 	is.NoErr(err)
 
 	mstST, err := timestamp.ParseInUTC("2006-07-02T15:04:05.000+00:00")
 	is.NoErr(err)
 	mstST = mstST.In(mst)
-	mstOffset, err := timestamp.OffsetForLocation(mstST.Year(), mstST.Month(), mstST.Day(), mst.String())
+	mstOffset, _, _, err := timestamp.OffsetForLocation(mstST.Year(), mstST.Month(), mstST.Day(), mst.String())
 	is.NoErr(err)
 
 	start := time.Now()
@@ -650,10 +650,8 @@ func TestOffsetForZones(t *testing.T) {
 	defer track(runningtime(fmt.Sprintf("Time to get offset information for %d locations/dates", len(locations)*2)))
 	for _, location := range locations {
 		for _, tNext := range []time.Time{t1, t2} {
-			d, err := timestamp.OffsetForLocation(tNext.Year(), tNext.Month(), tNext.Day(), location)
+			d, _, _, err := timestamp.OffsetForLocation(tNext.Year(), tNext.Month(), tNext.Day(), location)
 			is.NoErr(err) // Should be no error getting offset for location
-			// hours = int(d.Hours())
-			// minutes = int(d.Minutes())
 			offset := timestamp.LocationOffsetString(d)
 			fmt.Printf("zone %s time %v offset %s\n", location, tNext, offset)
 		}
@@ -674,7 +672,7 @@ func TestZoneTime(t *testing.T) {
 	var err error
 
 	for i := 0; i < count; i++ {
-		d, err = timestamp.OffsetForLocation(2006, 1, 1, zone)
+		d, _, _, err := timestamp.OffsetForLocation(2006, 1, 1, zone)
 		is.NoErr(err) // There should not have been an error
 		_ = timestamp.LocationOffsetString(d)
 	}
