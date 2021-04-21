@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/imarsman/datetime/timestamp"
-	"github.com/imarsman/datetime/timestamp/lex"
 	"github.com/matryer/is"
 )
 
@@ -868,27 +867,6 @@ func BenchmarkIterativeISOTimestampTest(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			t1, err = timestamp.ParseISOTimestamp("20060102T010101.", time.UTC)
-			if err != nil {
-				b.Log(err)
-			}
-		}
-	})
-
-	is.True(t1 != time.Time{}) // Should not have an empty time
-	is.NoErr(err)              // Parsing should not have caused an error
-}
-func BenchmarkLexedISOTimestampTest(b *testing.B) {
-	is := is.New(b)
-
-	var err error
-	var t1 time.Time
-
-	b.SetBytes(2)
-	b.ReportAllocs()
-	b.SetParallelism(30)
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			t1, err = lex.ParseInLocation([]byte("20060102T010101"), time.UTC)
 			if err != nil {
 				b.Log(err)
 			}
