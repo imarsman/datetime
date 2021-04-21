@@ -474,9 +474,6 @@ func ISO8601CompactMsecInLocation(t time.Time, location *time.Location) string {
 
 // StartTimeIsBeforeEndTime if time 1 is before time 2 return true, else false
 func StartTimeIsBeforeEndTime(t1 time.Time, t2 time.Time) bool {
-	// t1 = t1.In(time.UTC)
-	// t2 = t2.In(time.UTC)
-
 	return t2.Unix()-t1.Unix() > 0
 }
 
@@ -792,9 +789,17 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			// The +/- in the timestamp was used to set offsetPositive
 			switch offsetPositive {
 			case true:
-				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), ZoneFromHM(offsetH, offsetM))
+				// Get location inline to save small amount of time
+				offsetSec := offsetH*60*60 + offsetM*60
+				loc := time.FixedZone("FIXED", offsetSec)
+
+				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), loc)
 			case false:
-				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), ZoneFromHM(-offsetH, offsetM))
+				// Get location inline to save small amount of time
+				offsetSec := -offsetH*60*60 + offsetM*60
+				loc := time.FixedZone("FIXED", offsetSec)
+
+				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), loc)
 			}
 		}
 	}

@@ -854,6 +854,27 @@ func BenchmarkUnixTimestampNanoTest(b *testing.B) {
 	is.True(t1 != time.Time{}) // Should not have an empty time
 	is.NoErr(err)              // Parsing should not have caused an error
 }
+func BenchmarkIterativeISOTimestampDateOnlyTest(b *testing.B) {
+	is := is.New(b)
+
+	var err error
+	var t1 time.Time
+
+	b.SetBytes(2)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			t1, err = timestamp.ParseISOTimestamp("2006-07-02", time.UTC)
+			if err != nil {
+				b.Log(err)
+			}
+		}
+	})
+
+	is.True(t1 != time.Time{}) // Should not have an empty time
+	is.NoErr(err)              // Parsing should not have caused an error
+}
 
 func BenchmarkIterativeISOTimestampShortTest(b *testing.B) {
 	is := is.New(b)
