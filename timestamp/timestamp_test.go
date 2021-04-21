@@ -855,7 +855,7 @@ func BenchmarkUnixTimestampNanoTest(b *testing.B) {
 	is.NoErr(err)              // Parsing should not have caused an error
 }
 
-func BenchmarkIterativeISOTimestampTest(b *testing.B) {
+func BenchmarkIterativeISOTimestampShortTest(b *testing.B) {
 	is := is.New(b)
 
 	var err error
@@ -866,7 +866,51 @@ func BenchmarkIterativeISOTimestampTest(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			t1, err = timestamp.ParseISOTimestamp("20060102T010101.", time.UTC)
+			t1, err = timestamp.ParseISOTimestamp("20060102T010101", time.UTC)
+			if err != nil {
+				b.Log(err)
+			}
+		}
+	})
+
+	is.True(t1 != time.Time{}) // Should not have an empty time
+	is.NoErr(err)              // Parsing should not have caused an error
+}
+
+func BenchmarkIterativeISOTimestampLongTest(b *testing.B) {
+	is := is.New(b)
+
+	var err error
+	var t1 time.Time
+
+	b.SetBytes(2)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			t1, err = timestamp.ParseISOTimestamp("2006-07-02T01:01:01+01:00", time.UTC)
+			if err != nil {
+				b.Log(err)
+			}
+		}
+	})
+
+	is.True(t1 != time.Time{}) // Should not have an empty time
+	is.NoErr(err)              // Parsing should not have caused an error
+}
+
+func BenchmarkNativeISOTimestampLongTest(b *testing.B) {
+	is := is.New(b)
+
+	var err error
+	var t1 time.Time
+
+	b.SetBytes(2)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			t1, err = time.ParseInLocation("2006-01-02T15:04:05-07:00", "2006-07-02T01:01:01+01:00", time.UTC)
 			if err != nil {
 				b.Log(err)
 			}

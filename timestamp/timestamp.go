@@ -343,6 +343,9 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 	timeStr = strings.TrimSpace(timeStr)
 	original := timeStr
 
+	// Check to see if the incoming data is a series of digits or digits with a
+	// single decimal place.
+
 	isTS := false
 	if reDigits.MatchString(timeStr) {
 		// A 20060101 date will have 10 digits
@@ -355,6 +358,9 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 		}
 	}
 
+	// Try ISO parsing first. The lexer is tolerant of some inconsistency in
+	// format that is not ISO-8601 compliant, such as dashes where there should
+	// be colons and a space instead of a T to separate date and time.
 	if isTS == false {
 		t, err := ParseISOTimestamp(timeStr, location)
 		// t, err := lex.ParseInLocation([]byte(timeStr), location)
@@ -363,20 +369,17 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 		}
 	}
 
-	t, err := ParseUnixTS(timeStr)
-	if err == nil {
-		return t.In(location), nil
-	}
-	// Check to see if the incoming data is a series of digits or digits with a
-	// single decimal place.
-
-	// Try ISO parsing first. The lexer is tolerant of some inconsistency in
-	// format that is not ISO-8601 compliant, such as dashes where there should
-	// be colons and a space instead of a T to separate date and time.
-
 	// If only iso format patterns should be tried leave now
 	if isoOnly == true {
-		return time.Time{}, err
+		return time.Time{}, fmt.Errorf("Could not parse as ISO timestamp and isoOnly was specified %s", timeStr)
+	}
+
+	if isTS == true {
+		t, err := ParseUnixTS(timeStr)
+		if err == nil {
+			return t.In(location), nil
+		}
+		return time.Time{}, fmt.Errorf("Could not parse as UNIX timestamp %s", timeStr)
 	}
 
 	// If not a unix type timestamp try alternate non-iso timestamp formats
@@ -385,12 +388,11 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 		// If no zone in timestamp use location
 		t, err := time.ParseInLocation(format, original, location)
 		if err == nil {
-			// t = t.In(time.UTC)
 			return t, nil
 		}
 	}
 
-	return time.Time{}, fmt.Errorf("Could not parse as UNIX timestamp %s", timeStr)
+	return time.Time{}, fmt.Errorf("Could not parse with other timestamp patterns %s", timeStr)
 }
 
 // RFC7232 get format used for http headers
@@ -526,7 +528,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	var subsecondParts []rune
 	var zoneParts []rune
 
-	var unparsed string
+	var unparsed []string
 
 	// A function to handle adding to a slice if it is not above capacity and
 	// flagging when it has reached capacity. Runs same speed when inline and is
@@ -543,7 +545,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	}
 
 	// Loop through runes in time string and decide what to do with each.
-	for _, r := range timeStr {
+	for i, r := range timeStr {
 		orig := r
 		if unicode.IsDigit(r) {
 			switch currentSection {
@@ -596,7 +598,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 					currentSection = afterSection
 				}
 			default:
-				unparsed = unparsed + string(orig)
+
+				unparsed = append(unparsed, string(orig)+"("+fmt.Sprint(i)+")")
 			}
 		} else if r == '.' {
 			// There could be extraneous decimal characters.
@@ -620,7 +623,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 				zoneParts = []rune{'0', '0', '0', '0'}
 				break
 			} else {
-				unparsed = unparsed + string(orig)
+				unparsed = append(unparsed, string(orig)+"("+fmt.Sprint(i)+")")
+				// unparsed = unparsed + string(orig)
 			}
 			// Ignore spaces
 		} else if unicode.IsSpace(r) {
@@ -628,7 +632,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		} else {
 			// We haven't dealt with valid characters so prepare for erroor
 			// notAllocated = notAllocated + 1
-			unparsed = unparsed + string(orig)
+			// unparsed = unparsed + string(orig)
+			unparsed = append(unparsed, string(orig)+"("+fmt.Sprint(i)+")")
 		}
 	}
 
@@ -636,7 +641,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	if len(unparsed) > 0 {
 		return time.Time{}, fmt.Errorf(
 			"got unparsed caracters %s in input %s",
-			strings.Join(strings.Split(unparsed, ""), ","), timeStr)
+			strings.Join(unparsed, ","), timeStr)
 	}
 
 	zoneFound := false
