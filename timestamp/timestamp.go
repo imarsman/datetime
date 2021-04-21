@@ -139,11 +139,14 @@ func OffsetForTime(t time.Time) (d time.Duration) {
 }
 
 // OffsetFromHM get fixed zone from hour and minute offset
+// A negative offsetH will result in a negative zone offset
 func OffsetFromHM(offsetH, offsetM int) *time.Location {
-	offsetSec := offsetH*60*60 + offsetM*60
-	o := time.FixedZone("FIXED", offsetSec)
+	absM := int(math.Abs(float64(offsetM)))
 
-	return o
+	offsetSec := offsetH*60*60 + absM*60
+	name := fmt.Sprintf("%d%d", offsetH, absM)
+
+	return time.FixedZone(name, offsetSec)
 }
 
 // OffsetHM get hours and minutes for location offset from UTC
@@ -765,24 +768,19 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			return time.Time{}, err
 		}
 
-		// Evaluate seconds of offset from UTC
-		// offsetSec := offsetH*60*60 + offsetM*60
-
 		// If offset is 00:00 use UTC
 		if offsetH == 0 && offsetM == 0 {
 			t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), time.UTC)
 		} else {
 			// The +/- in the timestamp was used to set offsetPositive
 			if offsetPositive == true {
-				// Create fixed zone using seconds offset
+				// Get fixed zone using hours and minutes offset
 				fixedZone := OffsetFromHM(offsetH, offsetM)
-				// fixedZone := time.FixedZone("FIXEDZONE", offsetSec)
 				// Offset by fixed offset zone
 				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), fixedZone)
 			} else {
-				// Create fixed zone using negative seconds offset
+				// Get fixed zone using negative hours and minutes offset
 				fixedZone := OffsetFromHM(-offsetH, offsetM)
-				// fixedZone := time.FixedZone("FIXEDZONE", -offsetSec)
 				// Offset by fixed offset zone
 				t = time.Date(y, time.Month(m), d, h, mn, s, int(subsecond), fixedZone)
 			}
