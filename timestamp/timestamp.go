@@ -8,11 +8,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 	"unicode"
-
-	"github.com/imarsman/datetime/xfmt"
 	// https://golang.org/pkg/time/tzdata/
 	/*
 		    Package tzdata provides an embedded copy of the timezone database.
@@ -95,11 +92,12 @@ var nonISOTimeFormats = []string{
 }
 
 var timeFormats = []string{}
-var xfmtBuf xfmt.Buffer
-var xfmtBufM sync.Mutex
+
+// var xfmtBuf xfmt.Buffer
+// var xfmtBufM sync.Mutex
 
 func init() {
-	xfmtBuf = xfmt.Buffer{}
+	// xfmtBuf = xfmt.Buffer{}
 	reDigits = regexp.MustCompile(`^\d+\.?\d+$`)
 	timeFormats = append(timeFormats, nonISOTimeFormats...)
 }
@@ -108,15 +106,15 @@ func init() {
 // The buffer used is created on package init and is reset at end of each call.
 // The compiler will inline the buffer's output as long as it doesn't break the
 // rules when deciding to allocate to heap.
-func bufStr(buf *xfmt.Buffer) string {
-	xfmtBufM.Lock()
-	defer xfmtBufM.Unlock()
+// func bufStr(buf *xfmt.Buffer) string {
+// 	xfmtBufM.Lock()
+// 	defer xfmtBufM.Unlock()
 
-	s := string(xfmtBuf.Bytes())
-	buf.Reset()
+// 	s := string(xfmtBuf.Bytes())
+// 	buf.Reset()
 
-	return s
-}
+// 	return s
+// }
 
 // OffsetForLocation get offset data for a named zone such a America/Tornto or EST
 // or MST. Based on date the offset for a zone can differ, with, for example, an
@@ -319,9 +317,9 @@ func ParseUnixTS(timeStr string) (time.Time, error) {
 				sec, nsec := timeStr[0:10], timeStr[11:len(timeStr)-1]
 
 				// Avoid heap allocation
-				xfmtBuf.S(sec).S(".").S(nsec)
-				toSend = bufStr(&xfmtBuf)
-				// toSend = sec + "." + nsec
+				// xfmtBuf.S(sec).S(".").S(nsec)
+				// toSend = bufStr(&xfmtBuf)
+				toSend = fmt.Sprintf("%s.%s", sec, nsec)
 			}
 			// Get seconds, nanoseconds, and error if there was a problem
 			s, n, err := parseUnixTS(toSend)
@@ -336,9 +334,9 @@ func ParseUnixTS(timeStr string) (time.Time, error) {
 			return t, nil
 		}
 	}
-	xfmtBuf.S("Could not parse as UNIX timestamp ").S(timeStr)
-	// return time.Time{}, fmt.Errorf("Could not parse as UNIX timestamp %s", timeStr)
-	return time.Time{}, errors.New(bufStr(&xfmtBuf))
+	// xfmtBuf.S("Could not parse as UNIX timestamp ").S(timeStr)
+	return time.Time{}, fmt.Errorf("Could not parse as UNIX timestamp %s", timeStr)
+	// return time.Time{}, errors.New(bufStr(&xfmtBuf))
 }
 
 // ParseInUTC parse for all timestamps, defaulting to UTC, and return UTC zoned time
@@ -399,10 +397,10 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 
 	// If only iso format patterns should be tried leave now
 	if isoOnly == true {
-		xfmtBuf.S("Could not parse as ISO timestamp and isoOnly was specified ").S(timeStr)
+		// xfmtBuf.S("Could not parse as ISO timestamp and isoOnly was specified ").S(timeStr)
 
-		return time.Time{}, errors.New(bufStr(&xfmtBuf))
-		// return time.Time{}, fmt.Errorf("Could not parse as ISO timestamp and isoOnly was specified %s", timeStr)
+		// return time.Time{}, errors.New(bufStr(&xfmtBuf))
+		return time.Time{}, fmt.Errorf("Could not parse as ISO timestamp and isoOnly was specified %s", timeStr)
 	}
 
 	if isTS == true {
@@ -410,9 +408,9 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 		if err == nil {
 			return t.In(location), nil
 		}
-		xfmtBuf.S("Could not parse as UNIX timestamp ").S(timeStr)
-		return time.Time{}, errors.New(bufStr(&xfmtBuf))
-		// return time.Time{}, fmt.Errorf("Could not parse as UNIX timestamp %s", timeStr)
+		// xfmtBuf.S("Could not parse as UNIX timestamp ").S(timeStr)
+		// return time.Time{}, errors.New(bufStr(&xfmtBuf))
+		return time.Time{}, fmt.Errorf("Could not parse as UNIX timestamp %s", timeStr)
 	}
 
 	// If not a unix type timestamp try alternate non-iso timestamp formats
@@ -425,9 +423,9 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 		}
 	}
 
-	xfmtBuf.S("Could not parse with other timestamp patterns ").S(timeStr)
-	return time.Time{}, errors.New(bufStr(&xfmtBuf))
-	// return time.Time{}, fmt.Errorf("Could not parse with other timestamp patterns %s", timeStr)
+	// xfmtBuf.S("Could not parse with other timestamp patterns ").S(timeStr)
+	// return time.Time{}, errors.New(bufStr(&xfmtBuf))
+	return time.Time{}, fmt.Errorf("Could not parse with other timestamp patterns %s", timeStr)
 }
 
 // RFC7232 get format used for http headers
@@ -519,10 +517,11 @@ func StartTimeIsBeforeEndTime(t1 time.Time, t2 time.Time) bool {
 //  go build -gcflags '-m' timestamp.go
 func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, error) {
 	// Define sections that can change.
+	const maxLength = 35
 
-	if len(timeStr) > 35 {
-		xfmtBuf.S("Input length is ").D(len(timeStr)).S(" which is > max length of 35")
-		return time.Time{}, errors.New(bufStr(&xfmtBuf))
+	if len(timeStr) > maxLength {
+		return time.Time{}, fmt.Errorf("input %s... length > max %d",
+			timeStr[0:maxLength-1], maxLength)
 	}
 
 	var currentSection int = 0 // value for current section
@@ -685,11 +684,11 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// If we've found characters not allocated, error.
 	if len(unparsed) > 0 {
 		// return time.Time{}, fmt.Errorf(
-		xfmtBuf.S("got unparsed caracters ").S(strings.Join(unparsed, ",")).S(" in input ").S(timeStr)
+		// xfmtBuf.S("got unparsed caracters ").S(strings.Join(unparsed, ",")).S(" in input ").S(timeStr)
 
-		return time.Time{}, errors.New(bufStr(&xfmtBuf))
-		// 	"got unparsed caracters %s in input %s", strings.Join(unparsed, ","), timeStr)
-		// return time.Time{}, errors.New("Got unparsed characters in input")
+		// return time.Time{}, errors.New(bufStr(&xfmtBuf))
+		// // 	"got unparsed caracters %s in input %s", strings.Join(unparsed, ","), timeStr)
+		return time.Time{}, errors.New("Got unparsed characters in input")
 	}
 
 	zoneFound := false        // has time zone been found
@@ -700,11 +699,11 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		zoneFound = true
 		// A zone with 1 or 3 characters is ambiguous
 		if zoneLen == 1 || zoneLen == 3 {
-			xfmtBuf.S("Zone is of length ").D(zoneLen).S(" wich is not enough to detect zone")
+			// xfmtBuf.S("Zone is of length ").D(zoneLen).S(" wich is not enough to detect zone")
 
-			return time.Time{}, errors.New(bufStr(&xfmtBuf))
+			// return time.Time{}, errors.New(bufStr(&xfmtBuf))
 			// return time.Time{}, fmt.Errorf("Zone is of length %d wich is not enough to detect zone", zoneLen)
-			// return time.Time{}, errors.New("Zone is length 1 or 3, which is ambiguous")
+			return time.Time{}, errors.New("Zone is length 1 or 3, which is ambiguous")
 			// With no zone assume UTC
 		} else if zoneLen == 0 {
 			zoneFound = false

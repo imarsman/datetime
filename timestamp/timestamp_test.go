@@ -9,6 +9,10 @@ import (
 	"github.com/matryer/is"
 )
 
+func init() {
+	// Any init code here
+}
+
 func runningtime(s string) (string, time.Time) {
 	fmt.Println("Start:	", s)
 	return s, time.Now()
@@ -759,17 +763,8 @@ func TestParsISOTimestamp(t *testing.T) {
 	}
 
 	badFormats := []string{
-		// // Bad month
-		// "2006-13-02T40-01-01+0100",
-		// // bad day
-		// "2006-02-30T12-01-01+0100",
-		// // Bad hours
-		// "2006-01-02T40-01-01+0100",
-		// // Bad minutes
-		// "2006-01-02T11-60-01+0100",
-		// // Bad seconds
-		// "2006-01-02T11-30-61+0100",
 		"2006-01-02T11-30-61+010",
+		// Way too long and of course not a date
 		"bkjfdlkjdfsaj;g;lkjafdkljl;fdaladf;jkladfsl;kfjads;j",
 		"20060102T010101-04000",
 		"20060102T0101Z01Z",
@@ -927,6 +922,7 @@ func BenchmarkIterativeISOTimestampLongTest(b *testing.B) {
 	is.NoErr(err)              // Parsing should not have caused an error
 }
 
+// go test -run=XXX -bench=IterativeISOTimestampLong -benchmem
 func BenchmarkNativeISOTimestampLongTest(b *testing.B) {
 	is := is.New(b)
 
