@@ -481,6 +481,7 @@ func StartTimeIsBeforeEndTime(t1 time.Time, t2 time.Time) bool {
 // zone for the timestamp or if there is no zone offset in the incoming
 // timestamp the incoming location will bue used. It is the responsibility of
 // further steps to standardize to a specific zone offset.
+//  go build -gcflags '-m' timestamp.go
 func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, error) {
 	// Define sections that can change.
 
@@ -604,7 +605,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 					currentSection = afterSection
 				}
 			default:
-				unparsed = append(unparsed, string(orig)+"@"+fmt.Sprint(i)+"")
+				unparsed = append(unparsed, fmt.Sprintf("%s%s%d", string(orig), "@", i))
 			}
 		} else if r == '.' {
 			// There could be extraneous decimal characters.
@@ -625,17 +626,19 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		} else if unicode.ToUpper(r) == 'Z' {
 			if currentSection == zoneSection || currentSection == subsecondSection {
 				// define offset as zero for hours and minutes
-				zoneParts = []rune{'0', '0', '0', '0'}
+				zoneParts = append(zoneParts, '0', '0', '0', '0')
 				break
 			} else {
-				unparsed = append(unparsed, string(orig)+"@"+fmt.Sprint(i)+"")
+				unparsed = append(unparsed, fmt.Sprintf("%s%s%d", string(orig), "@", i))
+				// unparsed = append(unparsed, string(orig)+"@"+fmt.Sprint(i))
 			}
 			// Ignore spaces
 		} else if unicode.IsSpace(r) {
 			continue
 		} else {
 			// We haven't dealt with valid characters so prepare for erroor
-			unparsed = append(unparsed, string(orig)+"@"+fmt.Sprint(i)+"")
+			unparsed = append(unparsed, fmt.Sprintf("%s%s%d", string(orig), "@", i))
+			// unparsed = append(unparsed, string(orig)+"@"+fmt.Sprint(i))
 		}
 	}
 
@@ -701,43 +704,61 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return time.Time{}, fmt.Errorf("Input %s has second length %d needs %d", timeStr, len(secondParts), secondMax)
 	}
 
+	// var joinString = func(parts ...string) string {
+	// 	var sb strings.Builder
+	// 	for _, p := range parts {
+	// 		sb.WriteString(p)
+	// 	}
+	// 	return sb.String()
+	// }
+
+	var joinRunes = func(size int, runes ...rune) string {
+		var sb strings.Builder
+		sb.Grow(size)
+		for _, r := range runes {
+			sb.WriteRune(r)
+		}
+		return sb.String()
+	}
+
 	// We already only put digits into the parts so Atoi should be fine in all
 	// cases. The problem would have been with an incorrect number of digits in
 	// a part, which would have been caught above.
 
 	// Get year int value from yearParts rune slice
 	// Should not error
-	y, err := strconv.Atoi(string(yearParts))
+
+	y, err := strconv.Atoi(joinRunes(yearMax, yearParts...))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get month int value from monthParts rune slice
 	// Should not error
-	m, err := strconv.Atoi(string(monthParts))
+	m, err := strconv.Atoi(joinRunes(monthMax, monthParts...))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get day int value from dayParts rune slice
 	// Should not error
-	d, err := strconv.Atoi(string(dayParts))
+	d, err := strconv.Atoi(joinRunes(dayMax, dayParts...))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get hour int value from hourParts rune slice
 	// Should not error
-	h, err := strconv.Atoi(string(hourParts))
+	h, err := strconv.Atoi(joinRunes(hourMax, hourParts...))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get minute int value from minParts rune slice
 	// Should not error
-	mn, err := strconv.Atoi(string(minuteParts))
+	mn, err := strconv.Atoi(joinRunes(minuteMax, minuteParts...))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get second int value from secondParts rune slice
 	// Should not error
-	s, err := strconv.Atoi(string(secondParts))
+	s, err := strconv.Atoi(joinRunes(secondMax, secondParts...))
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -746,7 +767,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 
 	// Handle subseconds if that slice is nonempty
 	if len(subsecondParts) > 0 {
-		subsec, err = strconv.Atoi(string(subsecondParts))
+		subsec, err = strconv.Atoi(joinRunes(subsecondMax, subsecondParts...))
 		if err != nil {
 			return time.Time{}, err
 		}
@@ -776,12 +797,12 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 
 	// Evaluate offset from the timestamp value
 	// Error is unlikely
-	offsetH, err := strconv.Atoi(string(zoneParts[0:2]))
+	offsetH, err := strconv.Atoi(joinRunes(2, zoneParts[0:2]...))
 	if err != nil {
 		return time.Time{}, err
 	}
 
-	offsetM, err := strconv.Atoi(string(zoneParts[2:]))
+	offsetM, err := strconv.Atoi(joinRunes(2, zoneParts[2:]...))
 	if err != nil {
 		return time.Time{}, err
 	}

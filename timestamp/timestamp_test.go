@@ -898,6 +898,7 @@ func BenchmarkIterativeISOTimestampShortTest(b *testing.B) {
 	is.NoErr(err)              // Parsing should not have caused an error
 }
 
+// go test -run=XXX -bench=IterativeISOTimestampLong -gcflags '-m'
 func BenchmarkIterativeISOTimestampLongTest(b *testing.B) {
 	is := is.New(b)
 
