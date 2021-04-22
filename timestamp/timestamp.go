@@ -1,6 +1,7 @@
 package timestamp
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -9,6 +10,8 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/imarsman/datetime/xfmt"
 	// https://golang.org/pkg/time/tzdata/
 	/*
 		    Package tzdata provides an embedded copy of the timezone database.
@@ -91,8 +94,10 @@ var nonISOTimeFormats = []string{
 }
 
 var timeFormats = []string{}
+var xmltBuf xfmt.Buffer
 
 func init() {
+	xfmtBuf = xfmt.Buffer{}
 	reDigits = regexp.MustCompile(`^\d+\.?\d+$`)
 	timeFormats = append(timeFormats, nonISOTimeFormats...)
 }
@@ -644,8 +649,9 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 
 	// If we've found characters not allocated, error.
 	if len(unparsed) > 0 {
-		return time.Time{}, fmt.Errorf(
-			"got unparsed caracters %s in input %s", strings.Join(unparsed, ","), timeStr)
+		// return time.Time{}, fmt.Errorf(
+		// 	"got unparsed caracters %s in input %s", strings.Join(unparsed, ","), timeStr)
+		return time.Time{}, errors.New("Got unparsed characters in input")
 	}
 
 	zoneFound := false        // has time zone been found
@@ -656,7 +662,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		zoneFound = true
 		// A zone with 1 or 3 characters is ambiguous
 		if zoneLen == 1 || zoneLen == 3 {
-			return time.Time{}, fmt.Errorf("Zone is of length %d wich is not enough to detect zone", zoneLen)
+			// return time.Time{}, fmt.Errorf("Zone is of length %d wich is not enough to detect zone", zoneLen)
+			return time.Time{}, errors.New("Zone is length 1 or 3, which is ambiguous")
 			// With no zone assume UTC
 		} else if zoneLen == 0 {
 			zoneFound = false
@@ -686,22 +693,28 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// requiring that all date and time parts be fully allocated event if we
 	// can't tell where the problem started.
 	if len(yearParts) != yearMax {
-		return time.Time{}, fmt.Errorf("Input %s has year length %d needs %d", timeStr, len(yearParts), 4)
+		// return time.Time{}, fmt.Errorf("Input %s has year length %d needs %d", timeStr, len(yearParts), 4)
+		return time.Time{}, errors.New("Input year length is not 4")
 	}
 	if len(monthParts) != monthMax {
-		return time.Time{}, fmt.Errorf("Input %s has month length %d needs %d", timeStr, len(monthParts), 2)
+		return time.Time{}, errors.New("Input month length is not 2")
+		// return time.Time{}, fmt.Errorf("Input %s has month length %d needs %d", timeStr, len(monthParts), 2)
 	}
 	if len(dayParts) != dayMax {
-		return time.Time{}, fmt.Errorf("Input %s has day length %d needs %d", timeStr, len(dayParts), 2)
+		return time.Time{}, errors.New("Input day length is not 2")
+		// return time.Time{}, fmt.Errorf("Input %s has day length %d needs %d", timeStr, len(dayParts), 2)
 	}
 	if len(hourParts) != hourMax {
-		return time.Time{}, fmt.Errorf("Input %s has hour length %d needs %d", timeStr, len(hourParts), 2)
+		return time.Time{}, errors.New("Input hour length is not 2")
+		// return time.Time{}, fmt.Errorf("Input %s has hour length %d needs %d", timeStr, len(hourParts), 2)
 	}
 	if len(minuteParts) != minuteMax {
-		return time.Time{}, fmt.Errorf("Input %s has minute length %d needs %d", timeStr, len(minuteParts), 2)
+		return time.Time{}, errors.New("Input minute length is not 2")
+		// return time.Time{}, fmt.Errorf("Input %s has minute length %d needs %d", timeStr, len(minuteParts), 2)
 	}
 	if len(secondParts) != secondMax {
-		return time.Time{}, fmt.Errorf("Input %s has second length %d needs %d", timeStr, len(secondParts), 2)
+		return time.Time{}, errors.New("Input second length is not 2")
+		// return time.Time{}, fmt.Errorf("Input %s has second length %d needs %d", timeStr, len(secondParts), 2)
 	}
 
 	var joinRunes = func(size int, runes ...rune) string {
@@ -787,13 +800,15 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return time.Date(y, time.Month(m), d, h, mn, s, subsec, location), nil
 	}
 
-	// Evaluate offset from the timestamp value
+	// Evaluate hour offset from the timestamp value
 	// Error is unlikely
 	offsetH, err := strconv.Atoi(joinRunes(2, zoneParts[0:2]...))
 	if err != nil {
 		return time.Time{}, err
 	}
 
+	// Evaluate minute offset from the timestamp value
+	// Error is unlikely
 	offsetM, err := strconv.Atoi(joinRunes(2, zoneParts[2:]...))
 	if err != nil {
 		return time.Time{}, err
