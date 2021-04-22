@@ -686,31 +686,23 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// requiring that all date and time parts be fully allocated event if we
 	// can't tell where the problem started.
 	if len(yearParts) != yearMax {
-		return time.Time{}, fmt.Errorf("Input %s has year length %d needs %d", timeStr, len(yearParts), yearMax)
+		return time.Time{}, fmt.Errorf("Input %s has year length %d needs %d", timeStr, len(yearParts), 4)
 	}
 	if len(monthParts) != monthMax {
-		return time.Time{}, fmt.Errorf("Input %s has month length %d needs %d", timeStr, len(monthParts), monthMax)
+		return time.Time{}, fmt.Errorf("Input %s has month length %d needs %d", timeStr, len(monthParts), 2)
 	}
 	if len(dayParts) != dayMax {
-		return time.Time{}, fmt.Errorf("Input %s has day length %d needs %d", timeStr, len(dayParts), dayMax)
+		return time.Time{}, fmt.Errorf("Input %s has day length %d needs %d", timeStr, len(dayParts), 2)
 	}
 	if len(hourParts) != hourMax {
-		return time.Time{}, fmt.Errorf("Input %s has hour length %d needs %d", timeStr, len(hourParts), hourMax)
+		return time.Time{}, fmt.Errorf("Input %s has hour length %d needs %d", timeStr, len(hourParts), 2)
 	}
 	if len(minuteParts) != minuteMax {
-		return time.Time{}, fmt.Errorf("Input %s has minute length %d needs %d", timeStr, len(minuteParts), minuteMax)
+		return time.Time{}, fmt.Errorf("Input %s has minute length %d needs %d", timeStr, len(minuteParts), 2)
 	}
 	if len(secondParts) != secondMax {
-		return time.Time{}, fmt.Errorf("Input %s has second length %d needs %d", timeStr, len(secondParts), secondMax)
+		return time.Time{}, fmt.Errorf("Input %s has second length %d needs %d", timeStr, len(secondParts), 2)
 	}
-
-	// var joinString = func(parts ...string) string {
-	// 	var sb strings.Builder
-	// 	for _, p := range parts {
-	// 		sb.WriteString(p)
-	// 	}
-	// 	return sb.String()
-	// }
 
 	var joinRunes = func(size int, runes ...rune) string {
 		var sb strings.Builder
