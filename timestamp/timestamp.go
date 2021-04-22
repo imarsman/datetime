@@ -331,6 +331,7 @@ func parseUnixTS(value string) (int64, int64, error) {
 func ParseUnixTS(timeStr string) (time.Time, error) {
 	match := reDigits.MatchString(timeStr)
 
+	timeStrLength := len(timeStr)
 	// Only proceed if the incoming timestamp is a number with up to one
 	// decimaal place. Otherwise return an error.
 	if match == true {
@@ -338,12 +339,12 @@ func ParseUnixTS(timeStr string) (time.Time, error) {
 		// Don't support timestamps less than 7 characters in length
 		// to avoid strange date formats from being parsed.
 		// Max would be 9999999, or Sun Apr 26 1970 17:46:39 GMT+0000
-		if len(timeStr) > 6 {
+		if timeStrLength > 6 {
 			toSend := timeStr
 			// Break it into a format that has a period between second and
 			// millisecond portions for the function.
-			if len(timeStr) > 10 {
-				sec, nsec := timeStr[0:10], timeStr[11:len(timeStr)-1]
+			if timeStrLength > 10 {
+				sec, nsec := timeStr[0:10], timeStr[11:timeStrLength-1]
 
 				xfmtBuf := xfmt.Buffer{}
 
@@ -613,9 +614,12 @@ func StartTimeIsBeforeEndTime(t1 time.Time, t2 time.Time) bool {
 func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, error) {
 	// Define sections that can change.
 
-	if len(timeStr) > 35 {
+	const maxLength int = 35
+	timeStrLength := len(timeStr)
+
+	if timeStrLength > maxLength {
 		xfmtBuf := xfmt.Buffer{}
-		xfmtBuf.S("Input length is ").D(len(timeStr)).S(" which is > max length of 35")
+		xfmtBuf.S("Input ").S(timeStr[0:35]).S("... length is ").D(timeStrLength).S(" and > max of ").D(maxLength)
 		return time.Time{}, errors.New(string(xfmtBuf.Bytes()))
 	}
 
