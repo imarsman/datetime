@@ -744,6 +744,7 @@ func TestParsISOTimestamp(t *testing.T) {
 
 	formats := []string{
 		"20060102T010101",
+		"2006-13-02T40:01:01.123456789+01:00",
 		"20060102T010101.123456789",
 		"20060102T010101-0400",
 		"20060102t010101-0400",
@@ -758,32 +759,37 @@ func TestParsISOTimestamp(t *testing.T) {
 	}
 
 	badFormats := []string{
-		// Bad month
-		"2006-13-02T40-01-01+0100",
-		// bad day
-		"2006-02-30T12-01-01+0100",
-		// Bad hours
-		"2006-01-02T40-01-01+0100",
-		// Bad minutes
-		"2006-01-02T11-60-01+0100",
-		// Bad seconds
-		"2006-01-02T11-30-61+0100",
+		// // Bad month
+		// "2006-13-02T40-01-01+0100",
+		// // bad day
+		// "2006-02-30T12-01-01+0100",
+		// // Bad hours
+		// "2006-01-02T40-01-01+0100",
+		// // Bad minutes
+		// "2006-01-02T11-60-01+0100",
+		// // Bad seconds
+		// "2006-01-02T11-30-61+0100",
+		"2006-01-02T11-30-61+010",
+		"bkjfdlkjdfsaj;g;lkjafdkljl;fdaladf;jkladfsl;kfjads;j",
 		"20060102T010101-04000",
 		"20060102T0101Z01Z",
 		"2006w01s02T18a01b01c01:00",
 		"2006-01-02T18:01:01b01:00",
 	}
 
+	t.Log("Correct intput")
 	for _, in := range formats {
 		ts, err = timestamp.ParseISOTimestamp(in, time.UTC)
 		t.Logf("input %s ts %v", in, ts)
-		// is.NoErr(err)
+		is.NoErr(err)
 	}
 
+	t.Log("")
+	t.Log("Invalid intput")
 	for _, in := range badFormats {
 		ts, err = timestamp.ParseISOTimestamp(in, time.UTC)
 		t.Logf("input %s error %v", in, err)
-		// is.True(err != nil)
+		is.True(err != nil)
 	}
 
 	defer track(runningtime(fmt.Sprintf("Time to process ISO timestamp %dx", count*2)))
