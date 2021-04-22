@@ -753,22 +753,34 @@ func TestParsISOTimestamp(t *testing.T) {
 		"20060102T010101-0400",
 		"20060102t010101-0400",
 		"20060102T010101+0400",
+		// Force a rollover of day
+		// This is part of the functionality of the Go time library
+		"20060102T240000+0400",
 		"2006-01-02T01:01:01-04:00",
 		"2006-01-02T01:01:01-06:00",
 		"2006-01-02T18:01:01+01:00",
 		"2006-01-02T18-01-01+0100",
+		// Hour will force rollover of day
+		// This is part of the functionality of the Go time library
+		"2006-01-02T27-01-01+0100",
+		// Oddball separators but still can parse
 		"2006/01/02T18.01.01+01:00",
-		// Let 29th on leap year through
-		"2000-02-29T12-01-01+0100",
+		// Day will force rollover of month
+		// This is part of the functionality of the Go time library
+		"2000-02-30T12-01-01+0100",
 	}
 
 	badFormats := []string{
 		"2006-01-02T11-30-61+010",
 		// Way too long and of course not a date
 		"bkjfdlkjdfsaj;g;lkjafdkljl;fdaladf;jkladfsl;kfjads;j",
+		// Time zone too many characters
 		"20060102T010101-04000",
+		// Two zulu indicators
 		"20060102T0101Z01Z",
+		// More bad characters
 		"2006w01s02T18a01b01c01:00",
+		// More bad characters
 		"2006-01-02T18:01:01b01:00",
 	}
 
