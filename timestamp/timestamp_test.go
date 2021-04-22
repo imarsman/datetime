@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/imarsman/datetime/timestamp"
+	"github.com/imarsman/datetime/xfmt"
 	"github.com/matryer/is"
 )
 
@@ -960,3 +961,61 @@ func BenchmarkNativeISOTimestampLongTest(b *testing.B) {
 	is.True(t1 != time.Time{}) // Should not have an empty time
 	is.NoErr(err)              // Parsing should not have caused an error
 }
+
+func BenchmarkNonAllocatingBufferTest(b *testing.B) {
+	is := is.New(b)
+
+	var s []byte
+	first := "first"
+	second := "second"
+	third := "second"
+
+	// In practice this will cause one byte array allocation
+	// In practice this should be declared along with its use since the buffer
+	// must be reset
+	xfmtBuf := xfmt.Buffer{}
+
+	b.SetBytes(2)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			// Avoid heap allocation for each append which uses a variable
+			// The total in tests took about 80 ns/op, which is about 20 ms per
+			// append. The benchmark reported 0 B/op.
+			xfmtBuf.S("Could not parse as ISO timestamp ").S(first).C(' ').S(second).C(' ').S(third)
+			s = xfmtBuf.Bytes()
+			xfmtBuf.Reset()
+		}
+	})
+
+	is.True(len(s) > 0)
+}
+
+func BenchmarkAllocatingBufferTest(b *testing.B) {
+	is := is.New(b)
+
+	var s string
+	first := "first"
+	second := "second"
+	third := "second"
+
+	b.SetBytes(2)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			// Each append uses an allocation
+			// The total in tests took about 80 ns/op, which is about 20 ms per
+			// item. The benchmark reported 112 B/op.
+			s = fmt.Sprintf("Could not parse as ISO timestamp %s %s %s", first, second, third)
+		}
+	})
+
+	is.True(s != "")
+}
+
+// Other tests
+/*
+	go build -gcflags '-m -m' timestamp.go 2>&1 |less
+*/
