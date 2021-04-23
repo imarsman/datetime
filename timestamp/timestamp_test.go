@@ -2,6 +2,7 @@ package timestamp_test
 
 import (
 	"fmt"
+	"sort"
 	"testing"
 	"time"
 
@@ -592,6 +593,67 @@ func TestISOCompare(t *testing.T) {
 	t.Logf("Took %v to parse %s %d times", time.Since(start), ts, count)
 }
 
+// Note that the range of days returned by RangeOverTimes will result in a span
+// from the start time to the end time, which will be one more than the number
+// of days added to the start time.
+func TestRangeOverTimes(t *testing.T) {
+	is := is.New(t)
+
+	t1 := time.Now()
+	// Make zone incompatible to test error
+	t2 := t1.Add(10 * 24 * time.Hour).In(time.UTC)
+
+	m := make(map[string]string)
+
+	var err error
+	var newTime time.Time
+	for rt := timestamp.RangeOverTimes(t1, t2); ; {
+		newTime, err = rt()
+		if err != nil {
+			// Handle when there was an error in the input times
+			break
+		}
+		if newTime.IsZero() {
+			// Handle when the day range is done
+			break
+		}
+		v := fmt.Sprintf("%04d-%02d-%02d", newTime.Year(), newTime.Month(), newTime.Day())
+		m[v] = ""
+	}
+	is.True(err != nil)
+	fmt.Println("Got error", err)
+
+	t2 = t1.Add(10 * 24 * time.Hour)
+
+	for rd := timestamp.RangeOverTimes(t1, t2); ; {
+		newTime, err = rd()
+		if err != nil {
+			// Handle when there was an error in the input times
+			break
+		}
+		if newTime.IsZero() {
+			// Handle when the day range is done
+			break
+		}
+		v := fmt.Sprintf("%04d-%02d-%02d", newTime.Year(), newTime.Month(), newTime.Day())
+		m[v] = ""
+	}
+	is.NoErr(err)
+	t1 = time.Now()
+	t2 = t1.Add(10 * 24 * time.Hour)
+
+	a := make([]string, 0, len(m))
+	for v := range m {
+		a = append(a, v)
+	}
+	sort.Strings(a)
+
+	fmt.Println("Days in range")
+	for _, v := range a {
+		fmt.Println("Got", v)
+	}
+}
+
 // TestOrdering check ordering call
 func TestOrdering(t *testing.T) {
 	is := is.New(t)
@@ -1013,6 +1075,13 @@ func BenchmarkAllocatingBufferTest(b *testing.B) {
 	})
 
 	is.True(s != "")
+}
+
+func TestBits(t *testing.T) {
+	var a int32 = int32(rune('1'))
+	fmt.Println(a)
+	// a = a | (1 << 2)
+	// fmt.Printf("%08b\n", a)
 }
 
 // Other tests

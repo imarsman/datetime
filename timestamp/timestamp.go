@@ -95,27 +95,10 @@ var nonISOTimeFormats = []string{
 
 var timeFormats = []string{}
 
-// var xfmtBuf xfmt.Buffer
-// var xfmtBufM sync.Mutex
-
 func init() {
 	reDigits = regexp.MustCompile(`^\d+\.?\d+$`)
 	timeFormats = append(timeFormats, nonISOTimeFormats...)
 }
-
-// bufStr use non-allocating buffer to produce output instead of fmt.Sprintf.
-// The buffer used is created on package init and is reset at end of each call.
-// The compiler will inline the buffer's output as long as it doesn't break the
-// rules when deciding to allocate to heap.
-// func bufStr(buf *xfmt.Buffer) string {
-// 	xfmtBufM.Lock()
-// 	defer xfmtBufM.Unlock()
-
-// 	s := string(xfmtBuf.Bytes())
-// 	buf.Reset()
-
-// 	return s
-// }
 
 // OffsetForLocation get offset data for a named zone such a America/Tornto or EST
 // or MST. Based on date the offset for a zone can differ, with, for example, an
@@ -138,6 +121,7 @@ func init() {
 //
 // If the zone is not recognized in Go's tzdata database an error will be
 // returned.
+//
 // Doesn't inline with
 //   go build -gcflags '-m -m' timestamp.go 2>&1 |less
 func OffsetForLocation(year int, month time.Month, day int, location string) (d time.Duration, err error) {
@@ -165,22 +149,25 @@ func OffsetForTime(t time.Time) (d time.Duration) {
 
 // ZoneFromHM get fixed zone from hour and minute offset
 // A negative offsetH will result in a negative zone offset
+//
 // Inlines with
 //   go build -gcflags '-m -m' timestamp.go 2>&1 |less
 // and removal of fmt.Sprintf to make zone name
+// location is a pointer and escapes to heap
 func ZoneFromHM(offsetH, offsetM int) *time.Location {
-	// absM := int(math.Abs(float64(offsetM)))
 	if offsetM < 0 {
 		offsetM = -offsetM
 	}
 
 	offsetSec := offsetH*60*60 + offsetM*60
+	location := time.FixedZone("FixedZone", offsetSec)
 
-	return time.FixedZone("FixedZone", offsetSec)
+	return location
 }
 
 // OffsetHM get hours and minutes for location offset from UTC
 // Avoiding math.Abs and casting allows inlining in
+//
 //   go build -gcflags '-m -m' timestamp.go 2>&1 |less
 func OffsetHM(d time.Duration) (hours, minutes int) {
 	hours = int(d.Hours())
@@ -203,6 +190,7 @@ func OffsetHM(d time.Duration) (hours, minutes int) {
 //
 // For -5 hours and 30 minutes
 //  -0500
+//
 // Inlines with
 //   go build -gcflags '-m -m' timestamp.go 2>&1 |less
 func LocationOffsetString(d time.Duration) string {
@@ -217,6 +205,7 @@ func LocationOffsetString(d time.Duration) string {
 //
 // For -5 hours and 30 minutes
 //  -05:00
+//
 // Inlines with
 //   go build -gcflags '-m -m' timestamp.go 2>&1 |less
 func LocationOffsetStringDelimited(d time.Duration) string {
@@ -242,47 +231,90 @@ func locationOffsetString(d time.Duration, delimited bool) string {
 
 // RangeOverTimes returns a date range function over start date to end date inclusive.
 // After the end of the range, the range function returns a zero date,
-// date.IsZero() is true.
+// date.IsZero() is true. If zones for start and end differ an error will be
+// returned and needs to be checked for before time.IsZero().
+//
+// Note that this function has been modified to NOT change the location for the
+// start and end time to UTC. This is in keeping with the avoidance of change to
+// time locations passed into function. It is the responsibility of the caller
+// to set location in keeping with the intended use of the function. The
+// location used could affect the day values.
 //
 // Sample usage assuming building a map with empty string values:
 /*
-  for rd := dateutils.RangeOverTimes(start, end); ; {
-	 date := rd()
-	 if date.IsZero() {
-	   break
-	 }
-	 indicesForDays[getIndexForDate(*date)] = ""
-  }
+	t1 := time.Now()
+	t2 := t1.Add(30 * 24 * time.Hour)
+
+	m := make(map[string]string)
+
+	var err error
+	var newTime time.Time
+	for rt := timestamp.RangeOverTimes(t1, t2); ; {
+		newTime, err = rt()
+		if err != nil {
+			// Handle when there was an error in the input times
+			break
+		}
+		if newTime.IsZero() {
+			// Handle when the day range is done
+			break
+		}
+		v := fmt.Sprintf("%04d-%02d-%02d", newTime.Year(), newTime.Month(), newTime.Day())
+		m[v] = ""
+	}
+
+	if err != nil {
+		// handle error due to non-equal UTC offsets
+	}
+
+	a := make([]string, 0, len(m))
+	for v := range m {
+		a = append(a, v)
+	}
+	sort.Strings(a)
+	fmt.Println("Days in range")
+
+	for _, v := range a {
+		fmt.Println("Got", v)
+	}
 */
 // Can't inline
-func RangeOverTimes(start, end time.Time) func() time.Time {
-	start = start.In(time.UTC)
-	end = end.In(time.UTC)
+func RangeOverTimes(start, end time.Time) func() (time.Time, error) {
+	_, startZone := start.Zone()
+	_, endZone := end.Zone()
+
+	if startZone != endZone {
+		return func() (time.Time, error) {
+			return time.Time{}, errors.New("Zones for start and end differ")
+		}
+	}
 
 	y, m, d := start.Date()
-	start = time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
+	start = time.Date(y, m, d, 0, 0, 0, 0, start.Location())
 	y, m, d = end.Date()
-	end = time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
+	end = time.Date(y, m, d, 0, 0, 0, 0, end.Location())
 
-	return func() time.Time {
+	return func() (time.Time, error) {
 		if start.After(end) {
-			return time.Time{}
+			return time.Time{}, nil
 		}
 		date := start
 		start = start.AddDate(0, 0, 1)
 
-		return date
+		return date, nil
 	}
 }
 
 // TimeDateOnly get date with zero time values
 //
-// Can't inline
+// Note that this function has been modified to NOT change the location for the
+// start and end time to UTC. This is in keeping with the avoidance of change to
+// time locations passed into function. It is the responsibility of the caller
+// to set location in keeping with the intended use of the function.
+//
+// Can inline
 func TimeDateOnly(t time.Time) time.Time {
-	t = t.In(time.UTC)
-
-	newT := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
-	return newT
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }
 
 // parseUnixTS returns seconds and nanoseconds from a timestamp that has the
@@ -449,7 +481,6 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 		xfmtBuf.S("Could not parse as ISO timestamp ").S(timeStr)
 
 		return time.Time{}, errors.New(string(xfmtBuf.Bytes()))
-		// return time.Time{}, fmt.Errorf("Could not parse as ISO timestamp and isoOnly was specified %s", timeStr)
 	}
 
 	if isTS == true {
@@ -461,7 +492,6 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 		// Avoid heap allocation
 		xfmtBuf.S("Could not parse as UNIX timestamp ").S(timeStr)
 		return time.Time{}, errors.New(string(xfmtBuf.Bytes()))
-		// return time.Time{}, fmt.Errorf("Could not parse as UNIX timestamp %s", timeStr)
 	}
 
 	// If not a unix type timestamp try alternate non-iso timestamp formats
@@ -477,7 +507,6 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 	xfmtBuf := xfmt.Buffer{}
 	xfmtBuf.S("Could not parse with other timestamp patterns ").S(timeStr)
 	return time.Time{}, errors.New(string(xfmtBuf.Bytes()))
-	// return time.Time{}, fmt.Errorf("Could not parse with other timestamp patterns %s", timeStr)
 }
 
 // RFC7232 get format used for http headers
@@ -503,8 +532,6 @@ func RFC7232(t time.Time) string {
 //
 // Can inline if not converted first to UTC
 func ISO8601CompactUTC(t time.Time) string {
-	// t = t.In(time.UTC)
-
 	return t.Format("20060102T150405-0700")
 }
 
@@ -516,8 +543,6 @@ func ISO8601CompactUTC(t time.Time) string {
 //
 // Can inline if not converted first to UTC
 func ISO8601CompactMsecUTC(t time.Time) string {
-	// t = t.In(time.UTC)
-
 	return t.Format("20060102T150405.000-0700")
 }
 
@@ -529,8 +554,6 @@ func ISO8601CompactMsecUTC(t time.Time) string {
 //
 // Can inline if not converted first to UTC
 func ISO8601UTC(t time.Time) string {
-	// t = t.In(time.UTC)
-
 	return t.Format("2006-01-02T15:04:05-07:00")
 }
 
@@ -542,8 +565,6 @@ func ISO8601UTC(t time.Time) string {
 //
 // Can inline if not converted first to UTC
 func ISO8601MsecUTC(t time.Time) string {
-	// t = t.In(time.UTC)
-
 	return t.Format("2006-01-02T15:04:05.000-07:00")
 }
 
@@ -555,8 +576,6 @@ func ISO8601MsecUTC(t time.Time) string {
 //
 // Can inline if not converted first to UTC
 func ISO8601InLocation(t time.Time, location *time.Location) string {
-	// t = t.In(location)
-
 	return t.Format("2006-01-02T15:04:05-07:00")
 }
 
@@ -568,8 +587,6 @@ func ISO8601InLocation(t time.Time, location *time.Location) string {
 //
 // Can inline if not converted first to UTC
 func ISO8601MsecInLocation(t time.Time, location *time.Location) string {
-	// t = t.In(location)
-
 	return t.Format("2006-01-02T15:04:05.000-07:00")
 }
 
@@ -581,8 +598,6 @@ func ISO8601MsecInLocation(t time.Time, location *time.Location) string {
 //
 // Can inline if not converted first to UTC
 func ISO8601CompactInLocation(t time.Time, location *time.Location) string {
-	// t = t.In(location)
-
 	return t.Format("20060102T150405-0700")
 }
 
@@ -594,8 +609,6 @@ func ISO8601CompactInLocation(t time.Time, location *time.Location) string {
 //
 // Can inline if not converted first to UTC
 func ISO8601CompactMsecInLocation(t time.Time, location *time.Location) string {
-	// t = t.In(location)
-
 	return t.Format("20060102T150405.000-0700")
 }
 
@@ -608,6 +621,7 @@ func StartTimeIsBeforeEndTime(t1 time.Time, t2 time.Time) bool {
 // zone for the timestamp or if there is no zone offset in the incoming
 // timestamp the incoming location will bue used. It is the responsibility of
 // further steps to standardize to a specific zone offset.
+//
 //  go build -gcflags '-m' timestamp.go
 //
 // Can't inline
@@ -676,7 +690,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// A function to handle adding to a slice if it is not above capacity and
 	// flagging when it has reached capacity. Runs same speed when inline and is
 	// only used here. Return a flag indicating if a timestamp part has reached
-	// its max capacity plus the modified slice to avoid issues due to appending.
+	// its max capacity plus the modified slice to avoid issues due to
+	// appending.
 	var addIf = func(part []rune, add rune, max int) ([]rune, bool) {
 		if len(part) < max {
 			part = append(part, add)
@@ -743,7 +758,9 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 					currentSection = afterSection
 				}
 			default:
-				unparsed = append(unparsed, fmt.Sprintf("%s%s%d", string(orig), "@", i))
+				xfmtBuf := xfmt.Buffer{}
+				xfmtBuf.S("'").C(orig).S("'").C('@').D(i)
+				unparsed = append(unparsed, string(xfmtBuf.Bytes()))
 			}
 		} else if r == '.' {
 			// There could be extraneous decimal characters.
@@ -767,15 +784,17 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 				zoneParts = append(zoneParts, '0', '0', '0', '0')
 				break
 			} else {
-				unparsed = append(unparsed, fmt.Sprintf("%s%s%d", string(orig), "@", i))
+				xfmtBuf := xfmt.Buffer{}
+				xfmtBuf.S("'").C(orig).S("'").C('@').D(i)
+				unparsed = append(unparsed, string(xfmtBuf.Bytes()))
 			}
 			// Ignore spaces
 		} else if unicode.IsSpace(r) {
 			continue
 		} else {
-			// We haven't dealt with valid characters so prepare for erroor
-			unparsed = append(unparsed, fmt.Sprintf("%s%s%d", string(orig), "@", i))
-			// unparsed = append(unparsed, string(orig)+"@"+fmt.Sprint(i))
+			xfmtBuf := xfmt.Buffer{}
+			xfmtBuf.S("'").C(orig).S("'").C('@').D(i)
+			unparsed = append(unparsed, string(xfmtBuf.Bytes()))
 		}
 	}
 
@@ -785,8 +804,6 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		xfmtBuf.S("got unparsed caracters ").S(strings.Join(unparsed, ",")).S(" in input ").S(timeStr)
 
 		return time.Time{}, errors.New(string(xfmtBuf.Bytes()))
-		// 	"got unparsed caracters %s in input %s", strings.Join(unparsed, ","), timeStr)
-		// return time.Time{}, errors.New("Got unparsed characters in input")
 	}
 
 	zoneFound := false        // has time zone been found
@@ -801,8 +818,6 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			xfmtBuf.S("Zone is of length ").D(zoneLen).S(" wich is not enough to detect zone")
 
 			return time.Time{}, errors.New(string(xfmtBuf.Bytes()))
-			// return time.Time{}, fmt.Errorf("Zone is of length %d wich is not enough to detect zone", zoneLen)
-			// return time.Time{}, errors.New("Zone is length 1 or 3, which is ambiguous")
 			// With no zone assume UTC
 		} else if zoneLen == 0 {
 			zoneFound = false
@@ -832,28 +847,22 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// requiring that all date and time parts be fully allocated event if we
 	// can't tell where the problem started.
 	if len(yearParts) != yearMax {
-		// return time.Time{}, fmt.Errorf("Input %s has year length %d needs %d", timeStr, len(yearParts), 4)
 		return time.Time{}, errors.New("Input year length is not 4")
 	}
 	if len(monthParts) != monthMax {
 		return time.Time{}, errors.New("Input month length is not 2")
-		// return time.Time{}, fmt.Errorf("Input %s has month length %d needs %d", timeStr, len(monthParts), 2)
 	}
 	if len(dayParts) != dayMax {
 		return time.Time{}, errors.New("Input day length is not 2")
-		// return time.Time{}, fmt.Errorf("Input %s has day length %d needs %d", timeStr, len(dayParts), 2)
 	}
 	if len(hourParts) != hourMax {
 		return time.Time{}, errors.New("Input hour length is not 2")
-		// return time.Time{}, fmt.Errorf("Input %s has hour length %d needs %d", timeStr, len(hourParts), 2)
 	}
 	if len(minuteParts) != minuteMax {
 		return time.Time{}, errors.New("Input minute length is not 2")
-		// return time.Time{}, fmt.Errorf("Input %s has minute length %d needs %d", timeStr, len(minuteParts), 2)
 	}
 	if len(secondParts) != secondMax {
 		return time.Time{}, errors.New("Input second length is not 2")
-		// return time.Time{}, fmt.Errorf("Input %s has second length %d needs %d", timeStr, len(secondParts), 2)
 	}
 
 	var joinRunes = func(size int, runes ...rune) string {
