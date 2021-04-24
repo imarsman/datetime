@@ -33,6 +33,9 @@ import (
 	// _ "time/tzdata"
 )
 
+// Can view allocation analysis with
+//   go build -gcflags '-m -m' timestamp.go 2>&1 |less
+
 var reDigits *regexp.Regexp
 
 var namedZoneTimeFormats = []string{
@@ -100,37 +103,27 @@ func init() {
 	timeFormats = append(timeFormats, nonISOTimeFormats...)
 }
 
-// func joinRunesB(runes ...rune) (string, *strings.Builder) {
-// 	var sb strings.Builder
-// 	for _, r := range runes {
-// 		sb.WriteRune(r)
-// 	}
-// 	return sb.String(), &sb
-// }
-
-func joinRunes(runes ...rune) string {
+// runesToString join bytes with no allocation
+//
+// WriteRune is more complex than WriteByte so can't inline
+func runesToString(runes ...rune) string {
 	var sb strings.Builder
-	for _, r := range runes {
-		sb.WriteRune(r)
+	for i := 0; i < len(runes); i++ {
+		sb.WriteRune(runes[i])
 	}
 	return sb.String()
 }
 
-func joinBytes(bytes ...byte) string {
+// bytesToString join bytes with no allocation
+//
+// can inline - strings.Builder WriteByte is less complex than WriteRune
+func bytesToString(bytes ...byte) string {
 	var sb strings.Builder
-	for _, b := range bytes {
-		sb.WriteByte(b)
+	for i := 0; i < len(bytes); i++ {
+		sb.WriteByte(bytes[i])
 	}
 	return sb.String()
 }
-
-// func joinBytesB(bytes ...byte) (string, *strings.Builder) {
-// 	var sb strings.Builder
-// 	for _, b := range bytes {
-// 		sb.WriteByte(b)
-// 	}
-// 	return sb.String(), &sb
-// }
 
 // OffsetForLocation get offset data for a named zone such a America/Tornto or EST
 // or MST. Based on date the offset for a zone can differ, with, for example, an
@@ -154,8 +147,7 @@ func joinBytes(bytes ...byte) string {
 // If the zone is not recognized in Go's tzdata database an error will be
 // returned.
 //
-// Doesn't inline with
-//   go build -gcflags '-m -m' timestamp.go 2>&1 |less
+// Can't inline
 func OffsetForLocation(year int, month time.Month, day int, location string) (d time.Duration, err error) {
 	l, err := time.LoadLocation(location)
 	if err != nil {
@@ -416,7 +408,7 @@ func ParseUnixTS(timeStr string) (time.Time, error) {
 				b := xfmtBuf.Bytes()
 				// l := len(b)
 
-				toSend = joinBytes(b...)
+				toSend = bytesToString(b...)
 			}
 			// Get seconds, nanoseconds, and error if there was a problem
 			s, n, err := parseUnixTS(toSend)
@@ -436,7 +428,7 @@ func ParseUnixTS(timeStr string) (time.Time, error) {
 	xfmtBuf.S("Could not parse as UNIX timestamp ").S(timeStr)
 	b := xfmtBuf.Bytes()
 	// l := len(b)
-	s := joinBytes(b...)
+	s := bytesToString(b...)
 
 	// return time.Time{}, fmt.Errorf("Could not parse as UNIX timestamp %s", timeStr)
 	return time.Time{}, errors.New(s)
@@ -518,7 +510,7 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 
 		b := xfmtBuf.Bytes()
 		// l := len(b)
-		s := joinBytes(b...)
+		s := bytesToString(b...)
 
 		return time.Time{}, errors.New(s)
 	}
@@ -534,7 +526,7 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 
 		b := xfmtBuf.Bytes()
 		// l := len(b)
-		s := joinBytes(b...)
+		s := bytesToString(b...)
 
 		return time.Time{}, errors.New(s)
 	}
@@ -554,7 +546,7 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 
 	b := xfmtBuf.Bytes()
 	// l := len(b)
-	errMsg := joinBytes(b...)
+	errMsg := bytesToString(b...)
 
 	return time.Time{}, errors.New(errMsg)
 }
@@ -570,7 +562,6 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 // Can't inline as the format must be in GMT
 func RFC7232(t time.Time) string {
 	t = t.In(time.UTC)
-
 	return t.Format(http.TimeFormat)
 }
 
@@ -675,6 +666,7 @@ func StartTimeIsBeforeEndTime(t1 time.Time, t2 time.Time) bool {
 //  go build -gcflags '-m' timestamp.go
 //
 // Can't inline
+// location leaks
 func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, error) {
 	// Define sections that can change.
 
@@ -686,8 +678,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		xfmtBuf.S("Input ").S(timeStr[0:35]).S("... length is ").D(timeStrLength).S(" and > max of ").D(maxLength)
 
 		b := xfmtBuf.Bytes()
-		// l := len(b)
-		s := joinBytes(b...)
+		s := bytesToString(b...)
 
 		return time.Time{}, errors.New(s)
 	}
@@ -820,7 +811,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 				b := xfmtBuf.Bytes()
 				// l := len(b)
 				s := new(string)
-				*s = joinBytes(b...)
+				*s = bytesToString(b...)
 
 				unparsed = append(unparsed, *s)
 			}
@@ -849,7 +840,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 				xfmtBuf := new(xfmt.Buffer)
 				xfmtBuf.S("'").C(orig).S("'").C('@').D(i)
 				b := xfmtBuf.Bytes()
-				s := joinBytes(b...)
+				s := bytesToString(b...)
 
 				unparsed = append(unparsed, s)
 			}
@@ -861,7 +852,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			xfmtBuf.S("'").C(orig).S("'").C('@').D(i)
 			b := xfmtBuf.Bytes()
 			// l := len(b)
-			s := joinBytes(b...)
+			s := bytesToString(b...)
 
 			unparsed = append(unparsed, s)
 		}
@@ -872,7 +863,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		xfmtBuf := new(xfmt.Buffer)
 		xfmtBuf.S("got unparsed caracters ").S(strings.Join(unparsed, ",")).S(" in input ").S(timeStr)
 		b := xfmtBuf.Bytes()
-		s := joinBytes(b...)
+		s := bytesToString(b...)
 
 		e := errors.New(s)
 
@@ -890,7 +881,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			xfmtBuf := new(xfmt.Buffer)
 			xfmtBuf.S("Zone is of length ").D(zoneLen).S(" wich is not enough to detect zone")
 			b := xfmtBuf.Bytes()
-			s := joinBytes(b...)
+			s := bytesToString(b...)
 
 			return time.Time{}, errors.New(s)
 			// With no zone assume UTC
@@ -945,57 +936,62 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// a part, which would have been caught above.
 
 	// Get year int value from yearParts rune slice
-	// Should not error
-
-	y, err := strconv.Atoi(joinRunes(yearParts...))
+	// Should not error since only digits were place in slice
+	y, err := strconv.Atoi(runesToString(yearParts...))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get month int value from monthParts rune slice
-	// Should not error
-	m, err := strconv.Atoi(joinRunes(monthParts...))
+	// Should not error since only digits were place in slice
+	m, err := strconv.Atoi(runesToString(monthParts...))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get day int value from dayParts rune slice
-	// Should not error
-	d, err := strconv.Atoi(joinRunes(dayParts...))
+	// Should not error since only digits were place in slice
+	d, err := strconv.Atoi(runesToString(dayParts...))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get hour int value from hourParts rune slice
-	// Should not error
-	h, err := strconv.Atoi(joinRunes(hourParts...))
+	// Should not error since only digits were place in slice
+	h, err := strconv.Atoi(runesToString(hourParts...))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get minute int value from minParts rune slice
-	// Should not error
-	mn, err := strconv.Atoi(joinRunes(minuteParts...))
+	// Should not error since only digits were place in slice
+	mn, err := strconv.Atoi(runesToString(minuteParts...))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get second int value from secondParts rune slice
-	// Should not error
-	s, err := strconv.Atoi(joinRunes(secondParts...))
+	// Should not error since only digits were place in slice
+	s, err := strconv.Atoi(runesToString(secondParts...))
 	if err != nil {
 		return time.Time{}, err
 	}
 
-	var subsec int = 0 // default subsecond value is 0
+	var subseconds int = 0 // default subsecond value is 0
+
+	subsecondLen := len(subsecondParts)
 
 	// Handle subseconds if that slice is nonempty
-	if len(subsecondParts) > 0 {
-		subsec, err = strconv.Atoi(joinRunes(subsecondParts...))
+	// There would have been an error if the length of subsecond parts was
+	// greater than subsecondMax
+	if subsecondLen > 0 {
+		subseconds, err = strconv.Atoi(runesToString(subsecondParts...))
 		if err != nil {
 			return time.Time{}, err
 		}
 		// Calculate subseconds in terms of nanosecond if the length is less
 		// than the full length for nanoseconds since that is what the time.Date
 		// function is expecting.
-		if len(subsecondParts) < subsecondMax {
+		if subsecondLen < subsecondMax {
 			// 10^ whatever extra decimal place count is missing from 9
-			subsec = int(float64(subsec) * (math.Pow(10, (float64(subsecondMax) - float64(len(subsecondParts))))))
+			subseconds = int(
+				float64(subseconds) *
+					(math.Pow(10, (float64(subsecondMax) - float64(subsecondLen)))))
 		}
 	}
 
@@ -1011,26 +1007,26 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 
 	// If no zone was found in scan use default location
 	if zoneFound == false {
-		return time.Date(y, time.Month(m), d, h, mn, s, subsec, location), nil
+		return time.Date(y, time.Month(m), d, h, mn, s, subseconds, location), nil
 	}
 
 	// Evaluate hour offset from the timestamp value
-	// Error is unlikely
-	offsetH, err := strconv.Atoi(joinRunes(zoneParts[0:2]...))
+	// Should not error since only digits were place in slice
+	offsetH, err := strconv.Atoi(runesToString(zoneParts[0:2]...))
 	if err != nil {
 		return time.Time{}, err
 	}
 
 	// Evaluate minute offset from the timestamp value
-	// Error is unlikely
-	offsetM, err := strconv.Atoi(joinRunes(zoneParts[2:]...))
+	// Should not error since only digits were place in slice
+	offsetM, err := strconv.Atoi(runesToString(zoneParts[2:]...))
 	if err != nil {
 		return time.Time{}, err
 	}
 
 	// If offset is 00:00 use UTC
 	if offsetH == 0 && offsetM == 0 {
-		return time.Date(y, time.Month(m), d, h, mn, s, subsec, time.UTC), nil
+		return time.Date(y, time.Month(m), d, h, mn, s, subseconds, time.UTC), nil
 	}
 
 	var offsetSec int
@@ -1043,5 +1039,5 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		offsetSec = -offsetH*60*60 + offsetM*60
 	}
 
-	return time.Date(y, time.Month(m), d, h, mn, s, subsec, time.FixedZone("FixedZone", offsetSec)), nil
+	return time.Date(y, time.Month(m), d, h, mn, s, subseconds, time.FixedZone("FixedZone", offsetSec)), nil
 }
