@@ -110,7 +110,7 @@ func init() {
 	cachedZones = make(map[int]*time.Location)
 }
 
-// RunesToString join bytes with no allocation
+// RunesToString convert runes list to string with no allocation
 //
 // WriteRune is more complex than WriteByte so can't inline
 //
@@ -124,7 +124,7 @@ func RunesToString(runes ...rune) string {
 	return sb.String()
 }
 
-// BytesToString join bytes with no allocation
+// BytesToString convert byte list to string with no allocation
 //
 // can inline - strings.Builder WriteByte is less complex than WriteRune
 //
