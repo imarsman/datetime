@@ -892,7 +892,7 @@ func TestParsISOTimestamp(t *testing.T) {
 //  go test -bench=. -benchmem -memprofile memprofile.out -cpuprofile cpuprofile.out
 //  go tool pprof -http=:8080 memprofile.out
 //  go tool pprof -http=:8080 cpuprofile.out
-func BenchmarkUnixTimestampTest(b *testing.B) {
+func BenchmarkUnixTimestamp(b *testing.B) {
 	is := is.New(b)
 
 	var err error
@@ -922,7 +922,7 @@ func BenchmarkUnixTimestampTest(b *testing.B) {
 //  go test -bench=. -benchmem -memprofile memprofile.out -cpuprofile cpuprofile.out
 //  go tool pprof -http=:8080 memprofile.out
 //  go tool pprof -http=:8080 cpuprofile.out
-func BenchmarkUnixTimestampNanoTest(b *testing.B) {
+func BenchmarkUnixTimestampNano(b *testing.B) {
 	is := is.New(b)
 
 	var err error
@@ -946,7 +946,7 @@ func BenchmarkUnixTimestampNanoTest(b *testing.B) {
 	is.True(t1 != time.Time{}) // Should not have an empty time
 	is.NoErr(err)              // Parsing should not have caused an error
 }
-func BenchmarkIterativeISOTimestampDateOnlyTest(b *testing.B) {
+func BenchmarkIterativeISOTimestampDateOnly(b *testing.B) {
 	is := is.New(b)
 
 	var err error
@@ -968,7 +968,7 @@ func BenchmarkIterativeISOTimestampDateOnlyTest(b *testing.B) {
 	is.NoErr(err)              // Parsing should not have caused an error
 }
 
-func BenchmarkIterativeISOTimestampShortTest(b *testing.B) {
+func BenchmarkIterativeISOTimestampShort(b *testing.B) {
 	is := is.New(b)
 
 	var err error
@@ -991,7 +991,7 @@ func BenchmarkIterativeISOTimestampShortTest(b *testing.B) {
 }
 
 // go test -run=XXX -bench=IterativeISOTimestampLong -gcflags '-m'
-func BenchmarkIterativeISOTimestampLongTest(b *testing.B) {
+func BenchmarkIterativeISOTimestampLong(b *testing.B) {
 	is := is.New(b)
 
 	var err error
@@ -1013,7 +1013,7 @@ func BenchmarkIterativeISOTimestampLongTest(b *testing.B) {
 	is.NoErr(err)              // Parsing should not have caused an error
 }
 
-func BenchmarkIterativeISOTimestampLongZeroOffsetTest(b *testing.B) {
+func BenchmarkIterativeISOTimestampLongZeroOffset(b *testing.B) {
 	is := is.New(b)
 
 	var err error
@@ -1035,7 +1035,7 @@ func BenchmarkIterativeISOTimestampLongZeroOffsetTest(b *testing.B) {
 	is.NoErr(err)              // Parsing should not have caused an error
 }
 
-func BenchmarkNativeISOTimestampLongTest(b *testing.B) {
+func BenchmarkNativeISOTimestampLong(b *testing.B) {
 	is := is.New(b)
 
 	var err error
@@ -1057,7 +1057,7 @@ func BenchmarkNativeISOTimestampLongTest(b *testing.B) {
 	is.NoErr(err)              // Parsing should not have caused an error
 }
 
-func BenchmarkNonAllocatingBufferTest(b *testing.B) {
+func BenchmarkNonAllocatingBuffer(b *testing.B) {
 	is := is.New(b)
 
 	var s []byte
@@ -1087,7 +1087,7 @@ func BenchmarkNonAllocatingBufferTest(b *testing.B) {
 	is.True(len(s) > 0)
 }
 
-func BenchmarkAllocatingBufferTest(b *testing.B) {
+func BenchmarkAllocatingBuffer(b *testing.B) {
 	is := is.New(b)
 
 	var s string
@@ -1104,6 +1104,82 @@ func BenchmarkAllocatingBufferTest(b *testing.B) {
 			// The total in tests took about 80 ns/op, which is about 20 ms per
 			// item. The benchmark reported 112 B/op.
 			s = fmt.Sprintf("Could not parse as ISO timestamp %s %s %s", first, second, third)
+		}
+	})
+
+	is.True(s != "")
+}
+
+// The goal of using strings.Builder is to avoid heap allocation
+// The memory used and time taken should be similar to using a string cast
+func BenchmarkBytesToString(b *testing.B) {
+	is := is.New(b)
+
+	var s string
+	bytes := []byte{'a', 'b', 'c', 'd'}
+
+	b.SetBytes(2)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			s = timestamp.BytesToString(bytes...)
+		}
+	})
+
+	is.True(s != "")
+}
+
+// The goal of using strings.Builder is to avoid heap allocation
+// The memory used and time taken should be similar to using a string cast
+func BenchmarkRunesToString(b *testing.B) {
+	is := is.New(b)
+
+	var s string
+	runes := []rune{'a', 'b', 'c', 'd'}
+
+	b.SetBytes(2)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			s = timestamp.RunesToString(runes...)
+		}
+	})
+
+	is.True(s != "")
+}
+
+func BenchmarkBytesToStringCast(b *testing.B) {
+	is := is.New(b)
+
+	var s string
+	bytes := []byte{'a', 'b', 'c', 'd'}
+
+	b.SetBytes(2)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			s = string(bytes)
+		}
+	})
+
+	is.True(s != "")
+}
+
+func BenchmarkRunesToStringCast(b *testing.B) {
+	is := is.New(b)
+
+	var s string
+	runes := []rune{'a', 'b', 'c', 'd'}
+
+	b.SetBytes(2)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			s = string(runes)
 		}
 	})
 
