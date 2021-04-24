@@ -732,7 +732,10 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		zoneMax      int = 4 // max length for zone
 	)
 
-	var unparsed []string // set of unparsed runes and their positions
+	var unparsed []string // string representation of unparsed runes and their positions
+
+	var partAtMax bool     // flag indicating current part is filled
+	var offsetNonzero bool // flag indicating that full zone offset is zero
 
 	// A function to handle adding to a slice if it is not above capacity and
 	// flagging when it has reached capacity. Runs same speed when inline and is
@@ -749,63 +752,74 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return part, false
 	}
 
-	// A flag indicating that the current part (year, month, day, etc.) is
-	// filled.
-	var partAtMax bool
-
 	// Loop through runes in time string and decide what to do with each.
 	for i, r := range timeStr {
 		orig := r
 		if unicode.IsDigit(r) {
 			switch currentSection {
+			// Initially no section is active
 			case emptySection:
 				currentSection = yearSection
 				yearParts, partAtMax = addIf(yearParts, r, yearMax)
 				if partAtMax == true {
 					currentSection = monthSection
 				}
+				// Year section is used until full
 			case yearSection:
 				yearParts, partAtMax = addIf(yearParts, r, yearMax)
 				if partAtMax == true {
 					currentSection = monthSection
 				}
+				// Month section is used until full
 			case monthSection:
 				monthParts, partAtMax = addIf(monthParts, r, monthMax)
 				if partAtMax == true {
 					currentSection = daySection
 				}
+				// Day section is used until full
 			case daySection:
 				dayParts, partAtMax = addIf(dayParts, r, dayMax)
 				if partAtMax == true {
 					currentSection = hourSection
 				}
+				// Hour section is used until full
 			case hourSection:
 				hourParts, partAtMax = addIf(hourParts, r, hourMax)
 				if partAtMax == true {
 					currentSection = minuteSection
 				}
+				// Minute section is used until full
 			case minuteSection:
 				minuteParts, partAtMax = addIf(minuteParts, r, minuteMax)
 				if partAtMax == true {
 					currentSection = secondSection
 				}
+				// Second section is used until full
 			case secondSection:
 				secondParts, partAtMax = addIf(secondParts, r, secondMax)
 				if partAtMax == true {
 					currentSection = subsecondSection
 				}
+				// Subsecond section is used until full
 			case subsecondSection:
 				subsecondParts, partAtMax = addIf(subsecondParts, r, subsecondMax)
 				if partAtMax == true {
 					currentSection = zoneSection
 				}
+				// Zone section is used until full
 			case zoneSection:
+				// Allow for offset calculations later to be avoided
+				if r != '0' {
+					offsetNonzero = true
+				}
+				// Add to zone
 				zoneParts, partAtMax = addIf(zoneParts, r, zoneMax)
 				if partAtMax == true {
 					// We could exit here but we can continue to more accurately
 					// report bad date parts if we allow things to continue.
 					currentSection = afterSection
 				}
+				// Default to bad input
 			default:
 				xfmtBuf := new(xfmt.Buffer)
 				xfmtBuf.S("'").C(orig).S("'").C('@').D(i)
@@ -816,12 +830,13 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 
 				unparsed = append(unparsed, *s)
 			}
+			// If the current section is not for subseconds skip
 		} else if r == '.' {
 			// There could be extraneous decimal characters.
 			if currentSection != subsecondSection {
 				continue
 			}
-			currentSection = subsecondSection
+			// currentSection = subsecondSection
 		} else if r == '-' || r == '+' {
 			// Selectively define offset possitivity
 			if currentSection == subsecondSection {
@@ -833,11 +848,12 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			continue
 			// Zulu offset
 		} else if unicode.ToUpper(r) == 'Z' {
+			// define offset as zero for hours and minutes
 			if currentSection == zoneSection || currentSection == subsecondSection {
-				// define offset as zero for hours and minutes
 				zoneParts = append(zoneParts, '0', '0', '0', '0')
 				break
 			} else {
+				// Assume bad input
 				xfmtBuf := new(xfmt.Buffer)
 				xfmtBuf.S("'").C(orig).S("'").C('@').D(i)
 				b := xfmtBuf.Bytes()
@@ -849,10 +865,10 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		} else if unicode.IsSpace(r) {
 			continue
 		} else {
+			// Catch-all for characters not allowed
 			xfmtBuf := new(xfmt.Buffer)
 			xfmtBuf.S("'").C(orig).S("'").C('@').D(i)
 			b := xfmtBuf.Bytes()
-			// l := len(b)
 			s := bytesToString(b...)
 
 			unparsed = append(unparsed, s)
@@ -885,11 +901,11 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			s := bytesToString(b...)
 
 			return time.Time{}, errors.New(s)
-			// With no zone assume UTC
+			// With no zone assume UTC and set all offset characters to 0
 		} else if zoneLen == 0 {
 			zoneFound = false
 			zoneParts = append(zoneParts, '0', '0', '0', '0')
-			// Zone of length 2 needs padding to set minutes
+			// Zone of length 2 needs padding to set minute offset
 		} else if zoneLen == 2 {
 			zoneParts = append(zoneParts, '0', '0')
 		}
@@ -911,7 +927,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// easily if for instance a year had 2 digits instead of 4. If this happened
 	// year would take 4 digits, month would take 2, day would take 2, hour
 	// would take 2, minute would take 2, and second would get none. We are thus
-	// requiring that all date and time parts be fully allocated event if we
+	// requiring that all date and time parts be fully allocated even if we
 	// can't tell where the problem started.
 	if len(yearParts) != yearMax {
 		return time.Time{}, errors.New("Input year length is not 4")
@@ -1011,18 +1027,23 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return time.Date(y, time.Month(m), d, h, mn, s, subseconds, location), nil
 	}
 
-	// Evaluate hour offset from the timestamp value
-	// Should not error since only digits were place in slice
-	offsetH, err := strconv.Atoi(runesToString(zoneParts[0:2]...))
-	if err != nil {
-		return time.Time{}, err
-	}
+	var offsetM int = 0
+	var offsetH int = 0
 
-	// Evaluate minute offset from the timestamp value
-	// Should not error since only digits were place in slice
-	offsetM, err := strconv.Atoi(runesToString(zoneParts[2:]...))
-	if err != nil {
-		return time.Time{}, err
+	if offsetNonzero {
+		// Evaluate minute offset from the timestamp value
+		// Should not error since only digits were place in slice
+		offsetM, err = strconv.Atoi(runesToString(zoneParts[2:]...))
+		if err != nil {
+			return time.Time{}, err
+		}
+
+		// Evaluate hour offset from the timestamp value
+		// Should not error since only digits were place in slice
+		offsetH, err = strconv.Atoi(runesToString(zoneParts[0:2]...))
+		if err != nil {
+			return time.Time{}, err
+		}
 	}
 
 	// If offset is 00:00 use UTC
