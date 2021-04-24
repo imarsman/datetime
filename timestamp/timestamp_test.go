@@ -11,24 +11,37 @@ import (
 	"github.com/matryer/is"
 )
 
+//                    Tests
+// -----------------------------------------------------
+// benchmark
+//   go test -run=XXX -bench=. -benchmem
+// Get allocation information and pipe to less
+//   go build -gcflags '-m -m' timestamp.go 2>&1 |less
+// Run all tests
+//   go test -v
+// Run a specific test by function name pattern
+//  go test -run=TestParsISOTimestamp
+
+//report start of running time tracking
 func runningtime(s string) (string, time.Time) {
 	fmt.Println("Start:	", s)
 	return s, time.Now()
 }
 
+// report total running time
 func track(s string, startTime time.Time) {
 	endTime := time.Now()
 	fmt.Println("End:	", s, "took", endTime.Sub(startTime))
 }
 
+// sample running time tracking
 func execute() {
 	defer track(runningtime("execute"))
 	time.Sleep(3 * time.Second)
 }
 
-// checkDate for use in parse checking. If the timestamp has no zone use the
-// location passed in. Compare expected to the parssed value in the location
-// pased in.
+// For use in parse checking. If the timestamp has no zone use the location
+// passed in. Compare expected to the parssed value in the location pased in.
 func checkDate(t *testing.T, input string, location *time.Location) (
 	got string, parsed string, calculated time.Time, calculatedOffset time.Duration, defaultOffset time.Duration) {
 	is := is.New(t)
@@ -60,52 +73,53 @@ func TestParse(t *testing.T) {
 	is := is.New(t)
 
 	mst, err := time.LoadLocation("MST")
+	is.NoErr(err) // Location should parse without error
 	jst, err := time.LoadLocation("Asia/Tokyo")
-	is.NoErr(err)
+	is.NoErr(err) // Location should parse without error
 
 	test, err := time.LoadLocation("EST")
-	is.NoErr(err)
+	is.NoErr(err) // Location should parse without error
 	est, err := time.LoadLocation("America/Toronto")
-	is.NoErr(err)
-	is.True(test != est)
+	is.NoErr(err)        // Location should parse without error
+	is.True(test != est) // EST should not equal America/Toronto
 
 	utcST, err := timestamp.ParseInUTC("2006-01-02T15:04:05.000+00:00")
-	is.NoErr(err)
+	is.NoErr(err) // Timestamp should parse without error
 	utcST = utcST.In(time.UTC)
 	utcOffset, err := timestamp.OffsetForLocation(utcST.Year(), utcST.Month(), utcST.Day(), time.UTC.String())
-	is.NoErr(err)
+	is.NoErr(err) // Getting offset should not have resulted in error
 
 	estST, err := timestamp.ParseInUTC("2006-01-02T15:04:05.000+00:00")
-	is.NoErr(err)
+	is.NoErr(err) // Timestamp should parse without error
 	estST = estST.In(est)
 	estSTOffset, err := timestamp.OffsetForLocation(estST.Year(), estST.Month(), estST.Day(), est.String())
-	is.NoErr(err)
+	is.NoErr(err) // Getting offset should not have resulted in error
 
 	estDST, err := timestamp.ParseInUTC("2006-07-02T15:04:05.000+00:00")
-	is.NoErr(err)
+	is.NoErr(err) // Timestamp should parse without error
 	estDST = estDST.In(est)
 	estDSTOffset, err := timestamp.OffsetForLocation(estDST.Year(), estDST.Month(), estDST.Day(), est.String())
-	is.NoErr(err)
+	is.NoErr(err) // Getting offset should not have resulted in error
 
 	mstST, err := timestamp.ParseInUTC("2006-07-02T15:04:05.000+00:00")
-	is.NoErr(err)
+	is.NoErr(err) // Timestamp should parse without error
 	mstST = mstST.In(mst)
 	mstOffset, err := timestamp.OffsetForLocation(mstST.Year(), mstST.Month(), mstST.Day(), mst.String())
-	is.NoErr(err)
+	is.NoErr(err) // Getting offset should not have resulted in error
 
 	// Tokyo time test
 	jST, err := timestamp.ParseInUTC("2006-07-02T15:04:05.000+00:00")
-	is.NoErr(err)
+	is.NoErr(err) // Timestamp should parse without error
 	jST = mstST.In(mst)
 	jstOffset, err := timestamp.OffsetForLocation(jST.Year(), jST.Month(), jST.Day(), jst.String())
-	is.NoErr(err)
+	is.NoErr(err) // Getting offset should not have resulted in error
 
-	start := time.Now()
+	var start = time.Now() // Start the timing of time to do tests
 
 	// It is possible to have a string which is just digits that will be parsed
 	// as a timestamp, incorrectly.
 	_, err = timestamp.ParseInUTC("2006010247")
-	is.NoErr(err)
+	is.NoErr(err) // Timestamp with just date should parse without error
 
 	// Get a unix timestamp we should not parse
 	_, err = timestamp.ParseInUTC("1")
@@ -113,7 +127,7 @@ func TestParse(t *testing.T) {
 
 	// Get time value from parsed reference time
 	unixBase, err := timestamp.ParseInUTC("2006-01-02T15:04:05.000+00:00")
-	is.NoErr(err)
+	is.NoErr(err) // Timestamp should parse without error
 
 	var sent, tStr string
 	var res time.Time
@@ -638,7 +652,7 @@ func TestRangeOverTimes(t *testing.T) {
 		v := fmt.Sprintf("%04d-%02d-%02d", newTime.Year(), newTime.Month(), newTime.Day())
 		m[v] = ""
 	}
-	is.NoErr(err)
+	is.NoErr(err) // There should not have been an error in getting range of dates
 	t1 = time.Now()
 	t2 = t1.Add(10 * 24 * time.Hour)
 
@@ -659,10 +673,10 @@ func TestOrdering(t *testing.T) {
 	is := is.New(t)
 
 	t1, err1 := timestamp.ParseInUTC("20201210T223900-0500")
-	is.NoErr(err1) // Should parse with no error
+	is.NoErr(err1) // Timestamp should parse with no error
 
 	t2, err2 := timestamp.ParseInUTC("20201211T223900-0500")
-	is.NoErr(err2) // Should parse with no error
+	is.NoErr(err2) // Timestamp should parse with no error
 
 	is.True(timestamp.StartTimeIsBeforeEndTime(t1, t2))  // Start is before end
 	is.True(!timestamp.StartTimeIsBeforeEndTime(t2, t1)) // Start is not before end
@@ -854,7 +868,7 @@ func TestParsISOTimestamp(t *testing.T) {
 	for _, in := range formats {
 		ts, err = timestamp.ParseISOTimestamp(in, time.UTC)
 		t.Logf("input %s ts %v", in, ts)
-		is.NoErr(err)
+		is.NoErr(err) // Should be no error
 	}
 
 	t.Log("")
@@ -862,15 +876,14 @@ func TestParsISOTimestamp(t *testing.T) {
 	for _, in := range badFormats {
 		ts, err = timestamp.ParseISOTimestamp(in, time.UTC)
 		t.Logf("input %s error %v", in, err)
-		is.True(err != nil)
+		is.True(err != nil) // Should be an error
 	}
 
 	defer track(runningtime(fmt.Sprintf("Time to process ISO timestamp %dx", count*2)))
 	for i := 0; i < count; i++ {
 		ts, err = timestamp.ParseISOTimestamp("20060102T010101.", time.UTC)
-		is.NoErr(err)
+		is.NoErr(err) // Should be no error
 	}
-	is.NoErr(err)
 	t.Log("ts", ts)
 }
 
@@ -1096,15 +1109,3 @@ func BenchmarkAllocatingBufferTest(b *testing.B) {
 
 	is.True(s != "")
 }
-
-func TestBits(t *testing.T) {
-	var a int32 = int32(rune('1'))
-	fmt.Println(a)
-	// a = a | (1 << 2)
-	// fmt.Printf("%08b\n", a)
-}
-
-// Other tests
-/*
-	go build -gcflags '-m -m' timestamp.go 2>&1 |less
-*/
