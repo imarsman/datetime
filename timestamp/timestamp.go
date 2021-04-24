@@ -776,6 +776,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 
 	var partAtMax bool = false // flag indicating current part is filled
 	var offsetZero bool = true // flag indicating that full zone offset is zero
+	var offsetHZero bool = false
+	var offsetMZero bool = false
 
 	// A function to handle adding to a slice if it is not above capacity and
 	// flagging when it has reached capacity. Runs same speed when inline and is
@@ -951,6 +953,14 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		zoneFound = true
 	}
 
+	// Find out if hour and/or minute parts are zero to help avoid Atoi later
+	if zoneParts[0] == '0' && zoneParts[1] == '0' {
+		offsetHZero = true
+	}
+	if zoneParts[2] == '0' && zoneParts[3] == '0' {
+		offsetMZero = true
+	}
+
 	// Allow for just dates and convert to timestamp with zero valued time
 	// parts. Since we are fixing it here it will pass the next tests if nothing
 	// else is wrong or missing.
@@ -991,46 +1001,81 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return time.Time{}, errors.New("Input second length is not 2")
 	}
 
+	isZero := func(part ...rune) bool {
+		for i := 0; i < len(part); i++ {
+			if part[i] != '0' {
+				return false
+			}
+		}
+		return true
+	}
+
 	// We already only put digits into the parts so Atoi should be fine in all
 	// cases. The problem would have been with an incorrect number of digits in
 	// a part, which would have been caught above.
 
+	var err error
+	var y, m, d, h, mn, s int
+	y, m, d, h, mn, s = 0, 0, 0, 0, 0, 0
+
 	// Get year int value from yearParts rune slice
 	// Should not error since only digits were place in slice
-	y, err := strconv.Atoi(RunesToString(yearParts...))
-	if err != nil {
-		return time.Time{}, err
+	// If zero can avoid an allocation and time
+	if isZero(yearParts...) == false {
+		y, err = strconv.Atoi(RunesToString(yearParts...))
+		if err != nil {
+			return time.Time{}, err
+		}
 	}
 	// Get month int value from monthParts rune slice
 	// Should not error since only digits were place in slice
-	m, err := strconv.Atoi(RunesToString(monthParts...))
-	if err != nil {
-		return time.Time{}, err
+	// If zero can avoid an allocation and time
+	if isZero(monthParts...) == false {
+		m, err = strconv.Atoi(RunesToString(monthParts...))
+		if err != nil {
+			return time.Time{}, err
+		}
 	}
+
 	// Get day int value from dayParts rune slice
 	// Should not error since only digits were place in slice
-	d, err := strconv.Atoi(RunesToString(dayParts...))
-	if err != nil {
-		return time.Time{}, err
+	// If zero can avoid an allocation and time
+	if isZero(dayParts...) == false {
+		d, err = strconv.Atoi(RunesToString(dayParts...))
+		if err != nil {
+			return time.Time{}, err
+		}
 	}
+
 	// Get hour int value from hourParts rune slice
 	// Should not error since only digits were place in slice
-	h, err := strconv.Atoi(RunesToString(hourParts...))
-	if err != nil {
-		return time.Time{}, err
+	// If zero can avoid an allocation and time
+	if isZero(hourParts...) == false {
+		h, err = strconv.Atoi(RunesToString(hourParts...))
+		if err != nil {
+			return time.Time{}, err
+		}
 	}
+
 	// Get minute int value from minParts rune slice
 	// Should not error since only digits were place in slice
-	mn, err := strconv.Atoi(RunesToString(minuteParts...))
-	if err != nil {
-		return time.Time{}, err
+	// If zero can avoid an allocation and time
+	if isZero(minuteParts...) == false {
+		mn, err = strconv.Atoi(RunesToString(minuteParts...))
+		if err != nil {
+			return time.Time{}, err
+		}
 	}
+
 	// Get second int value from secondParts rune slice
 	// Should not error since only digits were place in slice
-	s, err := strconv.Atoi(RunesToString(secondParts...))
-	// s, err := strconv.Atoi(string(secondParts))
-	if err != nil {
-		return time.Time{}, err
+	// If zero can avoid an allocation and time
+	if isZero(secondParts...) == false {
+		s, err = strconv.Atoi(RunesToString(secondParts...))
+		// s, err := strconv.Atoi(string(secondParts))
+		if err != nil {
+			return time.Time{}, err
+		}
 	}
 
 	var subseconds int = 0 // default subsecond value is 0
@@ -1041,18 +1086,21 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// There would have been an error if the length of subsecond parts was
 	// greater than subsecondMax
 	if subsecondLen > 0 {
-		subseconds, err = strconv.Atoi(RunesToString(subsecondParts...))
-		if err != nil {
-			return time.Time{}, err
-		}
-		// Calculate subseconds in terms of nanosecond if the length is less
-		// than the full length for nanoseconds since that is what the time.Date
-		// function is expecting.
-		if subsecondLen < subsecondMax {
-			// 10^ whatever extra decimal place count is missing from 9
-			subseconds = int(
-				float64(subseconds) *
-					(math.Pow(10, (float64(subsecondMax) - float64(subsecondLen)))))
+		// If zero can avoid an allocation and time
+		if isZero(subsecondParts...) == false {
+			subseconds, err = strconv.Atoi(RunesToString(subsecondParts...))
+			if err != nil {
+				return time.Time{}, err
+			}
+			// Calculate subseconds in terms of nanosecond if the length is less
+			// than the full length for nanoseconds since that is what the time.Date
+			// function is expecting.
+			if subsecondLen < subsecondMax {
+				// 10^ whatever extra decimal place count is missing from 9
+				subseconds = int(
+					float64(subseconds) *
+						(math.Pow(10, (float64(subsecondMax) - float64(subsecondLen)))))
+			}
 		}
 	}
 
@@ -1062,7 +1110,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// minutes, etc. are being too large within their digit span. The Go time
 	// package increments higher values as appropriate. For instance a value of
 	// 60 seconds would force an addition to the minute and all the way up to
-	// the year for 2020-12-31T59:59:60-0000.
+	// the year for 2020-12-31T59:59:60-0000
 
 	// Create timestamp based on parts with proper offsset
 
@@ -1078,20 +1126,25 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	var offsetH int = 0 // starting state for offset hours
 	var offsetM int = 0 // starting state for offset minutes
 
-	// Evaluate hour offset from the timestamp value
-	// Should not error since only digits were place in slice
-	offsetH, err = strconv.Atoi(RunesToString(zoneParts[0:2]...))
-	if err != nil {
-		return time.Time{}, err
+	// Can avoid allocations by skipping this
+	if offsetHZero == false {
+		// Evaluate hour offset from the timestamp value
+		// Should not error since only digits were place in slice
+		offsetH, err = strconv.Atoi(RunesToString(zoneParts[0:2]...))
+		if err != nil {
+			return time.Time{}, err
+		}
 	}
 
-	// Evaluate minute offset from the timestamp value
-	// Should not error since only digits were place in slice
-	offsetM, err = strconv.Atoi(RunesToString(zoneParts[2:]...))
-	if err != nil {
-		return time.Time{}, err
+	// Can avoid allocations by skipping this
+	if offsetMZero == false {
+		// Evaluate minute offset from the timestamp value
+		// Should not error since only digits were place in slice
+		offsetM, err = strconv.Atoi(RunesToString(zoneParts[2:]...))
+		if err != nil {
+			return time.Time{}, err
+		}
 	}
-
 	// Set offset based on hours and minutes
 	offsetSec := offsetH*60*60 + offsetM*60
 
