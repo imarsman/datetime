@@ -281,12 +281,12 @@ func LocationOffsetStringDelimited(d time.Duration) string {
 // For -5 hours and 30 minutes
 //  -0500
 func locationOffsetString(d time.Duration, delimited bool) string {
-	hours, minutes := OffsetHM(d)
+	offsetH, offsetM := OffsetHM(d)
 
 	if delimited == false {
-		return fmt.Sprintf("%+03d%02d", hours, minutes)
+		return fmt.Sprintf("%+03d%02d", offsetH, offsetM)
 	}
-	return fmt.Sprintf("%+03d:%02d", hours, minutes)
+	return fmt.Sprintf("%+03d:%02d", offsetH, offsetM)
 }
 
 // RangeOverTimes returns a date range function over start date to end date inclusive.
