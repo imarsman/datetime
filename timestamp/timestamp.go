@@ -12,6 +12,7 @@ import (
 	"unicode"
 
 	"github.com/imarsman/datetime/xfmt"
+	// gocache "github.com/patrickmn/go-cache"
 	// https://golang.org/pkg/time/tzdata/
 	/*
 		    Package tzdata provides an embedded copy of the timezone database.
@@ -37,6 +38,8 @@ import (
 //   go build -gcflags '-m -m' timestamp.go 2>&1 |less
 
 var reDigits *regexp.Regexp
+
+// var zoneCache = gocache.New(1*time.Hour, 5*time.Minute)
 
 var namedZoneTimeFormats = []string{
 	"Monday, 02-Jan-06 15:04:05 MST",
@@ -96,18 +99,24 @@ var nonISOTimeFormats = []string{
 	"1/2/2006",
 }
 
-var timeFormats = []string{}
+var timeFormats = []string{}           // A slice of time formats to be used if ISO parsing fails
+var cachedZones map[int]*time.Location // A cache of zones by offset seconds
 
 func init() {
 	reDigits = regexp.MustCompile(`^\d+\.?\d+$`)
 	timeFormats = append(timeFormats, nonISOTimeFormats...)
+	// A cache for zones tied to offsets to save quite a bit of time and 3
+	// allocations needed to get a fixed zone.
+	cachedZones = make(map[int]*time.Location)
 }
 
 // runesToString join bytes with no allocation
 //
 // WriteRune is more complex than WriteByte so can't inline
+// A small cost a few ns in testing is incurred for using a string builder.
+// There are no heap allocations using strings.Builder.
 func runesToString(runes ...rune) string {
-	var sb strings.Builder
+	var sb = new(strings.Builder)
 	for i := 0; i < len(runes); i++ {
 		sb.WriteRune(runes[i])
 	}
@@ -117,8 +126,10 @@ func runesToString(runes ...rune) string {
 // bytesToString join bytes with no allocation
 //
 // can inline - strings.Builder WriteByte is less complex than WriteRune
+// A small cost a few ns in testing is incurred for using a string builder.
+// There are no heap allocations using strings.Builder.
 func bytesToString(bytes ...byte) string {
-	var sb strings.Builder
+	var sb = new(strings.Builder)
 	for i := 0; i < len(bytes); i++ {
 		sb.WriteByte(bytes[i])
 	}
@@ -409,6 +420,7 @@ func ParseUnixTS(timeStr string) (time.Time, error) {
 				// l := len(b)
 
 				toSend = bytesToString(b...)
+				// toSend = string(b)
 			}
 			// Get seconds, nanoseconds, and error if there was a problem
 			s, n, err := parseUnixTS(toSend)
@@ -429,6 +441,7 @@ func ParseUnixTS(timeStr string) (time.Time, error) {
 	b := xfmtBuf.Bytes()
 	// l := len(b)
 	s := bytesToString(b...)
+	// s := string(b)
 
 	// return time.Time{}, fmt.Errorf("Could not parse as UNIX timestamp %s", timeStr)
 	return time.Time{}, errors.New(s)
@@ -511,6 +524,7 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 		b := xfmtBuf.Bytes()
 		// l := len(b)
 		s := bytesToString(b...)
+		// s := string(b)
 
 		return time.Time{}, errors.New(s)
 	}
@@ -526,6 +540,7 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 
 		b := xfmtBuf.Bytes()
 		// l := len(b)
+		// s := string(b)
 		s := bytesToString(b...)
 
 		return time.Time{}, errors.New(s)
@@ -547,6 +562,7 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 	b := xfmtBuf.Bytes()
 	// l := len(b)
 	errMsg := bytesToString(b...)
+	// errMsg := string(b)
 
 	return time.Time{}, errors.New(errMsg)
 }
@@ -679,6 +695,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 
 		b := xfmtBuf.Bytes()
 		s := bytesToString(b...)
+		// s := string(b)
 
 		return time.Time{}, errors.New(s)
 	}
@@ -825,10 +842,10 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 				xfmtBuf.S("'").C(orig).S("'").C('@').D(i)
 				b := xfmtBuf.Bytes()
 				// l := len(b)
-				s := new(string)
-				*s = bytesToString(b...)
+				// s := new(string)
+				s := bytesToString(b...)
 
-				unparsed = append(unparsed, *s)
+				unparsed = append(unparsed, s)
 			}
 			// If the current section is not for subseconds skip
 		} else if r == '.' {
@@ -955,36 +972,42 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// Get year int value from yearParts rune slice
 	// Should not error since only digits were place in slice
 	y, err := strconv.Atoi(runesToString(yearParts...))
+	// y, err := strconv.Atoi(string(yearParts))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get month int value from monthParts rune slice
 	// Should not error since only digits were place in slice
 	m, err := strconv.Atoi(runesToString(monthParts...))
+	// m, err := strconv.Atoi(string(monthParts))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get day int value from dayParts rune slice
 	// Should not error since only digits were place in slice
 	d, err := strconv.Atoi(runesToString(dayParts...))
+	// d, err := strconv.Atoi(string(dayParts))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get hour int value from hourParts rune slice
 	// Should not error since only digits were place in slice
 	h, err := strconv.Atoi(runesToString(hourParts...))
+	// h, err := strconv.Atoi(string(hourParts))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get minute int value from minParts rune slice
 	// Should not error since only digits were place in slice
 	mn, err := strconv.Atoi(runesToString(minuteParts...))
+	// mn, err := strconv.Atoi(string(minuteParts))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get second int value from secondParts rune slice
 	// Should not error since only digits were place in slice
 	s, err := strconv.Atoi(runesToString(secondParts...))
+	// s, err := strconv.Atoi(string(secondParts))
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -998,6 +1021,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// greater than subsecondMax
 	if subsecondLen > 0 {
 		subseconds, err = strconv.Atoi(runesToString(subsecondParts...))
+		// subseconds, err = strconv.Atoi(string(subsecondParts))
 		if err != nil {
 			return time.Time{}, err
 		}
@@ -1034,6 +1058,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		// Evaluate minute offset from the timestamp value
 		// Should not error since only digits were place in slice
 		offsetM, err = strconv.Atoi(runesToString(zoneParts[2:]...))
+		// offsetM, err = strconv.Atoi(string(zoneParts[2:]))
 		if err != nil {
 			return time.Time{}, err
 		}
@@ -1041,13 +1066,11 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		// Evaluate hour offset from the timestamp value
 		// Should not error since only digits were place in slice
 		offsetH, err = strconv.Atoi(runesToString(zoneParts[0:2]...))
+		// offsetH, err = strconv.Atoi(string(zoneParts[0:2]))
 		if err != nil {
 			return time.Time{}, err
 		}
-	}
-
-	// If offset is 00:00 use UTC
-	if offsetH == 0 && offsetM == 0 {
+	} else {
 		return time.Date(y, time.Month(m), d, h, mn, s, subseconds, time.UTC), nil
 	}
 
@@ -1061,5 +1084,24 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		offsetSec = -offsetH*60*60 + offsetM*60
 	}
 
-	return time.Date(y, time.Month(m), d, h, mn, s, subseconds, time.FixedZone("FixedZone", offsetSec)), nil
+	var zone *time.Location
+
+	// Using a cache for locations saves 3 allocations and over 170 bytes in benchmark
+	if val, ok := cachedZones[offsetSec]; ok {
+		zone = val
+		// Given that zones are in at most 15 minute increments and can be
+		// positive or negative there should only be so many.
+		// https://time.is/time_zones
+		// There are currently 37 observed UTC offsets in the world (38 when
+		// Iran is on standard time).
+		// Allow up to 50.
+		if len(cachedZones) > 50 {
+			cachedZones = make(map[int]*time.Location)
+		}
+	} else {
+		zone = time.FixedZone("FixedZone", offsetSec)
+		cachedZones[offsetSec] = zone
+	}
+
+	return time.Date(y, time.Month(m), d, h, mn, s, subseconds, zone), nil
 }

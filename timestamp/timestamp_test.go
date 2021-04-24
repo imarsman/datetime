@@ -1006,6 +1006,28 @@ func BenchmarkIterativeISOTimestampLongTest(b *testing.B) {
 	is.NoErr(err)              // Parsing should not have caused an error
 }
 
+func BenchmarkIterativeISOTimestampLongZeroOffsetTest(b *testing.B) {
+	is := is.New(b)
+
+	var err error
+	var t1 time.Time
+
+	b.SetBytes(2)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			t1, err = timestamp.ParseISOTimestamp("2006-07-02T01:01:01+00:00", time.UTC)
+			if err != nil {
+				b.Log(err)
+			}
+		}
+	})
+
+	is.True(t1 != time.Time{}) // Should not have an empty time
+	is.NoErr(err)              // Parsing should not have caused an error
+}
+
 func BenchmarkNativeISOTimestampLongTest(b *testing.B) {
 	is := is.New(b)
 
@@ -1039,13 +1061,13 @@ func BenchmarkNonAllocatingBufferTest(b *testing.B) {
 	// In practice this will cause one byte array allocation
 	// In practice this should be declared along with its use since the buffer
 	// must be reset
-	xfmtBuf := xfmt.Buffer{}
 
 	b.SetBytes(2)
 	b.ReportAllocs()
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
+			var xfmtBuf = new(xfmt.Buffer)
 			// Avoid heap allocation for each append which uses a variable
 			// The total in tests took about 80 ns/op, which is about 20 ms per
 			// append. The benchmark reported 0 B/op.
