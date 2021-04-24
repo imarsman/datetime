@@ -683,15 +683,16 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return time.Time{}, errors.New(s)
 	}
 
+	// Needs to not be a const since it gets reassigned
 	var currentSection int = 0 // value for current section
-	var emptySection int = 0   // value for empty section
 
 	// Define sections that are constant. Use iota since the incrementing values
 	// correspond to the incremental section processing and give each const a
 	// separate value.
 
 	const (
-		yearSection      = iota + 1 // year - four digits
+		emptySection     int = iota // value for empty section
+		yearSection                 // year - four digits
 		monthSection                // month - 2 digits
 		daySection                  // day - 2 digits
 		hourSection                 // hour - 2 digits
