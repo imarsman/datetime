@@ -11,7 +11,7 @@ import (
 	"github.com/matryer/is"
 )
 
-//                    Tests
+//                Tests and benchmarks
 // -----------------------------------------------------
 // benchmark
 //   go test -run=XXX -bench=. -benchmem
@@ -19,8 +19,15 @@ import (
 //   go build -gcflags '-m -m' timestamp.go 2>&1 |less
 // Run all tests
 //   go test -v
+// Run one test and do allocation profiling
+//   go test -run=XXX -bench=IterativeISOTimestampLong -gcflags '-m' 2>&1 |less
 // Run a specific test by function name pattern
 //  go test -run=TestParsISOTimestamp
+//
+//  go test -run=XXX -bench=.
+//  go test -bench=. -benchmem -memprofile memprofile.out -cpuprofile cpuprofile.out
+//  go tool pprof -http=:8080 memprofile.out
+//  go tool pprof -http=:8080 cpuprofile.out
 
 //report start of running time tracking
 func runningtime(s string) (string, time.Time) {
@@ -919,11 +926,6 @@ func BenchmarkUnixTimestamp(b *testing.B) {
 	is.NoErr(err)              // Parsing should not have caused an error
 }
 
-// Run as
-//  go test -run=XXX -bench=.
-//  go test -bench=. -benchmem -memprofile memprofile.out -cpuprofile cpuprofile.out
-//  go tool pprof -http=:8080 memprofile.out
-//  go tool pprof -http=:8080 cpuprofile.out
 func BenchmarkUnixTimestampNano(b *testing.B) {
 	is := is.New(b)
 
@@ -992,7 +994,6 @@ func BenchmarkIterativeISOTimestampShort(b *testing.B) {
 	is.NoErr(err)              // Parsing should not have caused an error
 }
 
-// go test -run=XXX -bench=IterativeISOTimestampLong -gcflags '-m'
 func BenchmarkIterativeISOTimestampLong(b *testing.B) {
 	is := is.New(b)
 
