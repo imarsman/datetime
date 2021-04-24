@@ -51,10 +51,10 @@ func init() {
 	locationAtomic.Store(make(map[int]*time.Location))
 }
 
-func getLocation(offsetSec *int) *time.Location {
+func getLocation(offsetSec int) *time.Location {
 	cachedZones := locationAtomic.Load().(map[int]*time.Location)
 	var location *time.Location
-	if l, ok := cachedZones[*offsetSec]; ok {
+	if l, ok := cachedZones[offsetSec]; ok {
 		location = l
 		// Given that zones are in at most 15 minute increments and can be
 		// positive or negative there should only be so many.
@@ -67,8 +67,8 @@ func getLocation(offsetSec *int) *time.Location {
 			locationAtomic.Store(make(map[int]*time.Location))
 		}
 	} else {
-		location = time.FixedZone("FixedZone", *offsetSec)
-		cachedZones[*offsetSec] = location
+		location = time.FixedZone("FixedZone", offsetSec)
+		cachedZones[offsetSec] = location
 		locationAtomic.Store(cachedZones)
 	}
 
@@ -219,27 +219,27 @@ func ZoneFromHM(offsetH, offsetM int) time.Location {
 		offsetM = -offsetM
 	}
 
-	offsetSec := offsetH*60*60 + offsetM*60
-	location := *time.FixedZone("FixedZone", offsetSec)
+	// Must be passed a value equivalent to total seconds for hours and minutes
+	location := getLocation(offsetH*60*60 + offsetM*60)
 
-	return location
+	return *location
 }
 
 // OffsetHM get hours and minutes for location offset from UTC
 // Avoiding math.Abs and casting allows inlining in
 //
 //   go build -gcflags '-m -m' timestamp.go 2>&1 |less
-func OffsetHM(d time.Duration) (hours, minutes int) {
-	hours = int(d.Hours())
-	minutes = int(d.Minutes()) % 60
+func OffsetHM(d time.Duration) (offsetH, offsetM int) {
+	offsetH = int(d.Hours())
+	offsetM = int(d.Minutes()) % 60
 
 	// Ensure minutes is positive
-	if minutes < 0 {
-		minutes = -minutes
+	if offsetM < 0 {
+		offsetM = -offsetM
 	}
-	minutes = minutes % 60
+	offsetM = offsetM % 60
 
-	return hours, minutes
+	return offsetH, offsetM
 }
 
 // LocationOffsetString get an offset in HHMM format based on hours and
@@ -1116,29 +1116,5 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return time.Time{}, errors.New(BytesToString(xfmtBuf.Bytes()...))
 	}
 
-	var zone *time.Location
-
-	zone = getLocation(&offsetSec)
-	// zone = getLocation(&offsetSec)
-	// // Using a cache for locations saves 3 allocations and over 170 bytes in
-	// // benchmark if offset is not UTC.
-	// zoneMu.Lock()
-	// if val, ok := cachedZones[offsetSec]; ok {
-	// 	zone = val
-	// 	// Given that zones are in at most 15 minute increments and can be
-	// 	// positive or negative there should only be so many.
-	// 	// https://time.is/time_zones
-	// 	// There are currently 37 observed UTC offsets in the world
-	// 	// (38 when Iran is on standard time).
-	// 	// Allow up to 50.
-	// 	if len(cachedZones) > 50 {
-	// 		cachedZones = make(map[int]*time.Location)
-	// 	}
-	// } else {
-	// 	zone = time.FixedZone("FixedZone", offsetSec)
-	// 	cachedZones[offsetSec] = zone
-	// }
-	// zoneMu.Unlock()
-
-	return time.Date(y, time.Month(m), d, h, mn, s, subseconds, zone), nil
+	return time.Date(y, time.Month(m), d, h, mn, s, subseconds, getLocation(offsetSec)), nil
 }
