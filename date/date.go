@@ -292,7 +292,10 @@ func DatesInRange(d1, d2 Date) ([]Date, error) {
 	dateMap := make(map[Date]string)
 
 	for rd := timestamp.RangeOverTimes(start, end); ; {
-		t := rd()
+		t, err := rd()
+		if err != nil {
+			return nil, err
+		}
 
 		if t.IsZero() {
 			break
