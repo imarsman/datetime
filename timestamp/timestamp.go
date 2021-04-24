@@ -751,8 +751,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 
 	var unparsed []string // string representation of unparsed runes and their positions
 
-	var partAtMax bool     // flag indicating current part is filled
-	var offsetNonzero bool // flag indicating that full zone offset is zero
+	var partAtMax bool = false // flag indicating current part is filled
+	var offsetZero bool = true // flag indicating that full zone offset is zero
 
 	// A function to handle adding to a slice if it is not above capacity and
 	// flagging when it has reached capacity. Runs same speed when inline and is
@@ -827,7 +827,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			case zoneSection:
 				// Allow for offset calculations later to be avoided
 				if r != '0' {
-					offsetNonzero = true
+					offsetZero = false
 				}
 				// Add to zone
 				zoneParts, partAtMax = addIf(zoneParts, r, zoneMax)
@@ -1048,25 +1048,25 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return time.Date(y, time.Month(m), d, h, mn, s, subseconds, location), nil
 	}
 
-	var offsetM int = 0
-	var offsetH int = 0
-
-	if offsetNonzero {
-		// Evaluate minute offset from the timestamp value
-		// Should not error since only digits were place in slice
-		offsetM, err = strconv.Atoi(runesToString(zoneParts[2:]...))
-		if err != nil {
-			return time.Time{}, err
-		}
-
-		// Evaluate hour offset from the timestamp value
-		// Should not error since only digits were place in slice
-		offsetH, err = strconv.Atoi(runesToString(zoneParts[0:2]...))
-		if err != nil {
-			return time.Time{}, err
-		}
-	} else {
+	if offsetZero == true {
 		return time.Date(y, time.Month(m), d, h, mn, s, subseconds, time.UTC), nil
+	}
+
+	var offsetH int = 0 // starting state for offset hours
+	var offsetM int = 0 // starting state for offset minutes
+
+	// Evaluate minute offset from the timestamp value
+	// Should not error since only digits were place in slice
+	offsetM, err = strconv.Atoi(runesToString(zoneParts[2:]...))
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	// Evaluate hour offset from the timestamp value
+	// Should not error since only digits were place in slice
+	offsetH, err = strconv.Atoi(runesToString(zoneParts[0:2]...))
+	if err != nil {
+		return time.Time{}, err
 	}
 
 	// Set offset based on hours and minutes
@@ -1095,7 +1095,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return time.Time{}, errors.New(bytesToString(xfmtBuf.Bytes()...))
 	}
 
-	// Using a cache for locations saves 3 allocations and over 170 bytes in benchmark
+	// Using a cache for locations saves 3 allocations and over 170 bytes in
+	// benchmark if offset is not UTC.
 	if val, ok := cachedZones[offsetSec]; ok {
 		zone = val
 		// Given that zones are in at most 15 minute increments and can be
