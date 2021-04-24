@@ -1055,16 +1055,16 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	var offsetH int = 0 // starting state for offset hours
 	var offsetM int = 0 // starting state for offset minutes
 
-	// Evaluate minute offset from the timestamp value
+	// Evaluate hour offset from the timestamp value
 	// Should not error since only digits were place in slice
-	offsetM, err = strconv.Atoi(runesToString(zoneParts[2:]...))
+	offsetH, err = strconv.Atoi(runesToString(zoneParts[0:2]...))
 	if err != nil {
 		return time.Time{}, err
 	}
 
-	// Evaluate hour offset from the timestamp value
+	// Evaluate minute offset from the timestamp value
 	// Should not error since only digits were place in slice
-	offsetH, err = strconv.Atoi(runesToString(zoneParts[0:2]...))
+	offsetM, err = strconv.Atoi(runesToString(zoneParts[2:]...))
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -1077,8 +1077,6 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	if offsetPositive == false {
 		offsetSec = -offsetSec
 	}
-
-	var zone *time.Location
 
 	// Don't allow offset minutes not in 15 minute increment
 	switch offsetM {
@@ -1095,6 +1093,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return time.Time{}, errors.New(bytesToString(xfmtBuf.Bytes()...))
 	}
 
+	var zone *time.Location
+
 	// Using a cache for locations saves 3 allocations and over 170 bytes in
 	// benchmark if offset is not UTC.
 	if val, ok := cachedZones[offsetSec]; ok {
@@ -1102,8 +1102,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		// Given that zones are in at most 15 minute increments and can be
 		// positive or negative there should only be so many.
 		// https://time.is/time_zones
-		// There are currently 37 observed UTC offsets in the world (38 when
-		// Iran is on standard time).
+		// There are currently 37 observed UTC offsets in the world
+		// (38 when Iran is on standard time).
 		// Allow up to 50.
 		if len(cachedZones) > 50 {
 			cachedZones = make(map[int]*time.Location)
