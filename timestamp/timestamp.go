@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 	"unicode"
 
@@ -38,8 +39,41 @@ import (
 //   go build -gcflags '-m -m' timestamp.go 2>&1 |less
 
 var reDigits *regexp.Regexp
+var timeFormats = []string{} // A slice of time formats to be used if ISO parsing fails
+var locationAtomic atomic.Value
 
-// var zoneCache = gocache.New(1*time.Hour, 5*time.Minute)
+func init() {
+	reDigits = regexp.MustCompile(`^\d+\.?\d+$`)
+	timeFormats = append(timeFormats, nonISOTimeFormats...)
+	// A cache for zones tied to offsets to save quite a bit of time and 3
+	// allocations needed to get a fixed zone.
+	// cachedZones := make(map[int]*time.Location)
+	locationAtomic.Store(make(map[int]*time.Location))
+}
+
+func getLocation(offsetSec *int) *time.Location {
+	cachedZones := locationAtomic.Load().(map[int]*time.Location)
+	var location *time.Location
+	if l, ok := cachedZones[*offsetSec]; ok {
+		location = l
+		// Given that zones are in at most 15 minute increments and can be
+		// positive or negative there should only be so many.
+		// https://time.is/time_zones
+		// There are currently 37 observed UTC offsets in the world
+		// (38 when Iran is on standard time).
+		// Allow up to 50.
+		// zoneMu.Lock()
+		if len(cachedZones) > 50 {
+			locationAtomic.Store(make(map[int]*time.Location))
+		}
+	} else {
+		location = time.FixedZone("FixedZone", *offsetSec)
+		cachedZones[*offsetSec] = location
+		locationAtomic.Store(cachedZones)
+	}
+
+	return location
+}
 
 var namedZoneTimeFormats = []string{
 	"Monday, 02-Jan-06 15:04:05 MST",
@@ -97,17 +131,6 @@ var nonISOTimeFormats = []string{
 	"20060102",
 	"01/02/2006",
 	"1/2/2006",
-}
-
-var timeFormats = []string{}           // A slice of time formats to be used if ISO parsing fails
-var cachedZones map[int]*time.Location // A cache of zones by offset seconds
-
-func init() {
-	reDigits = regexp.MustCompile(`^\d+\.?\d+$`)
-	timeFormats = append(timeFormats, nonISOTimeFormats...)
-	// A cache for zones tied to offsets to save quite a bit of time and 3
-	// allocations needed to get a fixed zone.
-	cachedZones = make(map[int]*time.Location)
 }
 
 // RunesToString convert runes list to string with no allocation
@@ -1095,23 +1118,27 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 
 	var zone *time.Location
 
-	// Using a cache for locations saves 3 allocations and over 170 bytes in
-	// benchmark if offset is not UTC.
-	if val, ok := cachedZones[offsetSec]; ok {
-		zone = val
-		// Given that zones are in at most 15 minute increments and can be
-		// positive or negative there should only be so many.
-		// https://time.is/time_zones
-		// There are currently 37 observed UTC offsets in the world
-		// (38 when Iran is on standard time).
-		// Allow up to 50.
-		if len(cachedZones) > 50 {
-			cachedZones = make(map[int]*time.Location)
-		}
-	} else {
-		zone = time.FixedZone("FixedZone", offsetSec)
-		cachedZones[offsetSec] = zone
-	}
+	zone = getLocation(&offsetSec)
+	// zone = getLocation(&offsetSec)
+	// // Using a cache for locations saves 3 allocations and over 170 bytes in
+	// // benchmark if offset is not UTC.
+	// zoneMu.Lock()
+	// if val, ok := cachedZones[offsetSec]; ok {
+	// 	zone = val
+	// 	// Given that zones are in at most 15 minute increments and can be
+	// 	// positive or negative there should only be so many.
+	// 	// https://time.is/time_zones
+	// 	// There are currently 37 observed UTC offsets in the world
+	// 	// (38 when Iran is on standard time).
+	// 	// Allow up to 50.
+	// 	if len(cachedZones) > 50 {
+	// 		cachedZones = make(map[int]*time.Location)
+	// 	}
+	// } else {
+	// 	zone = time.FixedZone("FixedZone", offsetSec)
+	// 	cachedZones[offsetSec] = zone
+	// }
+	// zoneMu.Unlock()
 
 	return time.Date(y, time.Month(m), d, h, mn, s, subseconds, zone), nil
 }
