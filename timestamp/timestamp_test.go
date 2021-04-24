@@ -887,7 +887,7 @@ func TestParsISOTimestamp(t *testing.T) {
 	t.Log("ts", ts)
 }
 
-const bytesPerOp int64 = 10
+const bechmarkBytesPerOp int64 = 10
 
 // Run as
 //  go test -run=XXX -bench=.
@@ -903,7 +903,7 @@ func BenchmarkUnixTimestamp(b *testing.B) {
 	now := time.Now()
 	ts1 := fmt.Sprint(now.Unix())
 
-	b.SetBytes(bytesPerOp)
+	b.SetBytes(bechmarkBytesPerOp)
 	b.ReportAllocs()
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
@@ -933,7 +933,7 @@ func BenchmarkUnixTimestampNano(b *testing.B) {
 	now := time.Now()
 	ts1 := fmt.Sprint(now.UnixNano())
 
-	b.SetBytes(bytesPerOp)
+	b.SetBytes(bechmarkBytesPerOp)
 	b.ReportAllocs()
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
@@ -954,7 +954,7 @@ func BenchmarkIterativeISOTimestampDateOnly(b *testing.B) {
 	var err error
 	var t1 time.Time
 
-	b.SetBytes(bytesPerOp)
+	b.SetBytes(bechmarkBytesPerOp)
 	b.ReportAllocs()
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
@@ -976,7 +976,7 @@ func BenchmarkIterativeISOTimestampShort(b *testing.B) {
 	var err error
 	var t1 time.Time
 
-	b.SetBytes(bytesPerOp)
+	b.SetBytes(bechmarkBytesPerOp)
 	b.ReportAllocs()
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
@@ -999,7 +999,7 @@ func BenchmarkIterativeISOTimestampLong(b *testing.B) {
 	var err error
 	var t1 time.Time
 
-	b.SetBytes(bytesPerOp)
+	b.SetBytes(bechmarkBytesPerOp)
 	b.ReportAllocs()
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
@@ -1021,7 +1021,7 @@ func BenchmarkIterativeISOTimestampLongZeroOffset(b *testing.B) {
 	var err error
 	var t1 time.Time
 
-	b.SetBytes(bytesPerOp)
+	b.SetBytes(bechmarkBytesPerOp)
 	b.ReportAllocs()
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
@@ -1043,7 +1043,7 @@ func BenchmarkNativeISOTimestampLong(b *testing.B) {
 	var err error
 	var t1 time.Time
 
-	b.SetBytes(bytesPerOp)
+	b.SetBytes(bechmarkBytesPerOp)
 	b.ReportAllocs()
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
@@ -1067,11 +1067,7 @@ func BenchmarkNonAllocatingBuffer(b *testing.B) {
 	second := "second"
 	third := "second"
 
-	// In practice this will cause one byte array allocation
-	// In practice this should be declared along with its use since the buffer
-	// must be reset
-
-	b.SetBytes(bytesPerOp)
+	b.SetBytes(bechmarkBytesPerOp)
 	b.ReportAllocs()
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
@@ -1097,13 +1093,13 @@ func BenchmarkAllocatingBuffer(b *testing.B) {
 	second := "second"
 	third := "second"
 
-	b.SetBytes(bytesPerOp)
+	b.SetBytes(bechmarkBytesPerOp)
 	b.ReportAllocs()
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			// Each append uses an allocation
-			// The total in tests took about 80 ns/op, which is about 20 ms per
+			// The total in tests took about 80 ns/op, which is about 20 ns per
 			// item. The benchmark reported 112 B/op.
 			s = fmt.Sprintf("Could not parse as ISO timestamp %s %s %s", first, second, third)
 		}
@@ -1120,7 +1116,7 @@ func BenchmarkBytesToString(b *testing.B) {
 	var s string
 	bytes := []byte{'a', 'b', 'c', 'd'}
 
-	b.SetBytes(bytesPerOp)
+	b.SetBytes(bechmarkBytesPerOp)
 	b.ReportAllocs()
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
@@ -1140,7 +1136,7 @@ func BenchmarkRunesToString(b *testing.B) {
 	var s string
 	runes := []rune{'a', 'b', 'c', 'd'}
 
-	b.SetBytes(bytesPerOp)
+	b.SetBytes(bechmarkBytesPerOp)
 	b.ReportAllocs()
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
@@ -1158,7 +1154,7 @@ func BenchmarkBytesToStringCast(b *testing.B) {
 	var s string
 	bytes := []byte{'a', 'b', 'c', 'd'}
 
-	b.SetBytes(bytesPerOp)
+	b.SetBytes(bechmarkBytesPerOp)
 	b.ReportAllocs()
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
@@ -1176,7 +1172,7 @@ func BenchmarkRunesToStringCast(b *testing.B) {
 	var s string
 	runes := []rune{'a', 'b', 'c', 'd'}
 
-	b.SetBytes(bytesPerOp)
+	b.SetBytes(bechmarkBytesPerOp)
 	b.ReportAllocs()
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
