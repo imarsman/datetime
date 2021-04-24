@@ -113,6 +113,7 @@ func init() {
 // runesToString join bytes with no allocation
 //
 // WriteRune is more complex than WriteByte so can't inline
+//
 // A small cost a few ns in testing is incurred for using a string builder.
 // There are no heap allocations using strings.Builder.
 func runesToString(runes ...rune) string {
@@ -126,6 +127,7 @@ func runesToString(runes ...rune) string {
 // bytesToString join bytes with no allocation
 //
 // can inline - strings.Builder WriteByte is less complex than WriteRune
+//
 // A small cost a few ns in testing is incurred for using a string builder.
 // There are no heap allocations using strings.Builder.
 func bytesToString(bytes ...byte) string {
@@ -159,8 +161,8 @@ func bytesToString(bytes ...byte) string {
 // returned.
 //
 // Can't inline
-func OffsetForLocation(year int, month time.Month, day int, location string) (d time.Duration, err error) {
-	l, err := time.LoadLocation(location)
+func OffsetForLocation(year int, month time.Month, day int, locationName string) (d time.Duration, err error) {
+	l, err := time.LoadLocation(locationName)
 	if err != nil {
 		return 0, err
 	}
@@ -690,14 +692,12 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	timeStrLength := len(timeStr)
 
 	if timeStrLength > maxLength {
+		// Avoid allocations that would occur with fmt.Sprintf
 		xfmtBuf := new(xfmt.Buffer)
 		xfmtBuf.S("Input ").S(timeStr[0:35]).S("... length is ").D(timeStrLength).S(" and > max of ").D(maxLength)
 
-		b := xfmtBuf.Bytes()
-		s := bytesToString(b...)
-		// s := string(b)
-
-		return time.Time{}, errors.New(s)
+		// errors.New escapes to heap
+		return time.Time{}, errors.New(bytesToString(xfmtBuf.Bytes()...))
 	}
 
 	// Needs to not be a const since it gets reassigned
@@ -836,16 +836,14 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 					// report bad date parts if we allow things to continue.
 					currentSection = afterSection
 				}
-				// Default to bad input
 			default:
+				// Default to bad input
+
+				// Avoid allocations that would occur with fmt.Sprintf
 				xfmtBuf := new(xfmt.Buffer)
 				xfmtBuf.S("'").C(orig).S("'").C('@').D(i)
-				b := xfmtBuf.Bytes()
-				// l := len(b)
-				// s := new(string)
-				s := bytesToString(b...)
 
-				unparsed = append(unparsed, s)
+				unparsed = append(unparsed, bytesToString(xfmtBuf.Bytes()...))
 			}
 			// If the current section is not for subseconds skip
 		} else if r == '.' {
@@ -871,37 +869,35 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 				break
 			} else {
 				// Assume bad input
+
+				// Avoid allocations that would occur with fmt.Sprintf
 				xfmtBuf := new(xfmt.Buffer)
 				xfmtBuf.S("'").C(orig).S("'").C('@').D(i)
-				b := xfmtBuf.Bytes()
-				s := bytesToString(b...)
 
-				unparsed = append(unparsed, s)
+				unparsed = append(unparsed, bytesToString(xfmtBuf.Bytes()...))
 			}
 			// Ignore spaces
 		} else if unicode.IsSpace(r) {
 			continue
 		} else {
 			// Catch-all for characters not allowed
+
+			// Avoid allocations that would occur with fmt.Sprintf
 			xfmtBuf := new(xfmt.Buffer)
 			xfmtBuf.S("'").C(orig).S("'").C('@').D(i)
-			b := xfmtBuf.Bytes()
-			s := bytesToString(b...)
 
-			unparsed = append(unparsed, s)
+			unparsed = append(unparsed, bytesToString(xfmtBuf.Bytes()...))
 		}
 	}
 
 	// If we've found characters not allocated, error.
 	if len(unparsed) > 0 {
+		// Avoid allocations that would occur with fmt.Sprintf
 		xfmtBuf := new(xfmt.Buffer)
 		xfmtBuf.S("got unparsed caracters ").S(strings.Join(unparsed, ",")).S(" in input ").S(timeStr)
-		b := xfmtBuf.Bytes()
-		s := bytesToString(b...)
 
-		e := errors.New(s)
-
-		return time.Time{}, e
+		// errors.New escapes to heap
+		return time.Time{}, errors.New(bytesToString(xfmtBuf.Bytes()...))
 	}
 
 	zoneFound := false        // has time zone been found
@@ -912,18 +908,19 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		zoneFound = true
 		// A zone with 1 or 3 characters is ambiguous
 		if zoneLen == 1 || zoneLen == 3 {
+			// Avoid allocations that would occur with fmt.Sprintf
 			xfmtBuf := new(xfmt.Buffer)
 			xfmtBuf.S("Zone is of length ").D(zoneLen).S(" wich is not enough to detect zone")
-			b := xfmtBuf.Bytes()
-			s := bytesToString(b...)
 
-			return time.Time{}, errors.New(s)
+			// errors.New escapes to heap
+			return time.Time{}, errors.New(bytesToString(xfmtBuf.Bytes()...))
+
 			// With no zone assume UTC and set all offset characters to 0
 		} else if zoneLen == 0 {
 			zoneFound = false
 			zoneParts = append(zoneParts, '0', '0', '0', '0')
-			// Zone of length 2 needs padding to set minute offset
 		} else if zoneLen == 2 {
+			// Zone of length 2 needs padding to set minute offset
 			zoneParts = append(zoneParts, '0', '0')
 		}
 	} else {
@@ -947,21 +944,27 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// requiring that all date and time parts be fully allocated even if we
 	// can't tell where the problem started.
 	if len(yearParts) != yearMax {
+		// errors.New escapes to heap
 		return time.Time{}, errors.New("Input year length is not 4")
 	}
 	if len(monthParts) != monthMax {
+		// errors.New escapes to heap
 		return time.Time{}, errors.New("Input month length is not 2")
 	}
 	if len(dayParts) != dayMax {
+		// errors.New escapes to heap
 		return time.Time{}, errors.New("Input day length is not 2")
 	}
 	if len(hourParts) != hourMax {
+		// errors.New escapes to heap
 		return time.Time{}, errors.New("Input hour length is not 2")
 	}
 	if len(minuteParts) != minuteMax {
+		// errors.New escapes to heap
 		return time.Time{}, errors.New("Input minute length is not 2")
 	}
 	if len(secondParts) != secondMax {
+		// errors.New escapes to heap
 		return time.Time{}, errors.New("Input second length is not 2")
 	}
 
@@ -972,35 +975,30 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// Get year int value from yearParts rune slice
 	// Should not error since only digits were place in slice
 	y, err := strconv.Atoi(runesToString(yearParts...))
-	// y, err := strconv.Atoi(string(yearParts))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get month int value from monthParts rune slice
 	// Should not error since only digits were place in slice
 	m, err := strconv.Atoi(runesToString(monthParts...))
-	// m, err := strconv.Atoi(string(monthParts))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get day int value from dayParts rune slice
 	// Should not error since only digits were place in slice
 	d, err := strconv.Atoi(runesToString(dayParts...))
-	// d, err := strconv.Atoi(string(dayParts))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get hour int value from hourParts rune slice
 	// Should not error since only digits were place in slice
 	h, err := strconv.Atoi(runesToString(hourParts...))
-	// h, err := strconv.Atoi(string(hourParts))
 	if err != nil {
 		return time.Time{}, err
 	}
 	// Get minute int value from minParts rune slice
 	// Should not error since only digits were place in slice
 	mn, err := strconv.Atoi(runesToString(minuteParts...))
-	// mn, err := strconv.Atoi(string(minuteParts))
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -1021,7 +1019,6 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// greater than subsecondMax
 	if subsecondLen > 0 {
 		subseconds, err = strconv.Atoi(runesToString(subsecondParts...))
-		// subseconds, err = strconv.Atoi(string(subsecondParts))
 		if err != nil {
 			return time.Time{}, err
 		}
@@ -1058,7 +1055,6 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		// Evaluate minute offset from the timestamp value
 		// Should not error since only digits were place in slice
 		offsetM, err = strconv.Atoi(runesToString(zoneParts[2:]...))
-		// offsetM, err = strconv.Atoi(string(zoneParts[2:]))
 		if err != nil {
 			return time.Time{}, err
 		}
@@ -1066,7 +1062,6 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		// Evaluate hour offset from the timestamp value
 		// Should not error since only digits were place in slice
 		offsetH, err = strconv.Atoi(runesToString(zoneParts[0:2]...))
-		// offsetH, err = strconv.Atoi(string(zoneParts[0:2]))
 		if err != nil {
 			return time.Time{}, err
 		}
@@ -1074,17 +1069,31 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return time.Date(y, time.Month(m), d, h, mn, s, subseconds, time.UTC), nil
 	}
 
-	var offsetSec int
+	// Set offset based on hours and minutes
+	offsetSec := offsetH*60*60 + offsetM*60
 
 	// The +/- in the timestamp was used to set offsetPositive
-	switch offsetPositive {
-	case true:
-		offsetSec = offsetH*60*60 + offsetM*60
-	default:
-		offsetSec = -offsetH*60*60 + offsetM*60
+	// Negate it if offset is not positive
+	if offsetPositive == false {
+		offsetSec = -offsetSec
 	}
 
 	var zone *time.Location
+
+	// Don't allow offset minutes not in 15 minute increment
+	switch offsetM {
+	case 0:
+	case 15:
+	case 30:
+	case 45:
+	default:
+		// Avoid allocations that would occur with fmt.Sprintf
+		xfmtBuf := new(xfmt.Buffer)
+		xfmtBuf.S("UTC offset minutes ").D(offsetM).S(" not in a 15 minute increment")
+
+		// errors.New escapes to heap
+		return time.Time{}, errors.New(bytesToString(xfmtBuf.Bytes()...))
+	}
 
 	// Using a cache for locations saves 3 allocations and over 170 bytes in benchmark
 	if val, ok := cachedZones[offsetSec]; ok {

@@ -820,7 +820,8 @@ func TestParsISOTimestamp(t *testing.T) {
 		// This is part of the functionality of the Go time library
 		"20060102T240000+0400",
 		"2006-01-02T01:01:01-04:00",
-		"2006-01-02T01:01:01-06:00",
+		"2006-01-02T01:01:01-03:30",
+		"2006-01-02T01:01:01-04:30",
 		"2006-01-02T18:01:01+01:00",
 		"2006-01-02T18-01-01+0100",
 		// Hour will force rollover of day
@@ -834,16 +835,9 @@ func TestParsISOTimestamp(t *testing.T) {
 	}
 
 	badFormats := []string{
-		// // Bad month
-		// "2006-13-02T40-01-01+0100",
-		// // bad day
-		// "2006-02-30T12-01-01+0100",
-		// // Bad hours
-		// "2006-01-02T40-01-01+0100",
-		// // Bad minutes
-		// "2006-01-02T11-60-01+0100",
-		// // Bad seconds
-		// "2006-01-02T11-30-61+0100",
+		// Bad minutes offset
+		"2006/01/02T18.01.01+01:10",
+		// Invalid offset digit count
 		"2006-01-02T11-30-61+010",
 		"bkjfdlkjdfsaj;g;lkjafdkljl;fdaladf;jkladfsl;kfjads;j",
 		// Time zone too many characters
