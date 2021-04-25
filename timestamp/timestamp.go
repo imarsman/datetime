@@ -214,7 +214,7 @@ func OffsetForTime(t time.Time) (d time.Duration) {
 //   go build -gcflags '-m -m' timestamp.go 2>&1 |less
 // and removal of fmt.Sprintf to make zone name
 // location is a pointer and escapes to heap
-func ZoneFromHM(offsetH, offsetM int) time.Location {
+func ZoneFromHM(offsetH, offsetM int) *time.Location {
 	if offsetM < 0 {
 		offsetM = -offsetM
 	}
@@ -222,7 +222,7 @@ func ZoneFromHM(offsetH, offsetM int) time.Location {
 	// Must be passed a value equivalent to total seconds for hours and minutes
 	location := getLocation(offsetH*60*60 + offsetM*60)
 
-	return *location
+	return location
 }
 
 // OffsetHM get hours and minutes for location offset from UTC
