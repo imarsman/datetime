@@ -3,13 +3,86 @@ package timestamp
 import (
 	"errors"
 	"math"
+	"regexp"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 	"unicode"
 
 	"github.com/imarsman/datetime/xfmt"
 )
+
+var reDigits *regexp.Regexp
+var timeFormats = []string{} // A slice of time formats to be used if ISO parsing fails
+var locationAtomic atomic.Value
+
+var namedZoneTimeFormats = []string{
+	"Monday, 02-Jan-06 15:04:05 MST",
+	"Mon, 02 Jan 2006 15:04:05 MST",
+}
+
+// timeFormats a list of Golang time formats to cycle through. The first match
+// will cause the loop through the formats to exit.
+var nonISOTimeFormats = []string{
+
+	// "Monday, 02-Jan-06 15:04:05 MST",
+	// "Mon, 02 Jan 2006 15:04:05 MST",
+
+	// RFC7232 - used in HTTP protocol
+	"Mon, 02 Jan 2006 15:04:05 GMT",
+
+	// RFC850
+	// Unreliable to have Zone name known - don't try
+	// "Monday, 02-Jan-06 15:04:05 MST",
+
+	// RFC1123
+	// Unreliable to have Zone name known - don't try
+	// "Mon, 02 Jan 2006 15:04:05 MST",
+
+	// RFC1123Z
+	"Mon, 02 Jan 2006 15:04:05 -0700",
+
+	"Mon, 02 Jan 2006 15:04:05",
+	"Monday, 02-Jan-2006 15:04:05",
+
+	// RFC822Z
+	"02 Jan 06 15:04 -0700",
+
+	// Just in case
+	"2006-01-02 15-04-05",
+	"20060102150405",
+
+	// Stamp
+	// Year not known - don't try
+	// "Jan _2 15:04:05",
+
+	// StampMilli
+	// Year not known - don't try
+	// "Jan _2 15:04:05.000",
+
+	// StampMicro
+	// Year not known - don't try
+	// "Jan _2 15:04:05.000000",
+
+	// StampNano
+	// Year not known - don't try
+	// "Jan _2 15:04:05.000000000",
+
+	// Hopefully less likely to be found. Assume UTC.
+	"20060102",
+	"01/02/2006",
+	"1/2/2006",
+}
+
+func init() {
+	reDigits = regexp.MustCompile(`^\d+\.?\d+$`)
+	timeFormats = append(timeFormats, nonISOTimeFormats...)
+	// A cache for zones tied to offsets to save quite a bit of time and 3
+	// allocations needed to get a fixed zone.
+	// cachedZones := make(map[int]*time.Location)
+	locationAtomic.Store(make(map[int]*time.Location))
+}
 
 // ParseInUTC parse for all timestamps, defaulting to UTC, and return UTC zoned
 // time
@@ -126,8 +199,8 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 // Part of Docker, under Apache licence.
 //
 // Can't inline
-func parseUnixTS(value string) (int64, int64, error) {
-	sa := strings.SplitN(value, ".", 2)
+func parseUnixTS(timeStr string) (int64, int64, error) {
+	sa := strings.SplitN(timeStr, ".", 2)
 
 	s, err := strconv.ParseInt(sa[0], 10, 64)
 	if err != nil {
