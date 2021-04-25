@@ -3,6 +3,7 @@ package timestamp_test
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"testing"
 	"time"
 
@@ -732,6 +733,7 @@ var locations = []string{
 	"America/St_Johns",
 	"Europe/London",
 	"America/Argentina/San_Luis",
+	"Canada/Newfoundland",
 	"Asia/Calcutta",
 	"Asia/Tokyo",
 	"America/Toronto",
@@ -755,7 +757,8 @@ func TestOffsetForZones(t *testing.T) {
 		for _, tNext := range []time.Time{t1, t2} {
 			d, err := timestamp.OffsetForLocation(tNext.Year(), tNext.Month(), tNext.Day(), location)
 			is.NoErr(err) // Should be no error getting offset for location
-			offset := timestamp.LocationOffsetString(d)
+			offset, err := timestamp.LocationOffsetStringDelimited(d)
+			is.NoErr(err)
 			fmt.Printf("zone %s time %v offset %s\n", location, tNext, offset)
 		}
 	}
@@ -770,20 +773,105 @@ func TestZoneTime(t *testing.T) {
 
 	defer track(runningtime(fmt.Sprintf("Time to get zone information %dx", count)))
 
-	// var hours, minutes int
 	var d time.Duration
+	var offset string
 	var err error
 
+	d, err = timestamp.OffsetForLocation(2006, 1, 1, zone)
 	for i := 0; i < count; i++ {
-		d, err := timestamp.OffsetForLocation(2006, 1, 1, zone)
 		is.NoErr(err) // There should not have been an error
-		_ = timestamp.LocationOffsetString(d)
+		offset, err = timestamp.LocationOffsetString(d)
+		// t.Log(offset)
+		is.NoErr(err)
 	}
 
-	offset := timestamp.LocationOffsetStringDelimited(d)
+	offset, err = timestamp.LocationOffsetString(d)
+	t.Logf("Offset %s", offset)
+	offset, err = timestamp.LocationOffsetStringDelimited(d)
+	t.Logf("Offset delimited %s", offset)
+	is.NoErr(err)
 
 	t.Logf("start zone %s offset %s hours %d minutes %d offset %s error %v",
 		zone, offset, int(d.Hours()), int(d.Minutes()), offset, err)
+}
+
+func TestZoneTimeFmt(t *testing.T) {
+	is := is.New(t)
+
+	zone := "Canada/Newfoundland"
+	count := 1000
+
+	var d time.Duration
+	var offset string
+	var err error
+
+	d, err = timestamp.OffsetForLocation(2006, 1, 1, zone)
+	offsetH, offsetM := timestamp.OffsetHM(d)
+
+	defer track(runningtime(fmt.Sprintf("Time to get zone information %dx", count)))
+
+	for i := 0; i < count; i++ {
+		is.NoErr(err) // There should not have been an error
+		offset = fmt.Sprintf("%02d%02d", offsetH, offsetM)
+		// t.Log(offset)
+		is.NoErr(err)
+	}
+
+	t.Logf("Offset %s", offset)
+
+	t.Logf("start zone %s offset %s hours %d minutes %d offset %s error %v",
+		zone, offset, int(d.Hours()), int(d.Minutes()), offset, err)
+}
+
+// Test conversion of string to int
+func TestStringToInt(t *testing.T) {
+	is := is.New(t)
+	result, err := timestamp.StringToInt("123456789")
+	is.NoErr(err)
+	t.Log(result)
+	result, err = timestamp.StringToInt("1234567090")
+	is.True(err != nil)
+	t.Log("Got error - expected", err)
+}
+
+// Benchmark the string to int function
+func BenchmarkStringToInt(b *testing.B) {
+	is := is.New(b)
+
+	var err error
+	var result int
+
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			result, err = timestamp.StringToInt("123456789")
+		}
+	})
+
+	is.True(result != 0) // Should not be default null/0
+	is.NoErr(err)        // Parsing should not have caused an error
+}
+
+// Benchmark strconv.Atoi for comparison with the custom function
+func BenchmarkStringToIntAtoi(b *testing.B) {
+	is := is.New(b)
+
+	var err error
+	var result int
+
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			result, err = strconv.Atoi("123456789")
+		}
+	})
+
+	is.True(result != 0) // Should not be default null/0
+	is.NoErr(err)        // Parsing should not have caused an error
 }
 
 // Test seprate call to parse a Unix timestamp.
@@ -818,7 +906,16 @@ func TestParseLocation(t *testing.T) {
 
 	t.Logf("Got time %v at location %s", t1.Format(time.RFC1123), t1.Location())
 }
+func TestGetDigits(t *testing.T) {
+	is := is.New(t)
 
+	s, err := timestamp.TwoDigitOffset(1, true)
+	is.NoErr(err)
+	t.Log(s)
+	s, err = timestamp.TwoDigitOffset(-1, true)
+	is.NoErr(err)
+	t.Log(s)
+}
 func TestParsISOTimestamp(t *testing.T) {
 	is := is.New(t)
 
@@ -996,7 +1093,7 @@ func BenchmarkIterativeISOTimestampShortNoZone(b *testing.B) {
 }
 
 // Benchmark a timestamp with no delimiters but a zone
-func BenchmarkIterativeISOTimestampShortWithZone(b *testing.B) {
+func BenchmarkIterativeISOTimestampCompactNoMsecWithZone(b *testing.B) {
 	is := is.New(b)
 
 	var err error

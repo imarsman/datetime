@@ -142,14 +142,37 @@ func BytesToString(bytes ...byte) string {
 // assumed that m is a positive power. Don't use for negative values of m.
 // https://stackoverflow.com/questions/64108933/how-to-use-math-pow-with-integers-in-golang
 func intPow(n, m int) int {
-	if m == 0 {
+	var result int = n
+	switch m {
+	case 0:
 		return 1
 	}
-	result := n
 	for i := 2; i <= m; i++ {
 		result *= n
 	}
 	return result
+}
+
+// StringToInt convert a string with no decimal spaces to int.
+func StringToInt(input string) (int, error) {
+	var runes []rune = []rune(input)
+	var l int = len(runes)
+	if l > 9 {
+		return 0, errors.New("length greater than 9")
+	}
+
+	var result int = 0
+	for i := 0; i < l; i++ {
+		r := runes[i]
+		if unicode.IsDigit(r) {
+			var num int = int(r) - 48 // 48 is 0 so any digit will be an offset from that
+			var pow int = intPow(10, l-i-1)
+			result = result + num*pow
+		} else {
+			return 0, errors.New("non digit in input")
+		}
+	}
+	return result, nil
 }
 
 // ParseInUTC parse for all timestamps, defaulting to UTC, and return UTC zoned
@@ -674,6 +697,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// If zero can avoid an allocation and time
 	if isZero(yearParts...) == false {
 		y, err = strconv.Atoi(RunesToString(yearParts...))
+		// y, err = StringToInt(RunesToString(yearParts...))
 		if err != nil {
 			return time.Time{}, err
 		}
@@ -684,6 +708,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// If zero can avoid an allocation and time
 	if isZero(monthParts...) == false {
 		m, err = strconv.Atoi(RunesToString(monthParts...))
+		// m, err = StringToInt(RunesToString(monthParts...))
 		if err != nil {
 			return time.Time{}, err
 		}
@@ -694,6 +719,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// If zero can avoid an allocation and time
 	if isZero(dayParts...) == false {
 		d, err = strconv.Atoi(RunesToString(dayParts...))
+		// d, err = StringToInt(RunesToString(dayParts...))
 		if err != nil {
 			return time.Time{}, err
 		}
@@ -703,6 +729,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
 	if isZero(hourParts...) == false {
+		// h, err = StringToInt(RunesToString(hourParts...))
 		h, err = strconv.Atoi(RunesToString(hourParts...))
 		if err != nil {
 			return time.Time{}, err
@@ -713,6 +740,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
 	if isZero(minuteParts...) == false {
+		// mn, err = StringToInt(RunesToString(minuteParts...))
 		mn, err = strconv.Atoi(RunesToString(minuteParts...))
 		if err != nil {
 			return time.Time{}, err
@@ -723,8 +751,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
 	if isZero(secondParts...) == false {
+		// s, err = StringToInt(RunesToString(secondParts...))
 		s, err = strconv.Atoi(RunesToString(secondParts...))
-		// s, err := strconv.Atoi(string(secondParts))
 		if err != nil {
 			return time.Time{}, err
 		}
@@ -738,6 +766,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	if subsecondLen > 0 {
 		// If zero can avoid an allocation and time
 		if isZero(subsecondParts...) == false {
+			// subseconds, err = StringToInt(RunesToString(subsecondParts...))
 			subseconds, err = strconv.Atoi(RunesToString(subsecondParts...))
 			if err != nil {
 				return time.Time{}, err
@@ -765,8 +794,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 				// subseconds = intPow(subseconds, subsecondMax-subsecondLen)
 
 				subseconds = int(
-					float64(subseconds) *
-						(math.Pow(10, (float64(subsecondMax) - float64(subsecondLen)))))
+					subseconds *
+						int(math.Pow(10, (float64(subsecondMax-subsecondLen)))))
 			}
 		}
 	}
@@ -800,6 +829,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	if isZero(hourOffsetParts...) == false {
 		// Evaluate hour offset from the timestamp value
 		// Should not error since only digits were place in slice
+		// offsetH, err = StringToInt(RunesToString(hourOffsetParts...))
 		offsetH, err = strconv.Atoi(RunesToString(hourOffsetParts...))
 		if err != nil {
 			return time.Time{}, err
@@ -811,6 +841,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	if isZero(minuteOffsetParts...) == false {
 		// Evaluate minute offset from the timestamp value
 		// Should not error since only digits were place in slice
+		// offsetM, err = StringToInt(RunesToString(minuteOffsetParts...))
 		offsetM, err = strconv.Atoi(RunesToString(minuteOffsetParts...))
 		if err != nil {
 			return time.Time{}, err

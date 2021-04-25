@@ -2,9 +2,10 @@ package timestamp
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/imarsman/datetime/xfmt"
 	// gocache "github.com/patrickmn/go-cache"
 	// https://golang.org/pkg/time/tzdata/
 	/*
@@ -108,7 +109,7 @@ func OffsetHM(d time.Duration) (offsetH, offsetM int) {
 //
 // For -5 hours and 30 minutes
 //  -0500
-func LocationOffsetString(d time.Duration) string {
+func LocationOffsetString(d time.Duration) (string, error) {
 	return locationOffsetString(d, false)
 }
 
@@ -120,8 +121,33 @@ func LocationOffsetString(d time.Duration) string {
 //
 // For -5 hours and 30 minutes
 //  -05:00
-func LocationOffsetStringDelimited(d time.Duration) string {
+func LocationOffsetStringDelimited(d time.Duration) (string, error) {
 	return locationOffsetString(d, true)
+}
+
+// TwoDigitOffset get digit offset for hours and minutes
+func TwoDigitOffset(in int, addPrefix bool) (string, error) {
+	if in > 99 || in < -99 {
+		return "", errors.New("Out of range")
+	}
+
+	var prefix rune = '+'
+
+	if in < 0 {
+		prefix = '-'
+		in = -in
+	}
+
+	first := '0' + int(in/10)
+	last := '0' + in%10
+
+	fr := rune(first)
+	lr := rune(last)
+
+	if addPrefix == true {
+		return RunesToString(prefix, fr, lr), nil
+	}
+	return RunesToString(fr, lr), nil
 }
 
 // OffsetString get an offset in HHMM format based on hours and minutes offset
@@ -132,13 +158,26 @@ func LocationOffsetStringDelimited(d time.Duration) string {
 //
 // For -5 hours and 30 minutes
 //  -0500
-func locationOffsetString(d time.Duration, delimited bool) string {
+func locationOffsetString(d time.Duration, delimited bool) (string, error) {
 	offsetH, offsetM := OffsetHM(d)
 
-	if delimited == false {
-		return fmt.Sprintf("%+03d%02d", offsetH, offsetM)
+	xfmt := new(xfmt.Buffer)
+
+	h, err := TwoDigitOffset(offsetH, true)
+	if err != nil {
+		return "", err
 	}
-	return fmt.Sprintf("%+03d:%02d", offsetH, offsetM)
+	xfmt.S(h)
+	if delimited == true {
+		xfmt.C(':')
+	}
+	m, err := TwoDigitOffset(offsetM, false)
+	if err != nil {
+		return "", err
+	}
+	xfmt.S(m)
+
+	return BytesToString(xfmt.Bytes()...), nil
 }
 
 // RangeOverTimes returns a date range function over start date to end date inclusive.
