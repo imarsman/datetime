@@ -829,6 +829,7 @@ func TestParsISOTimestamp(t *testing.T) {
 	formats := []string{
 		"20060102T010101",
 		"2006-13-02T40:01:01.123456789+01:00",
+		"2006-13-02T40:01:01.999999999+01:00",
 		"20060102T010101.123456789",
 		"20060102T010101.12345678",
 		"20060102T010101.1234567",
@@ -1019,6 +1020,32 @@ func BenchmarkIterativeISOTimestampShortWithZone(b *testing.B) {
 
 // The most computational and allocationally intensive timestamp to parse, with
 // a nonzero value in every part plus delimiters.
+func BenchmarkIterativeISOTimestampMsecAllPartsNonzero(b *testing.B) {
+	is := is.New(b)
+
+	var err error
+	var t1 time.Time
+
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			// Max allocations with no part zero
+			t1, err = timestamp.ParseISOTimestamp("2006-07-02T07:01:01.999+03:30", time.UTC)
+			if err != nil {
+				b.Log(err)
+			}
+		}
+	})
+
+	// b.Log(t1)
+	is.True(t1 != time.Time{}) // Should not have an empty time
+	is.NoErr(err)              // Parsing should not have caused an error
+}
+
+// The most computational and allocationally intensive timestamp to parse, with
+// a nonzero value in every part plus delimiters.
 func BenchmarkIterativeISOTimestampLongAllPartsNonzero(b *testing.B) {
 	is := is.New(b)
 
@@ -1031,13 +1058,14 @@ func BenchmarkIterativeISOTimestampLongAllPartsNonzero(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			// Max allocations with no part zero
-			t1, err = timestamp.ParseISOTimestamp("2006-07-02T07:01:01.123+03:30", time.UTC)
+			t1, err = timestamp.ParseISOTimestamp("2006-07-02T07:01:01.999999999+03:30", time.UTC)
 			if err != nil {
 				b.Log(err)
 			}
 		}
 	})
 
+	// b.Log(t1)
 	is.True(t1 != time.Time{}) // Should not have an empty time
 	is.NoErr(err)              // Parsing should not have caused an error
 }

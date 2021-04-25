@@ -138,6 +138,20 @@ func BytesToString(bytes ...byte) string {
 	return sb.String()
 }
 
+// IntPow calculates n to the mth power. Since the result is an int, it is
+// assumed that m is a positive power. Don't use for negative values of m.
+// https://stackoverflow.com/questions/64108933/how-to-use-math-pow-with-integers-in-golang
+func intPow(n, m int) int {
+	if m == 0 {
+		return 1
+	}
+	result := n
+	for i := 2; i <= m; i++ {
+		result *= n
+	}
+	return result
+}
+
 // ParseInUTC parse for all timestamps, defaulting to UTC, and return UTC zoned
 // time
 func ParseInUTC(timeStr string) (time.Time, error) {
@@ -256,22 +270,36 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 func parseUnixTS(timeStr string) (int64, int64, error) {
 	sa := strings.SplitN(timeStr, ".", 2)
 
+	// Parse the first portion
 	s, err := strconv.ParseInt(sa[0], 10, 64)
 	if err != nil {
 		return s, 0, err
 	}
 
+	// If there is no second part assume nanoseconds is zero
 	if len(sa) != 2 {
 		return s, 0, nil
 	}
 
+	// Parse the first portion
 	n, err := strconv.ParseInt(sa[1], 10, 64)
 	if err != nil {
 		return s, n, err
 	}
 
-	// should already be in nanoseconds but just in case convert n to nanoseconds
+	// big package cumbersome for this purpose and slower
+	// var nb = big.NewInt(n)
+	// var i = big.NewInt(10)
+	// var e = big.NewInt(int64(9 - len(sa[1])))
+	// var r = i.Exp(i, e, nil)
+
+	// bi := nb.Mul(nb, r)
+	// s = bi.Int64()
+
+	// should already be in nanoseconds but just in case convert n to
+	// nanoseconds. math.Pow works well here.
 	n = int64(float64(n) * math.Pow(float64(10), float64(9-len(sa[1]))))
+
 	return s, n, nil
 }
 
@@ -719,6 +747,23 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			// function is expecting.
 			if subsecondLen < subsecondMax {
 				// 10^ whatever extra decimal place count is missing from 9
+				// This has been tried 3 ways
+				// - with a custom intPow function
+				// - with math.Pow
+				// - with the big package
+				//
+				// - using math.Pow seems to be quite consistent
+				// - using intPow seems to be most consistently fast
+				// - going with math.Pow because it's almost identical and is very
+				//   tested
+
+				// var i = big.NewInt(int64(subseconds))
+				// var e = big.NewInt(int64(subsecondMax - subsecondLen))
+				// bi := i.Exp(i, e, nil)
+				// subseconds = int(bi.Int64())
+
+				// subseconds = intPow(subseconds, subsecondMax-subsecondLen)
+
 				subseconds = int(
 					float64(subseconds) *
 						(math.Pow(10, (float64(subsecondMax) - float64(subsecondLen)))))
