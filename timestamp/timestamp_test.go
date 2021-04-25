@@ -972,7 +972,7 @@ func BenchmarkIterativeISOTimestampDateOnly(b *testing.B) {
 	is.NoErr(err)              // Parsing should not have caused an error
 }
 
-func BenchmarkIterativeISOTimestampShort(b *testing.B) {
+func BenchmarkIterativeISOTimestampShortNoZone(b *testing.B) {
 	is := is.New(b)
 
 	var err error
@@ -994,7 +994,7 @@ func BenchmarkIterativeISOTimestampShort(b *testing.B) {
 	is.NoErr(err)              // Parsing should not have caused an error
 }
 
-func BenchmarkIterativeISOTimestampLong(b *testing.B) {
+func BenchmarkIterativeISOTimestampShortWithZone(b *testing.B) {
 	is := is.New(b)
 
 	var err error
@@ -1005,7 +1005,7 @@ func BenchmarkIterativeISOTimestampLong(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			t1, err = timestamp.ParseISOTimestamp("2006-07-02T01:01:01+01:00", time.UTC)
+			t1, err = timestamp.ParseISOTimestamp("20060702T010101+0130", time.UTC)
 			if err != nil {
 				b.Log(err)
 			}
@@ -1016,7 +1016,9 @@ func BenchmarkIterativeISOTimestampLong(b *testing.B) {
 	is.NoErr(err)              // Parsing should not have caused an error
 }
 
-func BenchmarkIterativeISOTimestampLongZeroOffset(b *testing.B) {
+// The most computational and allocationally intensive timestamp to parse, with
+// a nonzero value in every part
+func BenchmarkIterativeISOTimestampLongAllPartsNonzero(b *testing.B) {
 	is := is.New(b)
 
 	var err error
@@ -1050,7 +1052,7 @@ func BenchmarkNativeISOTimestampLong(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			t1, err = time.ParseInLocation("2006-01-02T15:04:05-07:00", "2006-07-02T01:01:01+01:00", time.UTC)
+			t1, err = time.ParseInLocation("2006-01-02T15:04:05-07:00", "2006-07-02T01:01:01+01:30", time.UTC)
 			if err != nil {
 				b.Log(err)
 			}
@@ -1129,6 +1131,23 @@ func BenchmarkBytesToString(b *testing.B) {
 
 	is.True(s != "")
 }
+func BenchmarkBytesToStringCast(b *testing.B) {
+	is := is.New(b)
+
+	var s string
+	bytes := []byte{'a', 'b', 'c', 'd'}
+
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			s = string(bytes)
+		}
+	})
+
+	is.True(s != "")
+}
 
 // The goal of using strings.Builder is to avoid heap allocation
 // The memory used and time taken should be similar to using a string cast
@@ -1144,24 +1163,6 @@ func BenchmarkRunesToString(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			s = timestamp.RunesToString(runes...)
-		}
-	})
-
-	is.True(s != "")
-}
-
-func BenchmarkBytesToStringCast(b *testing.B) {
-	is := is.New(b)
-
-	var s string
-	bytes := []byte{'a', 'b', 'c', 'd'}
-
-	b.SetBytes(bechmarkBytesPerOp)
-	b.ReportAllocs()
-	b.SetParallelism(30)
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			s = string(bytes)
 		}
 	})
 
