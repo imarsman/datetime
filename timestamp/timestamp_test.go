@@ -896,11 +896,7 @@ func TestParsISOTimestamp(t *testing.T) {
 
 const bechmarkBytesPerOp int64 = 10
 
-// Run as
-//  go test -run=XXX -bench=.
-//  go test -bench=. -benchmem -memprofile memprofile.out -cpuprofile cpuprofile.out
-//  go tool pprof -http=:8080 memprofile.out
-//  go tool pprof -http=:8080 cpuprofile.out
+// Benchmark parsing a unix timestamp
 func BenchmarkUnixTimestamp(b *testing.B) {
 	is := is.New(b)
 
@@ -926,6 +922,7 @@ func BenchmarkUnixTimestamp(b *testing.B) {
 	is.NoErr(err)              // Parsing should not have caused an error
 }
 
+// Benchmark a unix nano timestamp
 func BenchmarkUnixTimestampNano(b *testing.B) {
 	is := is.New(b)
 
@@ -950,6 +947,8 @@ func BenchmarkUnixTimestampNano(b *testing.B) {
 	is.True(t1 != time.Time{}) // Should not have an empty time
 	is.NoErr(err)              // Parsing should not have caused an error
 }
+
+// Benchmark a timestamp that is only a date
 func BenchmarkIterativeISOTimestampDateOnly(b *testing.B) {
 	is := is.New(b)
 
@@ -972,6 +971,7 @@ func BenchmarkIterativeISOTimestampDateOnly(b *testing.B) {
 	is.NoErr(err)              // Parsing should not have caused an error
 }
 
+// Benchmark a timestamp with no delimiters or zone
 func BenchmarkIterativeISOTimestampShortNoZone(b *testing.B) {
 	is := is.New(b)
 
@@ -994,6 +994,7 @@ func BenchmarkIterativeISOTimestampShortNoZone(b *testing.B) {
 	is.NoErr(err)              // Parsing should not have caused an error
 }
 
+// Benchmark a timestamp with no delimiters but a zone
 func BenchmarkIterativeISOTimestampShortWithZone(b *testing.B) {
 	is := is.New(b)
 
@@ -1017,7 +1018,7 @@ func BenchmarkIterativeISOTimestampShortWithZone(b *testing.B) {
 }
 
 // The most computational and allocationally intensive timestamp to parse, with
-// a nonzero value in every part
+// a nonzero value in every part plus delimiters.
 func BenchmarkIterativeISOTimestampLongAllPartsNonzero(b *testing.B) {
 	is := is.New(b)
 
@@ -1041,6 +1042,7 @@ func BenchmarkIterativeISOTimestampLongAllPartsNonzero(b *testing.B) {
 	is.NoErr(err)              // Parsing should not have caused an error
 }
 
+// Benchmark the Go time parsing call with format
 func BenchmarkNativeISOTimestampLong(b *testing.B) {
 	is := is.New(b)
 
@@ -1063,6 +1065,7 @@ func BenchmarkNativeISOTimestampLong(b *testing.B) {
 	is.NoErr(err)              // Parsing should not have caused an error
 }
 
+// Benchmark a non allocating buffer that is an alternative to the fmt package
 func BenchmarkNonAllocatingBuffer(b *testing.B) {
 	is := is.New(b)
 
@@ -1089,6 +1092,7 @@ func BenchmarkNonAllocatingBuffer(b *testing.B) {
 	is.True(len(s) > 0)
 }
 
+// Benchmlark allocating fmt call
 func BenchmarkAllocatingBuffer(b *testing.B) {
 	is := is.New(b)
 
@@ -1131,6 +1135,8 @@ func BenchmarkBytesToString(b *testing.B) {
 
 	is.True(s != "")
 }
+
+// Benchmark creating a string from bytes using Go cast
 func BenchmarkBytesToStringCast(b *testing.B) {
 	is := is.New(b)
 
@@ -1169,6 +1175,7 @@ func BenchmarkRunesToString(b *testing.B) {
 	is.True(s != "")
 }
 
+// Benchmark creating a string from runes using Go cast
 func BenchmarkRunesToStringCast(b *testing.B) {
 	is := is.New(b)
 
