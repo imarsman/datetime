@@ -84,6 +84,60 @@ func init() {
 	locationAtomic.Store(make(map[int]*time.Location))
 }
 
+// LocationFromOffset get a location based on the offset seconds from UTC. Uses a cache
+// of locations based on offset.
+func LocationFromOffset(offsetSec int) *time.Location {
+	cachedZones := locationAtomic.Load().(map[int]*time.Location)
+	var location *time.Location
+	if l, ok := cachedZones[offsetSec]; ok {
+		location = l
+		// Given that zones are in at most 15 minute increments and can be
+		// positive or negative there should only be so many.
+		// https://time.is/time_zones
+		// There are currently 37 observed UTC offsets in the world
+		// (38 when Iran is on standard time).
+		// Allow up to 50.
+		// zoneMu.Lock()
+		if len(cachedZones) > 50 {
+			locationAtomic.Store(make(map[int]*time.Location))
+		}
+	} else {
+		location = time.FixedZone("FixedZone", offsetSec)
+		cachedZones[offsetSec] = location
+		locationAtomic.Store(cachedZones)
+	}
+
+	return location
+}
+
+// RunesToString convert runes list to string with no allocation
+//
+// WriteRune is more complex than WriteByte so can't inline
+//
+// A small cost a few ns in testing is incurred for using a string builder.
+// There are no heap allocations using strings.Builder.
+func RunesToString(runes ...rune) string {
+	var sb = new(strings.Builder)
+	for i := 0; i < len(runes); i++ {
+		sb.WriteRune(runes[i])
+	}
+	return sb.String()
+}
+
+// BytesToString convert byte list to string with no allocation
+//
+// can inline - strings.Builder WriteByte is less complex than WriteRune
+//
+// A small cost a few ns in testing is incurred for using a string builder.
+// There are no heap allocations using strings.Builder.
+func BytesToString(bytes ...byte) string {
+	var sb = new(strings.Builder)
+	for i := 0; i < len(bytes); i++ {
+		sb.WriteByte(bytes[i])
+	}
+	return sb.String()
+}
+
 // ParseInUTC parse for all timestamps, defaulting to UTC, and return UTC zoned
 // time
 func ParseInUTC(timeStr string) (time.Time, error) {
