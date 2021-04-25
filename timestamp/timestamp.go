@@ -125,7 +125,9 @@ func LocationOffsetStringDelimited(d time.Duration) (string, error) {
 	return locationOffsetString(d, true)
 }
 
-// TwoDigitOffset get digit offset for hours and minutes
+// TwoDigitOffset get digit offset for hours and minutes. This is designed
+// solely to help with calculating offset strings for timestamps without using
+// fmt.Sprintf, which causes allocations.
 func TwoDigitOffset(in int, addPrefix bool) (string, error) {
 	if in > 99 || in < -99 {
 		return "", errors.New("Out of range")
@@ -138,11 +140,8 @@ func TwoDigitOffset(in int, addPrefix bool) (string, error) {
 		in = -in
 	}
 
-	first := '0' + int(in/10)
-	last := '0' + in%10
-
-	fr := rune(first)
-	lr := rune(last)
+	var fr rune = rune('0' + int(in/10))
+	var lr rune = rune('0' + in%10)
 
 	if addPrefix == true {
 		return RunesToString(prefix, fr, lr), nil

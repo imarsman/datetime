@@ -771,11 +771,11 @@ func TestZoneTime(t *testing.T) {
 	zone := "Canada/Newfoundland"
 	count := 1000
 
-	defer track(runningtime(fmt.Sprintf("Time to get zone information %dx", count)))
-
 	var d time.Duration
 	var offset string
 	var err error
+
+	defer track(runningtime(fmt.Sprintf("Time to get zone information %dx with zero allocation", count)))
 
 	d, err = timestamp.OffsetForLocation(2006, 1, 1, zone)
 	for i := 0; i < count; i++ {
@@ -808,7 +808,7 @@ func TestZoneTimeFmt(t *testing.T) {
 	d, err = timestamp.OffsetForLocation(2006, 1, 1, zone)
 	offsetH, offsetM := timestamp.OffsetHM(d)
 
-	defer track(runningtime(fmt.Sprintf("Time to get zone information %dx", count)))
+	defer track(runningtime(fmt.Sprintf("Time to get zone information %dx with allocation", count)))
 
 	for i := 0; i < count; i++ {
 		is.NoErr(err) // There should not have been an error
