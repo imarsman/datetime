@@ -411,7 +411,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return part, false
 	}
 
-	isZero := func(part ...rune) bool {
+	var isZero = func(part ...rune) bool {
 		for i := 0; i < len(part); i++ {
 			if part[i] != '0' {
 				return false
@@ -586,6 +586,11 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	minuteLen := len(minuteParts)
 	secondLen := len(secondParts)
 
+	// This does not need to be recalculated
+	subsecondLen := len(subsecondParts)
+	// This will need to be recalculated
+	zoneLen = len(zoneParts)
+
 	// Allow for just dates and convert to timestamp with zero valued time
 	// parts. Since we are fixing it here it will pass the next tests if nothing
 	// else is wrong or missing.
@@ -698,8 +703,6 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	}
 
 	var subseconds int = 0 // default subsecond value is 0
-
-	subsecondLen := len(subsecondParts)
 
 	// Handle subseconds if that slice is nonempty
 	// There would have been an error if the length of subsecond parts was
