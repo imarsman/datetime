@@ -1027,7 +1027,8 @@ func BenchmarkIterativeISOTimestampLongZeroOffset(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			t1, err = timestamp.ParseISOTimestamp("2006-07-02T01:01:01.123+00:00", time.UTC)
+			// Max allocations with no part zero
+			t1, err = timestamp.ParseISOTimestamp("2006-07-02T07:01:01.123+03:30", time.UTC)
 			if err != nil {
 				b.Log(err)
 			}
