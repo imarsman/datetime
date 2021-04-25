@@ -16,7 +16,7 @@ import (
 // benchmark
 //   go test -run=XXX -bench=. -benchmem
 // Get allocation information and pipe to less
-//   go build -gcflags '-m -m' timestamp.go 2>&1 |less
+//   go build -gcflags '-m -m' ./*.go 2>&1 |less
 // Run all tests
 //   go test -v
 // Run one test and do allocation profiling
