@@ -502,7 +502,6 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 	// be colons and a space instead of a T to separate date and time.
 	if isTS == false {
 		t, err := ParseISOTimestamp(timeStr, location)
-		// t, err := lex.ParseInLocation([]byte(timeStr), location)
 		if err == nil {
 			return t, nil
 		}
@@ -515,12 +514,7 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 		// Avoid heap allocation
 		xfmtBuf.S("Could not parse as ISO timestamp ").S(timeStr)
 
-		b := xfmtBuf.Bytes()
-		// l := len(b)
-		s := BytesToString(b...)
-		// s := string(b)
-
-		return time.Time{}, errors.New(s)
+		return time.Time{}, errors.New(BytesToString(xfmtBuf.Bytes()...))
 	}
 
 	if isTS == true {
@@ -532,12 +526,7 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 		// Avoid heap allocation
 		xfmtBuf.S("Could not parse as UNIX timestamp ").S(timeStr)
 
-		b := xfmtBuf.Bytes()
-		// l := len(b)
-		// s := string(b)
-		s := BytesToString(b...)
-
-		return time.Time{}, errors.New(s)
+		return time.Time{}, errors.New(BytesToString(xfmtBuf.Bytes()...))
 	}
 
 	// If not a unix type timestamp try alternate non-iso timestamp formats
@@ -553,10 +542,7 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 	xfmtBuf := new(xfmt.Buffer)
 	xfmtBuf.S("Could not parse with other timestamp patterns ").S(timeStr)
 
-	b := xfmtBuf.Bytes()
-	errMsg := BytesToString(b...)
-
-	return time.Time{}, errors.New(errMsg)
+	return time.Time{}, errors.New(BytesToString(xfmtBuf.Bytes()...))
 }
 
 // RFC7232 get format used for http headers
