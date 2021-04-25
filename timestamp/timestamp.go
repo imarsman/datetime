@@ -182,8 +182,6 @@ func BytesToString(bytes ...byte) string {
 //
 // If the zone is not recognized in Go's tzdata database an error will be
 // returned.
-//
-// Can't inline
 func OffsetForLocation(year int, month time.Month, day int, locationName string) (d time.Duration, err error) {
 	l, err := time.LoadLocation(locationName)
 	if err != nil {
@@ -197,8 +195,6 @@ func OffsetForLocation(year int, month time.Month, day int, locationName string)
 }
 
 // OffsetForTime the duration of the offset from UTC
-// Inlines with
-//   go build -gcflags '-m -m' timestamp.go 2>&1 |less
 func OffsetForTime(t time.Time) (d time.Duration) {
 	_, offset := t.Zone()
 
@@ -209,11 +205,6 @@ func OffsetForTime(t time.Time) (d time.Duration) {
 
 // ZoneFromHM get fixed zone from hour and minute offset
 // A negative offsetH will result in a negative zone offset
-//
-// Inlines with
-//   go build -gcflags '-m -m' timestamp.go 2>&1 |less
-// and removal of fmt.Sprintf to make zone name
-// location is a pointer and escapes to heap
 func ZoneFromHM(offsetH, offsetM int) *time.Location {
 	if offsetM < 0 {
 		offsetM = -offsetM
@@ -227,8 +218,6 @@ func ZoneFromHM(offsetH, offsetM int) *time.Location {
 
 // OffsetHM get hours and minutes for location offset from UTC
 // Avoiding math.Abs and casting allows inlining in
-//
-//   go build -gcflags '-m -m' timestamp.go 2>&1 |less
 func OffsetHM(d time.Duration) (offsetH, offsetM int) {
 	offsetH = int(d.Hours())
 	offsetM = int(d.Minutes()) % 60
@@ -250,9 +239,6 @@ func OffsetHM(d time.Duration) (offsetH, offsetM int) {
 //
 // For -5 hours and 30 minutes
 //  -0500
-//
-// Inlines with
-//   go build -gcflags '-m -m' timestamp.go 2>&1 |less
 func LocationOffsetString(d time.Duration) string {
 	return locationOffsetString(d, false)
 }
@@ -265,9 +251,6 @@ func LocationOffsetString(d time.Duration) string {
 //
 // For -5 hours and 30 minutes
 //  -05:00
-//
-// Inlines with
-//   go build -gcflags '-m -m' timestamp.go 2>&1 |less
 func LocationOffsetStringDelimited(d time.Duration) string {
 	return locationOffsetString(d, true)
 }
@@ -338,7 +321,6 @@ func locationOffsetString(d time.Duration, delimited bool) string {
 		fmt.Println("Got", v)
 	}
 */
-// Can't inline
 func RangeOverTimes(start, end time.Time) func() (time.Time, error) {
 	_, startZone := start.Zone()
 	_, endZone := end.Zone()
@@ -442,10 +424,8 @@ func ParseUnixTS(timeStr string) (time.Time, error) {
 				xfmtBuf := new(xfmt.Buffer)
 				xfmtBuf.S(sec).S(".").S(nsec)
 				b := xfmtBuf.Bytes()
-				// l := len(b)
 
 				toSend = BytesToString(b...)
-				// toSend = string(b)
 			}
 			// Get seconds, nanoseconds, and error if there was a problem
 			s, n, err := parseUnixTS(toSend)
@@ -464,33 +444,24 @@ func ParseUnixTS(timeStr string) (time.Time, error) {
 	// Avoid heap allocation
 	xfmtBuf.S("Could not parse as UNIX timestamp ").S(timeStr)
 	b := xfmtBuf.Bytes()
-	// l := len(b)
-	s := BytesToString(b...)
-	// s := string(b)
 
 	// return time.Time{}, fmt.Errorf("Could not parse as UNIX timestamp %s", timeStr)
-	return time.Time{}, errors.New(s)
+	return time.Time{}, errors.New(BytesToString(b...))
 }
 
 // ParseInUTC parse for all timestamps, defaulting to UTC, and return UTC zoned
 // time
-//
-// Can inline
 func ParseInUTC(timeStr string) (time.Time, error) {
 	return parseTimestamp(timeStr, time.UTC, false)
 }
 
 // ParseISOInUTC parse limited to ISO timestamp formats and return UTC zoned time
-//
-// Can inline
 func ParseISOInUTC(timeStr string) (time.Time, error) {
 	return parseTimestamp(timeStr, time.UTC, true)
 }
 
 // ParseInLocation parse for all timestamp formats and default to location if
 // there is no zone in the incoming timestamp. Return time adjusted to UTC.
-//
-// Can inline
 func ParseInLocation(timeStr string, location *time.Location) (time.Time, error) {
 	return parseTimestamp(timeStr, location, false)
 }
@@ -498,8 +469,6 @@ func ParseInLocation(timeStr string, location *time.Location) (time.Time, error)
 // ParseISOInLocation parse limited to ISO timestamp formats, defaulting to
 // location if there is no zone in the incoming timezone. Return time  adjusted
 // to UTC.
-//
-// Can inline
 func ParseISOInLocation(timeStr string, location *time.Location) (time.Time, error) {
 	return parseTimestamp(timeStr, location, true)
 }
@@ -585,9 +554,7 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 	xfmtBuf.S("Could not parse with other timestamp patterns ").S(timeStr)
 
 	b := xfmtBuf.Bytes()
-	// l := len(b)
 	errMsg := BytesToString(b...)
-	// errMsg := string(b)
 
 	return time.Time{}, errors.New(errMsg)
 }
@@ -611,8 +578,6 @@ func RFC7232(t time.Time) string {
 //
 // Result will be in whatever the location the incoming time is set to. If UTC
 // is desired set location to time.UTC first
-//
-// Can inline if not converted first to UTC
 func ISO8601CompactUTC(t time.Time) string {
 	return t.Format("20060102T150405-0700")
 }
@@ -622,8 +587,6 @@ func ISO8601CompactUTC(t time.Time) string {
 //
 // Result will be in whatever the location the incoming time is set to. If UTC
 // is desired set location to time.UTC first
-//
-// Can inline if not converted first to UTC
 func ISO8601CompactMsecUTC(t time.Time) string {
 	return t.Format("20060102T150405.000-0700")
 }
@@ -633,8 +596,6 @@ func ISO8601CompactMsecUTC(t time.Time) string {
 //
 // Result will be in whatever the location the incoming time is set to. If UTC
 // is desired set location to time.UTC first
-//
-// Can inline if not converted first to UTC
 func ISO8601UTC(t time.Time) string {
 	return t.Format("2006-01-02T15:04:05-07:00")
 }
@@ -644,8 +605,6 @@ func ISO8601UTC(t time.Time) string {
 //
 // Result will be in whatever the location the incoming time is set to. If UTC
 // is desired set location to time.UTC first
-//
-// Can inline if not converted first to UTC
 func ISO8601MsecUTC(t time.Time) string {
 	return t.Format("2006-01-02T15:04:05.000-07:00")
 }
@@ -655,8 +614,6 @@ func ISO8601MsecUTC(t time.Time) string {
 //
 // Result will be in whatever the location the incoming time is set to. If UTC
 // is desired set location to time.UTC first
-//
-// Can inline if not converted first to UTC
 func ISO8601InLocation(t time.Time, location *time.Location) string {
 	return t.Format("2006-01-02T15:04:05-07:00")
 }
@@ -666,8 +623,6 @@ func ISO8601InLocation(t time.Time, location *time.Location) string {
 //
 // Result will be in whatever the location the incoming time is set to. If UTC
 // is desired set location to time.UTC first
-//
-// Can inline if not converted first to UTC
 func ISO8601MsecInLocation(t time.Time, location *time.Location) string {
 	return t.Format("2006-01-02T15:04:05.000-07:00")
 }
@@ -677,8 +632,6 @@ func ISO8601MsecInLocation(t time.Time, location *time.Location) string {
 //
 // Result will be in whatever the location the incoming time is set to. If UTC
 // is desired set location to time.UTC first
-//
-// Can inline if not converted first to UTC
 func ISO8601CompactInLocation(t time.Time, location *time.Location) string {
 	return t.Format("20060102T150405-0700")
 }
@@ -688,8 +641,6 @@ func ISO8601CompactInLocation(t time.Time, location *time.Location) string {
 //
 // Result will be in whatever the location the incoming time is set to. If UTC
 // is desired set location to time.UTC first
-//
-// Can inline if not converted first to UTC
 func ISO8601CompactMsecInLocation(t time.Time, location *time.Location) string {
 	return t.Format("20060102T150405.000-0700")
 }
@@ -703,11 +654,6 @@ func StartTimeIsBeforeEndTime(t1 time.Time, t2 time.Time) bool {
 // zone for the timestamp or if there is no zone offset in the incoming
 // timestamp the incoming location will bue used. It is the responsibility of
 // further steps to standardize to a specific zone offset.
-//
-//  go build -gcflags '-m' timestamp.go
-//
-// Can't inline
-// location leaks
 func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, error) {
 	// Define sections that can change.
 
@@ -772,13 +718,6 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		zoneMax      int = 4 // max length for zone
 	)
 
-	var unparsed []string // string representation of unparsed runes and their positions
-
-	var partAtMax bool = false // flag indicating current part is filled
-	var offsetZero bool = true // flag indicating that full zone offset is zero
-	var offsetHZero bool = false
-	var offsetMZero bool = false
-
 	// A function to handle adding to a slice if it is not above capacity and
 	// flagging when it has reached capacity. Runs same speed when inline and is
 	// only used here. Return a flag indicating if a timestamp part has reached
@@ -793,6 +732,18 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		}
 		return part, false
 	}
+
+	isZero := func(part ...rune) bool {
+		for i := 0; i < len(part); i++ {
+			if part[i] != '0' {
+				return false
+			}
+		}
+		return true
+	}
+
+	var unparsed []string      // string representation of unparsed runes and their positions
+	var partAtMax bool = false // flag indicating current part is filled
 
 	// Loop through runes in time string and decide what to do with each.
 	for i, r := range timeStr {
@@ -850,10 +801,6 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 				}
 				// Zone section is used until full
 			case zoneSection:
-				// Allow for offset calculations later to be avoided
-				if r != '0' {
-					offsetZero = false
-				}
 				// Add to zone
 				zoneParts, partAtMax = addIf(zoneParts, r, zoneMax)
 				if partAtMax == true {
@@ -953,14 +900,6 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		zoneFound = true
 	}
 
-	// Find out if hour and/or minute parts are zero to help avoid Atoi later
-	if zoneParts[0] == '0' && zoneParts[1] == '0' {
-		offsetHZero = true
-	}
-	if zoneParts[2] == '0' && zoneParts[3] == '0' {
-		offsetMZero = true
-	}
-
 	// Allow for just dates and convert to timestamp with zero valued time
 	// parts. Since we are fixing it here it will pass the next tests if nothing
 	// else is wrong or missing.
@@ -1001,15 +940,6 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return time.Time{}, errors.New("Input second length is not 2")
 	}
 
-	isZero := func(part ...rune) bool {
-		for i := 0; i < len(part); i++ {
-			if part[i] != '0' {
-				return false
-			}
-		}
-		return true
-	}
-
 	// We already only put digits into the parts so Atoi should be fine in all
 	// cases. The problem would have been with an incorrect number of digits in
 	// a part, which would have been caught above.
@@ -1027,6 +957,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			return time.Time{}, err
 		}
 	}
+
 	// Get month int value from monthParts rune slice
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
@@ -1112,6 +1043,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// 60 seconds would force an addition to the minute and all the way up to
 	// the year for 2020-12-31T59:59:60-0000
 
+	offsetZero := isZero(zoneParts...)
+
 	// Create timestamp based on parts with proper offsset
 
 	// If no zone was found in scan use default location
@@ -1126,25 +1059,28 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	var offsetH int = 0 // starting state for offset hours
 	var offsetM int = 0 // starting state for offset minutes
 
+	hourOffsetParts := zoneParts[0:2]
 	// Can avoid allocations by skipping this
-	if offsetHZero == false {
+	if isZero(hourOffsetParts...) == false {
 		// Evaluate hour offset from the timestamp value
 		// Should not error since only digits were place in slice
-		offsetH, err = strconv.Atoi(RunesToString(zoneParts[0:2]...))
+		offsetH, err = strconv.Atoi(RunesToString(hourOffsetParts...))
 		if err != nil {
 			return time.Time{}, err
 		}
 	}
 
+	minuteOffsetParts := zoneParts[2:]
 	// Can avoid allocations by skipping this
-	if offsetMZero == false {
+	if isZero(minuteOffsetParts...) == false {
 		// Evaluate minute offset from the timestamp value
 		// Should not error since only digits were place in slice
-		offsetM, err = strconv.Atoi(RunesToString(zoneParts[2:]...))
+		offsetM, err = strconv.Atoi(RunesToString(minuteOffsetParts...))
 		if err != nil {
 			return time.Time{}, err
 		}
 	}
+
 	// Set offset based on hours and minutes
 	offsetSec := offsetH*60*60 + offsetM*60
 
