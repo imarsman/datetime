@@ -813,7 +813,6 @@ func TestZoneTimeFmt(t *testing.T) {
 	for i := 0; i < count; i++ {
 		is.NoErr(err) // There should not have been an error
 		offset = fmt.Sprintf("%02d%02d", offsetH, offsetM)
-		// t.Log(offset)
 		is.NoErr(err)
 	}
 
@@ -1010,11 +1009,11 @@ func BenchmarkTwoDigitOffsets(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			s, err = timestamp.TwoDigitOffset(7, true)
+			s, err = timestamp.TwoDigitOffset(-7, true)
 		}
 	})
 
-	b.Log(s)
+	is.True(s != "")
 	is.NoErr(err)
 }
 
