@@ -906,15 +906,20 @@ func TestParseLocation(t *testing.T) {
 
 	t.Logf("Got time %v at location %s", t1.Format(time.RFC1123), t1.Location())
 }
+
 func TestGetDigits(t *testing.T) {
 	is := is.New(t)
 
-	s, err := timestamp.TwoDigitOffset(1, true)
-	is.NoErr(err)
+	var s string
+	var err error
+	for i := 0; i < 1000; i++ {
+		s, err = timestamp.TwoDigitOffset(1, true)
+		is.NoErr(err)
+		s, err = timestamp.TwoDigitOffset(-1, true)
+		is.NoErr(err)
+	}
 	t.Log(s)
-	s, err = timestamp.TwoDigitOffset(-1, true)
-	is.NoErr(err)
-	t.Log(s)
+
 }
 func TestParsISOTimestamp(t *testing.T) {
 	is := is.New(t)
@@ -993,6 +998,39 @@ func TestParsISOTimestamp(t *testing.T) {
 }
 
 const bechmarkBytesPerOp int64 = 10
+
+func BenchmarkTwoDigitOffsets(b *testing.B) {
+	is := is.New(b)
+
+	var err error
+	var s string
+
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			s, err = timestamp.TwoDigitOffset(7, true)
+		}
+	})
+
+	b.Log(s)
+	is.NoErr(err)
+}
+
+func BenchmarkTwoDigitOffsetsFmt(b *testing.B) {
+	// is := is.New(b)
+
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_ = fmt.Sprintf("%03d", -1)
+		}
+	})
+
+}
 
 // Benchmark parsing a unix timestamp
 func BenchmarkUnixTimestamp(b *testing.B) {
