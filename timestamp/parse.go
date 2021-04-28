@@ -426,17 +426,6 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// Define the varous part to hold values for year, month, etc. Make initial
 	// size 0 and capacity enough to avoid shuffling when appending.
 
-	var (
-		yearParts      = make([]rune, 0, 4) // year digit parts
-		monthParts     = make([]rune, 0, 2) // month digit parts
-		dayParts       = make([]rune, 0, 2) // day digit parts
-		hourParts      = make([]rune, 0, 2) // hour digit parts
-		minuteParts    = make([]rune, 0, 2) // minute digit parts
-		secondParts    = make([]rune, 0, 2) // second digit parts
-		subsecondParts = make([]rune, 0, 9) // subsecond digit parts
-		zoneParts      = make([]rune, 0, 4) // zone parts
-	)
-
 	const (
 		yearMax      int = 4 // max length for year
 		monthMax     int = 2 // max length for month number
@@ -446,6 +435,17 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		secondMax    int = 2 // max length for second number
 		subsecondMax int = 9 // max length for subsecond number
 		zoneMax      int = 4 // max length for zone
+	)
+
+	var (
+		yearParts      = make([]rune, 0, yearMax)      // year digit parts
+		monthParts     = make([]rune, 0, monthMax)     // month digit parts
+		dayParts       = make([]rune, 0, dayMax)       // day digit parts
+		hourParts      = make([]rune, 0, hourMax)      // hour digit parts
+		minuteParts    = make([]rune, 0, minuteMax)    // minute digit parts
+		secondParts    = make([]rune, 0, secondMax)    // second digit parts
+		subsecondParts = make([]rune, 0, subsecondMax) // subsecond digit parts
+		zoneParts      = make([]rune, 0, zoneMax)      // zone parts
 	)
 
 	// A function to handle adding to a slice if it is not above capacity and
