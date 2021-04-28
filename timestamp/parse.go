@@ -438,12 +438,12 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	)
 
 	var (
-		yearParts      = make([]rune, 0, yearMax)      // year digit parts
-		monthParts     = make([]rune, 0, monthMax)     // month digit parts
-		dayParts       = make([]rune, 0, dayMax)       // day digit parts
-		hourParts      = make([]rune, 0, hourMax)      // hour digit parts
-		minuteParts    = make([]rune, 0, minuteMax)    // minute digit parts
-		secondParts    = make([]rune, 0, secondMax)    // second digit parts
+		yearPart       = make([]rune, 0, yearMax)      // year digit parts
+		monthPart      = make([]rune, 0, monthMax)     // month digit parts
+		dayPart        = make([]rune, 0, dayMax)       // day digit parts
+		hourPart       = make([]rune, 0, hourMax)      // hour digit parts
+		minutePart     = make([]rune, 0, minuteMax)    // minute digit parts
+		secondPart     = make([]rune, 0, secondMax)    // second digit parts
 		subsecondParts = make([]rune, 0, subsecondMax) // subsecond digit parts
 		zoneParts      = make([]rune, 0, zoneMax)      // zone parts
 	)
@@ -463,6 +463,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return part, false
 	}
 
+	// Check if a set of runes is made up of all all zeros
 	var isZero = func(part ...rune) bool {
 		for i := 0; i < len(part); i++ {
 			if part[i] != '0' {
@@ -483,43 +484,43 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			// Initially no section is active
 			case emptySection:
 				currentSection = yearSection
-				yearParts, partAtMax = addIf(yearParts, r, yearMax)
+				yearPart, partAtMax = addIf(yearPart, r, yearMax)
 				if partAtMax == true {
 					currentSection = monthSection
 				}
 				// Year section is used until full
 			case yearSection:
-				yearParts, partAtMax = addIf(yearParts, r, yearMax)
+				yearPart, partAtMax = addIf(yearPart, r, yearMax)
 				if partAtMax == true {
 					currentSection = monthSection
 				}
 				// Month section is used until full
 			case monthSection:
-				monthParts, partAtMax = addIf(monthParts, r, monthMax)
+				monthPart, partAtMax = addIf(monthPart, r, monthMax)
 				if partAtMax == true {
 					currentSection = daySection
 				}
 				// Day section is used until full
 			case daySection:
-				dayParts, partAtMax = addIf(dayParts, r, dayMax)
+				dayPart, partAtMax = addIf(dayPart, r, dayMax)
 				if partAtMax == true {
 					currentSection = hourSection
 				}
 				// Hour section is used until full
 			case hourSection:
-				hourParts, partAtMax = addIf(hourParts, r, hourMax)
+				hourPart, partAtMax = addIf(hourPart, r, hourMax)
 				if partAtMax == true {
 					currentSection = minuteSection
 				}
 				// Minute section is used until full
 			case minuteSection:
-				minuteParts, partAtMax = addIf(minuteParts, r, minuteMax)
+				minutePart, partAtMax = addIf(minutePart, r, minuteMax)
 				if partAtMax == true {
 					currentSection = secondSection
 				}
 				// Second section is used until full
 			case secondSection:
-				secondParts, partAtMax = addIf(secondParts, r, secondMax)
+				secondPart, partAtMax = addIf(secondPart, r, secondMax)
 				if partAtMax == true {
 					currentSection = subsecondSection
 				}
@@ -630,13 +631,13 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		zoneFound = true
 	}
 
-	yearLen := len(yearParts)
-	monthLen := len(monthParts)
-	dayLen := len(dayParts)
+	yearLen := len(yearPart)
+	monthLen := len(monthPart)
+	dayLen := len(dayPart)
 
-	hourLen := len(hourParts)
-	minuteLen := len(minuteParts)
-	secondLen := len(secondParts)
+	hourLen := len(hourPart)
+	minuteLen := len(minutePart)
+	secondLen := len(secondPart)
 
 	// This does not need to be recalculated
 	subsecondLen := len(subsecondParts)
@@ -647,9 +648,9 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// parts. Since we are fixing it here it will pass the next tests if nothing
 	// else is wrong or missing.
 	if hourLen == 0 && minuteLen == 0 && secondLen == 0 {
-		hourParts = append(hourParts, '0', '0')
-		minuteParts = append(minuteParts, '0', '0')
-		secondParts = append(secondParts, '0', '0')
+		hourPart = append(hourPart, '0', '0')
+		minutePart = append(minutePart, '0', '0')
+		secondPart = append(secondPart, '0', '0')
 
 		hourLen, minuteLen, secondLen = hourMax, minuteMax, secondMax
 	}
@@ -660,6 +661,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// would take 2, minute would take 2, and second would get none. We are thus
 	// requiring that all date and time parts be fully allocated even if we
 	// can't tell where the problem started.
+
+	// We have previously made sure that year has 4 digits
 	if yearLen != yearMax {
 		// errors.New escapes to heap
 		return time.Time{}, errors.New("Input year length is not 4")
@@ -696,8 +699,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// Get year int value from yearParts rune slice
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
-	if isZero(yearParts...) == false {
-		y, err = strconv.Atoi(RunesToString(yearParts...))
+	if isZero(yearPart...) == false {
+		y, err = strconv.Atoi(RunesToString(yearPart...))
 		// y, err = StringToInt(RunesToString(yearParts...))
 		if err != nil {
 			return time.Time{}, err
@@ -707,8 +710,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// Get month int value from monthParts rune slice
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
-	if isZero(monthParts...) == false {
-		m, err = strconv.Atoi(RunesToString(monthParts...))
+	if isZero(monthPart...) == false {
+		m, err = strconv.Atoi(RunesToString(monthPart...))
 		// m, err = StringToInt(RunesToString(monthParts...))
 		if err != nil {
 			return time.Time{}, err
@@ -718,8 +721,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// Get day int value from dayParts rune slice
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
-	if isZero(dayParts...) == false {
-		d, err = strconv.Atoi(RunesToString(dayParts...))
+	if isZero(dayPart...) == false {
+		d, err = strconv.Atoi(RunesToString(dayPart...))
 		// d, err = StringToInt(RunesToString(dayParts...))
 		if err != nil {
 			return time.Time{}, err
@@ -729,9 +732,9 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// Get hour int value from hourParts rune slice
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
-	if isZero(hourParts...) == false {
+	if isZero(hourPart...) == false {
 		// h, err = StringToInt(RunesToString(hourParts...))
-		h, err = strconv.Atoi(RunesToString(hourParts...))
+		h, err = strconv.Atoi(RunesToString(hourPart...))
 		if err != nil {
 			return time.Time{}, err
 		}
@@ -740,9 +743,9 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// Get minute int value from minParts rune slice
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
-	if isZero(minuteParts...) == false {
+	if isZero(minutePart...) == false {
 		// mn, err = StringToInt(RunesToString(minuteParts...))
-		mn, err = strconv.Atoi(RunesToString(minuteParts...))
+		mn, err = strconv.Atoi(RunesToString(minutePart...))
 		if err != nil {
 			return time.Time{}, err
 		}
@@ -751,9 +754,9 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// Get second int value from secondParts rune slice
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
-	if isZero(secondParts...) == false {
+	if isZero(secondPart...) == false {
 		// s, err = StringToInt(RunesToString(secondParts...))
-		s, err = strconv.Atoi(RunesToString(secondParts...))
+		s, err = strconv.Atoi(RunesToString(secondPart...))
 		if err != nil {
 			return time.Time{}, err
 		}

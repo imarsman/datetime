@@ -705,7 +705,7 @@ func TestTime(t *testing.T) {
 	}
 
 	is.NoErr(err) // Timestamp should parse with no error
-	t.Logf("Timestamp %s", timestamp.ISO8601MsecUTC(unixBase))
+	t.Logf("Timestamp %s", timestamp.ISO8601Msec(unixBase))
 }
 
 func TestFormat(t *testing.T) {
@@ -719,7 +719,7 @@ func TestFormat(t *testing.T) {
 	defer track(runningtime(fmt.Sprintf("Time to format timestamp %dx", count)))
 
 	for i := 0; i < count; i++ {
-		s = timestamp.ISO8601MsecUTC(ts)
+		s = timestamp.ISO8601Msec(ts)
 	}
 
 	t.Logf("Timestamp %s", s)
