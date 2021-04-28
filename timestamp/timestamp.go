@@ -290,39 +290,39 @@ func RFC7232(t time.Time) string {
 	return t.Format(http.TimeFormat)
 }
 
-// ISO8601CompactUTC ISO-8601 timestamp with no sub seconds
+// ISO8601Compact ISO-8601 timestamp with no sub seconds
 //   "20060102T150405-0700"
 //
 // Result will be in whatever the location the incoming time is set to. If UTC
 // is desired set location to time.UTC first
-func ISO8601CompactUTC(t time.Time) string {
+func ISO8601Compact(t time.Time) string {
 	return t.Format("20060102T150405-0700")
 }
 
-// ISO8601CompactMsecUTC ISO-8601 timestamp with no seconds
+// ISO8601CompactMsec ISO-8601 timestamp with no seconds
 //   "20060102T150405.000-0700"
 //
 // Result will be in whatever the location the incoming time is set to. If UTC
 // is desired set location to time.UTC first
-func ISO8601CompactMsecUTC(t time.Time) string {
+func ISO8601CompactMsec(t time.Time) string {
 	return t.Format("20060102T150405.000-0700")
 }
 
-// ISO8601UTC ISO-8601 timestamp long format string result
+// ISO8601 ISO-8601 timestamp long format string result
 //   "2006-01-02T15:04:05-07:00"
 //
 // Result will be in whatever the location the incoming time is set to. If UTC
 // is desired set location to time.UTC first
-func ISO8601UTC(t time.Time) string {
+func ISO8601(t time.Time) string {
 	return t.Format("2006-01-02T15:04:05-07:00")
 }
 
-// ISO8601MsecUTC ISO-8601 longtimestamp with msec
+// ISO8601Msec ISO-8601 longtimestamp with msec
 //   "2006-01-02T15:04:05.000-07:00"
 //
 // Result will be in whatever the location the incoming time is set to. If UTC
 // is desired set location to time.UTC first
-func ISO8601MsecUTC(t time.Time) string {
+func ISO8601Msec(t time.Time) string {
 	return t.Format("2006-01-02T15:04:05.000-07:00")
 }
 
