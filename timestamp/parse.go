@@ -154,6 +154,7 @@ func intPow(n, m int) int {
 }
 
 // StringToInt convert a string with no decimal spaces to int.
+// It's slower by a tiny amount than Atoi and will be removed.
 func StringToInt(input string) (int, error) {
 	var runes []rune = []rune(input)
 	var l int = len(runes)

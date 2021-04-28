@@ -775,21 +775,20 @@ func TestZoneTime(t *testing.T) {
 	var offset string
 	var err error
 
+	offset, err = timestamp.LocationOffsetString(d)
+	t.Logf("Offset %s", offset)
+	offset, err = timestamp.LocationOffsetStringDelimited(d)
+	t.Logf("Offset delimited %s", offset)
+	is.NoErr(err)
+
 	defer track(runningtime(fmt.Sprintf("Time to get zone information %dx with zero allocation", count)))
 
 	d, err = timestamp.OffsetForLocation(2006, 1, 1, zone)
 	for i := 0; i < count; i++ {
 		is.NoErr(err) // There should not have been an error
 		offset, err = timestamp.LocationOffsetString(d)
-		// t.Log(offset)
 		is.NoErr(err)
 	}
-
-	offset, err = timestamp.LocationOffsetString(d)
-	t.Logf("Offset %s", offset)
-	offset, err = timestamp.LocationOffsetStringDelimited(d)
-	t.Logf("Offset delimited %s", offset)
-	is.NoErr(err)
 
 	t.Logf("start zone %s offset %s hours %d minutes %d offset %s error %v",
 		zone, offset, int(d.Hours()), int(d.Minutes()), offset, err)

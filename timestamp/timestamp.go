@@ -67,7 +67,8 @@ func OffsetForLocation(year int, month time.Month, day int, locationName string)
 	return d, nil
 }
 
-// OffsetForTime the duration of the offset from UTC
+// OffsetForTime the duration of the offset from UTC. Mostly the same as doing
+// the same thing inline but this reliably gets a duration.
 func OffsetForTime(t time.Time) (d time.Duration) {
 	_, offset := t.Zone()
 
