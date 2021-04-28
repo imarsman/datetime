@@ -445,7 +445,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		minutePart     = make([]rune, 0, minuteMax)    // minute digit parts
 		secondPart     = make([]rune, 0, secondMax)    // second digit parts
 		subsecondParts = make([]rune, 0, subsecondMax) // subsecond digit parts
-		zoneParts      = make([]rune, 0, zoneMax)      // zone parts
+		zonePart       = make([]rune, 0, zoneMax)      // zone parts
 	)
 
 	// A function to handle adding to a slice if it is not above capacity and
@@ -533,7 +533,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 				// Zone section is used until full
 			case zoneSection:
 				// Add to zone
-				zoneParts, partAtMax = addIf(zoneParts, r, zoneMax)
+				zonePart, partAtMax = addIf(zonePart, r, zoneMax)
 				if partAtMax == true {
 					// We could exit here but we can continue to more accurately
 					// report bad date parts if we allow things to continue.
@@ -568,7 +568,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		} else if unicode.ToUpper(r) == 'Z' {
 			// define offset as zero for hours and minutes
 			if currentSection == zoneSection || currentSection == subsecondSection {
-				zoneParts = append(zoneParts, '0', '0', '0', '0')
+				zonePart = append(zonePart, '0', '0', '0', '0')
 				break
 			} else {
 				// Assume bad input
@@ -603,8 +603,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		return time.Time{}, errors.New(BytesToString(xfmtBuf.Bytes()...))
 	}
 
-	zoneFound := false        // has time zone been found
-	zoneLen := len(zoneParts) // length of the zone found
+	zoneFound := false       // has time zone been found
+	zoneLen := len(zonePart) // length of the zone found
 
 	// If length < 4
 	if zoneLen < zoneMax {
@@ -621,10 +621,10 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			// With no zone assume UTC and set all offset characters to 0
 		} else if zoneLen == 0 {
 			zoneFound = false
-			zoneParts = append(zoneParts, '0', '0', '0', '0')
+			zonePart = append(zonePart, '0', '0', '0', '0')
 		} else if zoneLen == 2 {
 			// Zone of length 2 needs padding to set minute offset
-			zoneParts = append(zoneParts, '0', '0')
+			zonePart = append(zonePart, '0', '0')
 		}
 	} else {
 		// Zone is found. Used later when setting location
@@ -642,7 +642,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// This does not need to be recalculated
 	subsecondLen := len(subsecondParts)
 	// This will need to be recalculated
-	zoneLen = len(zoneParts)
+	zoneLen = len(zonePart)
 
 	// Allow for just dates and convert to timestamp with zero valued time
 	// parts. Since we are fixing it here it will pass the next tests if nothing
@@ -812,7 +812,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// 60 seconds would force an addition to the minute and all the way up to
 	// the year for 2020-12-31T59:59:60-0000
 
-	offsetZero := isZero(zoneParts...)
+	offsetZero := isZero(zonePart...)
 
 	// Create timestamp based on parts with proper offsset
 
@@ -828,7 +828,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	var offsetH int = 0 // starting state for offset hours
 	var offsetM int = 0 // starting state for offset minutes
 
-	hourOffsetParts := zoneParts[0:2]
+	hourOffsetParts := zonePart[0:2]
 	// Can avoid allocations by skipping this
 	if isZero(hourOffsetParts...) == false {
 		// Evaluate hour offset from the timestamp value
@@ -840,7 +840,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		}
 	}
 
-	minuteOffsetParts := zoneParts[2:]
+	minuteOffsetParts := zonePart[2:]
 	// Can avoid allocations by skipping this
 	if isZero(minuteOffsetParts...) == false {
 		// Evaluate minute offset from the timestamp value
