@@ -438,14 +438,14 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	)
 
 	var (
-		yearPart       = make([]rune, 0, yearMax)      // year digit parts
-		monthPart      = make([]rune, 0, monthMax)     // month digit parts
-		dayPart        = make([]rune, 0, dayMax)       // day digit parts
-		hourPart       = make([]rune, 0, hourMax)      // hour digit parts
-		minutePart     = make([]rune, 0, minuteMax)    // minute digit parts
-		secondPart     = make([]rune, 0, secondMax)    // second digit parts
-		subsecondParts = make([]rune, 0, subsecondMax) // subsecond digit parts
-		zonePart       = make([]rune, 0, zoneMax)      // zone parts
+		yearPart      = make([]rune, 0, yearMax)      // year digit parts
+		monthPart     = make([]rune, 0, monthMax)     // month digit parts
+		dayPart       = make([]rune, 0, dayMax)       // day digit parts
+		hourPart      = make([]rune, 0, hourMax)      // hour digit parts
+		minutePart    = make([]rune, 0, minuteMax)    // minute digit parts
+		secondPart    = make([]rune, 0, secondMax)    // second digit parts
+		subsecondPart = make([]rune, 0, subsecondMax) // subsecond digit parts
+		zonePart      = make([]rune, 0, zoneMax)      // zone parts
 	)
 
 	// A function to handle adding to a slice if it is not above capacity and
@@ -526,7 +526,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 				}
 				// Subsecond section is used until full
 			case subsecondSection:
-				subsecondParts, partAtMax = addIf(subsecondParts, r, subsecondMax)
+				subsecondPart, partAtMax = addIf(subsecondPart, r, subsecondMax)
 				if partAtMax == true {
 					currentSection = zoneSection
 				}
@@ -640,7 +640,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	secondLen := len(secondPart)
 
 	// This does not need to be recalculated
-	subsecondLen := len(subsecondParts)
+	subsecondLen := len(subsecondPart)
 	// This will need to be recalculated
 	zoneLen = len(zonePart)
 
@@ -769,9 +769,9 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// greater than subsecondMax
 	if subsecondLen > 0 {
 		// If zero can avoid an allocation and time
-		if isZero(subsecondParts...) == false {
+		if isZero(subsecondPart...) == false {
 			// subseconds, err = StringToInt(RunesToString(subsecondParts...))
-			subseconds, err = strconv.Atoi(RunesToString(subsecondParts...))
+			subseconds, err = strconv.Atoi(RunesToString(subsecondPart...))
 			if err != nil {
 				return time.Time{}, err
 			}
