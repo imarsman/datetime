@@ -452,7 +452,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// flagging when it has reached capacity. Runs same speed when inline and is
 	// only used here. Return a flag indicating if a timestamp part has reached
 	// its max capacity plus the modified slice to avoid issues due to
-	// appending.
+	// appending. Using pointers uses more memory and more allocations.
 	var addIf = func(part []rune, add rune, max int) ([]rune, bool) {
 		if len(part) < max {
 			part = append(part, add)
@@ -460,6 +460,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		if len(part) == max {
 			return part, true
 		}
+
 		return part, false
 	}
 
@@ -470,6 +471,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 				return false
 			}
 		}
+
 		return true
 	}
 
