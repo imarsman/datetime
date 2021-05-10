@@ -788,9 +788,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 				// - with the big package
 				//
 				// - using math.Pow seems to be quite consistent
-				// - using intPow seems to be most consistently fast
-				// - going with math.Pow because it's almost identical and is very
-				//   tested
+				// - using intPow seems is consistent as well but its code is
+				//   not tested nearly as thoroughly as the Go builtin.
 
 				// var i = big.NewInt(int64(subseconds))
 				// var e = big.NewInt(int64(subsecondMax - subsecondLen))

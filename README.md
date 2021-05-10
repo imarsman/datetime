@@ -12,22 +12,21 @@ timestamps that could be used in the production of output documents.
 Handling of ISO-8601 dates, periods, and timespans is included using the code
 found at https://github.com/rickb777/date. That code is for the most part
 included without modification as it is evidently well optimized and the result
-of a great deal of thought and careful attention to accuracy. A period lexing
-package is included but was mostly written for comparison purposes with the
-existing parsing functionality. It will likely be removed as the existing
-parsing is about 3x faster and has already benefitted from careful attention to
-proper handling.
+of a great deal of thought and careful attention to accuracy. This library used
+to include a period lexing package but the one by rickb777 is much more
+efficient.
 
 The timestamp parsing of ISO-8601 timestamps is weighted in favour of allowing
 for some non-compliant formatting of parsed input as long as the compliance
-issues do allow acceptance of ambiguous input. The library takes the approach of
-initially trying to tokenize ISO-8601 format timestamps. If that step fails a
-number of non-ISO-8601 formats are tried in a loop in a best effort to parse the
-incoming timestamp. Finally, if the incoming timestamp is in a Unix timestamp
-format an attempt is made to parse it as such.
+issues do not allow acceptance of ambiguous input. The library takes the
+approach of initially trying to tokenize ISO-8601 format timestamps. If that
+step fails a number of non-ISO-8601 formats are tried in a loop in a best effort
+to parse the incoming timestamp. Finally, if the incoming timestamp is in a Unix
+timestamp format an attempt is made to parse it as such.
 
 None of the ISO-8601 time types are comprehensive in their handling of the
-possible formats and variations in formats. The ISO-8601 standard is a large one.
+possible formats and variations in formats. The ISO-8601 standard is a large and
+complex one.
 
 The code for ISO-8601 date, period, and timespan handling is licenced under the
 BSD-3-Clause Licence. You can read this licence at the end of the LICENCE file
