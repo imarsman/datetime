@@ -249,7 +249,7 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 		if err != nil {
 			xfmtBuf := new(xfmt.Buffer)
 			// Avoid heap allocation
-			xfmtBuf.S("Could not parse as UNIX timestamp ").S(timeStr)
+			xfmtBuf.S("timestamp.parseTimestamp: could not parse as UNIX timestamp ").S(timeStr)
 
 			return time.Time{}, errors.New(BytesToString(xfmtBuf.Bytes()...))
 		}
@@ -268,7 +268,7 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 	}
 
 	xfmtBuf := new(xfmt.Buffer)
-	xfmtBuf.S("Could not parse with other timestamp patterns ").S(timeStr)
+	xfmtBuf.S("timestamp.parseTimestamp: could not parse with other timestamp patterns ").S(timeStr)
 
 	return time.Time{}, errors.New(BytesToString(xfmtBuf.Bytes()...))
 }
@@ -373,7 +373,7 @@ func ParseUnixTS(timeStr string) (time.Time, error) {
 	}
 	xfmtBuf := new(xfmt.Buffer)
 	// Avoid heap allocation
-	xfmtBuf.S("Could not parse as UNIX timestamp ").S(timeStr)
+	xfmtBuf.S("timestamp.ParseUnixTS: Could not parse as UNIX timestamp ").S(timeStr)
 	b := xfmtBuf.Bytes()
 
 	// return time.Time{}, fmt.Errorf("Could not parse as UNIX timestamp %s", timeStr)
@@ -393,7 +393,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	if timeStrLength > maxLength {
 		// Avoid allocations that would occur with fmt.Sprintf
 		xfmtBuf := new(xfmt.Buffer)
-		xfmtBuf.S("Input ").S(timeStr[0:35]).S("... length is ").D(timeStrLength).S(" and > max of ").D(maxLength)
+		xfmtBuf.S("timestamp.ParseISOTimestamp: input ").S(timeStr[0:35]).S("... length is ").D(timeStrLength).S(" and > max of ").D(maxLength)
 
 		// errors.New escapes to heap
 		return time.Time{}, errors.New(BytesToString(xfmtBuf.Bytes()...))
@@ -599,7 +599,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	if len(unparsed) > 0 {
 		// Avoid allocations that would occur with fmt.Sprintf
 		xfmtBuf := new(xfmt.Buffer)
-		xfmtBuf.S("got unparsed caracters ").S(strings.Join(unparsed, ",")).S(" in input ").S(timeStr)
+		xfmtBuf.S("timestamp.ParseISOTimestamp: got unparsed caracters ").S(strings.Join(unparsed, ",")).S(" in input ").S(timeStr)
 
 		// errors.New escapes to heap
 		return time.Time{}, errors.New(BytesToString(xfmtBuf.Bytes()...))
@@ -615,7 +615,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		if zoneLen == 1 || zoneLen == 3 {
 			// Avoid allocations that would occur with fmt.Sprintf
 			xfmtBuf := new(xfmt.Buffer)
-			xfmtBuf.S("Zone is of length ").D(zoneLen).S(" wich is not enough to detect zone")
+			xfmtBuf.S("timestamp.ParseISOTimestamp: zone is of length ").D(zoneLen).S(" wich is not enough to detect zone")
 
 			// errors.New escapes to heap
 			return time.Time{}, errors.New(BytesToString(xfmtBuf.Bytes()...))
@@ -667,27 +667,27 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// We have previously made sure that year has 4 digits
 	if yearLen != yearMax {
 		// errors.New escapes to heap
-		return time.Time{}, errors.New("Input year length is not 4")
+		return time.Time{}, errors.New("timestamp.ParseISOTimestamp: input year length is not 4")
 	}
 	if monthLen != monthMax {
 		// errors.New escapes to heap
-		return time.Time{}, errors.New("Input month length is not 2")
+		return time.Time{}, errors.New("timestamp.ParseISOTimestamp: input month length is not 2")
 	}
 	if dayLen != dayMax {
 		// errors.New escapes to heap
-		return time.Time{}, errors.New("Input day length is not 2")
+		return time.Time{}, errors.New("timestamp.ParseISOTimestamp: input day length is not 2")
 	}
 	if hourLen != hourMax {
 		// errors.New escapes to heap
-		return time.Time{}, errors.New("Input hour length is not 2")
+		return time.Time{}, errors.New("timestamp.ParseISOTimestamp: input hour length is not 2")
 	}
 	if minuteLen != minuteMax {
 		// errors.New escapes to heap
-		return time.Time{}, errors.New("Input minute length is not 2")
+		return time.Time{}, errors.New("timestamp.ParseISOTimestamp: input minute length is not 2")
 	}
 	if secondLen != secondMax {
 		// errors.New escapes to heap
-		return time.Time{}, errors.New("Input second length is not 2")
+		return time.Time{}, errors.New("timestamp.ParseISOTimestamp: input second length is not 2")
 	}
 
 	// We already only put digits into the parts so Atoi should be fine in all
@@ -871,7 +871,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	default:
 		// Avoid allocations that would occur with fmt.Sprintf
 		xfmtBuf := new(xfmt.Buffer)
-		xfmtBuf.S("UTC offset minutes ").D(offsetM).S(" not in a 15 minute increment")
+		xfmtBuf.S("timestamp.ParseISOTimestamp: UTC offset minutes ").D(offsetM).S(" not in a 15 minute increment")
 
 		// errors.New escapes to heap
 		return time.Time{}, errors.New(BytesToString(xfmtBuf.Bytes()...))
