@@ -134,9 +134,9 @@ func (p Period) Seconds() int64 {
 // computations applied to the period can only be precise if they concern either the date (year, month,
 // day) part, or the clock (hour, minute, second) part, but not both.
 func Between(t1, t2 time.Time) (p Period) {
-	sign := 1
+	t1GTt2 := true
 	if t2.Before(t1) {
-		t1, t2, sign = t2, t1, -1
+		t1, t2, t1GTt2 = t2, t1, false
 	}
 
 	if t1.Location() != t2.Location() {
@@ -145,13 +145,11 @@ func Between(t1, t2 time.Time) (p Period) {
 
 	year, month, day, hour, min, sec, hundredth := daysDiff(t1, t2)
 
-	if sign < 0 {
-		p = NewPeriod(-year, -month, -day, -hour, -min, -sec)
-		p.seconds -= int64(hundredth)
-	} else {
-		p = NewPeriod(year, month, day, hour, min, sec)
-		p.seconds += int64(hundredth)
-	}
+	p = NewPeriod(year, month, day, hour, min, sec)
+	p.seconds = int64(hundredth)
+
+	p.negative = t1GTt2 == false
+
 	return
 }
 
@@ -184,14 +182,11 @@ func daysDiff(t1, t2 time.Time) (year, month, day, hour, min, sec, hundredth int
 		// no need to reduce day - it's calculated differently.
 	}
 
-	// test 16bit storage limit (with 1 fixed decimal place)
-	if day > 3276 {
-		y1, m1, d1 := t1.Date()
-		y2, m2, d2 := t2.Date()
-		year = int64(y2 - y1)
-		month = int64(m2 - m1)
-		day = int64(d2 - d1)
-	}
+	y1, m1, d1 := t1.Date()
+	y2, m2, d2 := t2.Date()
+	year = int64(y2 - y1)
+	month = int64(m2 - m1)
+	day = int64(d2 - d1)
 
 	return
 }
@@ -201,19 +196,15 @@ func daysDiff(t1, t2 time.Time) (year, month, day, hour, min, sec, hundredth int
 // 525949.2 minutes or 31556952 seconds). For this calendar, a common year is
 // 365 days (8760 hours, 525600 minutes or 31536000 seconds), and a leap year is
 // 366 days (8784 hours, 527040 minutes or 31622400 seconds)
-// const daysPerYearE4 = 3652425   // 365.2425 days by the Gregorian rule
-// const daysPerMonth = 30436875   // 30.436875 days per month
-// const daysPerMonthE4 = 304369   // 30.4369 days per month
-// const daysPerMonthE6 = 30436875 // 30.436875 days per month
-// const daysPerMonthE6 = 30436875 // 30.436875 days per month
+
 const daysPerMonthE6 = 30436875 // 30.436875 days per month
 
-var oneDay = 24 * time.Hour
+var oneDay time.Duration = 24 * time.Hour // Number of nanoseconds in a day
 
-const oneMonthSeconds = 2628000
-const oneMonthApprox = oneMonthSeconds * time.Second // 30.436875 days
+const oneMonthSeconds = 2628000                                    // Number of seconds in a month
+const oneMonthApprox time.Duration = oneMonthSeconds * time.Second // 30.436875 days
 
-const oneE4 = 10000 // 1e^5
+const oneE4 = 10000 // 1e^4
 
 const oneE5 = 100000 // 1e^5
 
@@ -221,7 +212,7 @@ const oneE6 = 1000000 // 1e^6
 
 // More exact but rounds with small units
 // const oneYearApprox = time.Duration(float64(365.2425*60*60*24)) * time.Second // 365.2425 days
-const oneYearApprox = oneMonthSeconds * time.Second * 12 // 365.2425 days
+const oneYearApprox time.Duration = oneMonthSeconds * time.Second * 12 // Nanoseconds in 1 year
 
 // Abs converts a negative period to a positive one.
 func (p Period) Abs() Period {
@@ -385,12 +376,11 @@ func (p Period) IsPositive() bool {
 // Negate changes the sign of the period.
 func (p Period) Negate() Period {
 	if p.IsNegative() {
-		// p.Input = strings.ReplaceAll(p.Input, "-", "")
 		p.negative = false
 		return p
 	}
 	p.negative = true
-	// p.Input = "-" + p.Input
+
 	return p
 }
 
@@ -414,13 +404,15 @@ func (p Period) IsZero() bool {
 }
 
 // Duration converts a period to the equivalent duration in nanoseconds.
-// A flag is also returned that is true when the conversion was precise and false otherwise.
+// A flag is also returned that is true when the conversion was precise and
+// false otherwise.
 //
-// When the period specifies hours, minutes and seconds only, the result is precise.
-// however, when the period specifies years, months and days, it is impossible to be precise
-// because the result may depend on knowing date and timezone information, so the duration
-// is estimated on the basis of a year being 365.2425 days as per Gregorian calendar rules)
-// and a month being 1/12 of a that; days are all assumed to be 24 hours long.
+// When the period specifies hours, minutes and seconds only, the result is
+// precise. however, when the period specifies years, months and days, it is
+// impossible to be precise because the result may depend on knowing date and
+// timezone information, so the duration is estimated on the basis of a year
+// being 365.2425 days as per Gregorian calendar rules) and a month being 1/12
+// of a that; days are all assumed to be 24 hours long.
 func (p Period) Duration() (time.Duration, bool) {
 	// remember that the fields are all fixed-point 1E1
 	tdE6 := time.Duration(totalDaysApproxE7(p))

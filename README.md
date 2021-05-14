@@ -9,12 +9,13 @@ this functionality arose from an earlier project written in Java where timestamp
 inputs were in varying formats that had to be read in reliably to produce
 timestamps that could be used in the production of output documents.
 
-Handling of ISO-8601 dates, periods, and timespans is included using the code
-found at https://github.com/rickb777/date. That code is for the most part
-included without modification as it is evidently well optimized and the result
-of a great deal of thought and careful attention to accuracy. This library used
-to include a period lexing package but the one by rickb777 is much more
-efficient.
+Handling of ISO-8601 dates and timespans is included using the code found at
+https://github.com/rickb777/date. That code is for the most part included
+without modification as it is evidently well optimized and the result of a great
+deal of thought and careful attention to accuracy. A separate period handling
+package is being tested that replaces the one from rickb777. Until testing is
+finished the original period parsing package will be kept. The period parsing
+package does not handle fractional parts.
 
 The timestamp parsing of ISO-8601 timestamps is weighted in favour of allowing
 for some non-compliant formatting of parsed input as long as the compliance
