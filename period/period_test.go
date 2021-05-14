@@ -81,9 +81,15 @@ func TestParsePeriod(t *testing.T) {
 		"P1M",
 		"P2M",
 		"P1W",
-		"P1D",
+		// Showing shifting of years to months
+		"P11Y",
+		// Showing shifting of hours to minutes
+		"PT11H",
+		// Showing shifting of monts to days
+		"P11M",
 		"PT1H",
-		"P1MT1H30M",
+		// Showing shifting of minutes to seconds
+		"P1MT1H31M",
 		"PT1M",
 		"PT1M5S",
 		"PT1S",
@@ -104,7 +110,7 @@ func TestParsePeriod(t *testing.T) {
 	is := is.New(t)
 
 	for _, test := range tests {
-		p, _ := period.Parse(test, false)
+		p, _ := period.Parse(test, true, true)
 		d, _, err := p.Duration()
 		is.NoErr(err)
 		fmt.Printf("Input %-15s period %0-15s normalized %-20s duration %-15v\n",
@@ -145,7 +151,7 @@ func BenchmarkParsePeriod(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			p, err = period.Parse("P250Y150M200DT1H4M2000S", false)
+			p, err = period.Parse("P250Y150M200DT1H4M2000S", true)
 		}
 	})
 

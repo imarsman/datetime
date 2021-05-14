@@ -576,18 +576,18 @@ func (p *Period) Normalise(precise bool) *Period {
 }
 
 func (p *Period) normalise(precise bool) *Period {
-	// return p.rippleUp(precise).moveFractionToRight()
-	return p.rippleUp(precise)
+	return p.rippleUp().AdjustToRight(precise)
+	// return p.rippleUp(precise)
 }
 
-// rippleUp move values up through category if boundaries passed
-func (p *Period) rippleUp(precise bool) *Period {
-	// maxInt64 := math.MaxInt64
-
-	// hourDuration := time.Duration(p.hours) * time.Hour
-	// minuteDuration := time.Duration(p.minutes) * time.Minute
-	// secondDuration := time.Duration(p.seconds) * time.Second
-	// hourminutesecondDuration := (hourDuration + minuteDuration + secondDuration)
+// rippleUp move values up through category if boundaries passed Since this call
+// uses durations to handle moving things around it is possible for the duration
+// for an hour, minute, and second or year, month, and day duraton to overflow
+// the duration's maximum value, which is 292.471208677536 years in nanoseconds.
+// This is currently considered an acceptable cost as if there is an overflow it
+// is handled by leaving the overflowing values alone.
+// Currently precise is not used here but is relevant in the AdjustRight function.
+func (p *Period) rippleUp() *Period {
 	hourminutesecondDuration, err := totalSecondsDuration(*p)
 	if err == nil {
 		hourNumber := int64(hourminutesecondDuration / time.Hour)
@@ -618,100 +618,55 @@ func (p *Period) rippleUp(precise bool) *Period {
 		p.days = dayNumber
 
 	}
-	// yearDuration := time.Duration(p.years) * oneYearApprox
-	// monthDuration := time.Duration(p.months) * oneMonthApprox
-	// dayDuration := time.Duration(p.days) * oneDay
-	// yearMonthDayDuration := yearDuration + monthDuration + dayDuration
-
-	// if hourNumber >= 0 && minuteNumber >= 0 && secondNumber >= 0 {
-	// 	p.hours = hourNumber
-	// 	p.minutes = minuteNumber
-	// 	p.seconds = secondNumber
-	// } else {
-	// 	// fmt.Println("hour minute second total exceeds max duration")
-	// }
-
-	// // Have we exceeded the maximum? If not then use the values
-	// if yearNumber >= 0 && monthNumber >= 0 && dayNumber >= 0 {
-	// 	p.years = yearNumber
-	// 	p.months = monthNumber
-	// 	p.days = dayNumber
-	// } else {
-	// 	// fmt.Println("year month day total exceeds max duration")
-	// }
-
-	// // Units below 10 will not be affected
-	// p.minutes += (p.seconds / 600) * 10
-	// // Will not be affected by values below 600
-	// p.seconds = p.seconds % 600
-	// // fmt.Println("hours", p.hours, "minutes", p.minutes)
-
-	// // Units below 10 will not be affected
-	// p.hours += (p.minutes / 600) * 10
-	// // Will not be affected by values below 600
-	// p.minutes = p.minutes % 600
-	// // fmt.Println("hours", p.hours, "minutes", p.minutes)
-
-	// // 32670-(32670/60)-(32670/3600) = 32760 - 546 - 9.1 = 32204.9
-	// if !precise || p.hours > 32204 {
-	// 	p.days += (p.hours / 240) * 10
-	// 	p.hours = p.hours % 240
-	// }
-
-	// if !precise || p.days > 32760 {
-	// 	dE6 := p.days * oneE5
-	// 	p.months += (dE6 / daysPerMonthE6) * 10
-	// 	p.days = (dE6 % daysPerMonthE6) / oneE5
-	// }
-
-	// // Units below 10 will not be affected
-	// p.years += (p.months / 120) * 10
-	// // 5%120 is 5 so will stay the same
-	// p.months = p.months % 120
-	// fmt.Println("hours", p.hours, "minutes", p.minutes)
 
 	return p
 }
 
-// moveFractionToRight attempts to remove fractions in higher-order fields by moving their value to the
+// AdjustToRight attempts to remove fractions in higher-order fields by moving their value to the
 // next-lower-order field.
 //
 // The average number of days in a month is 30.436875 days, so getting a period
 // with months in nit will make the adjustment approximate.
-func (p *Period) moveFractionToRight() *Period {
+// Note that precise is a cascade of normalize from parse.
+func (p *Period) AdjustToRight(precise bool) *Period {
 	// remember that the fields are all fixed-point 1E1
 
 	y10 := p.years % 10
 	// if y10 != 0 && p.years > 10 && (p.months != 0 || p.days != 0 || p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
-	if p.years > 10 && (p.months != 0 || p.days != 0 || p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
+	// if p.years >= 10 && (p.months != 0 || p.days != 0 || p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
+	if p.years > 10 {
 		p.months += y10 * 12
 		p.years = (p.years / 10) * 10
 	}
 
 	m10 := p.months % 10
 	// if m10 != 0 && p.months > 10 && (p.days != 0 || p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
-	if p.months > 10 && (p.days != 0 || p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
+	// if p.months >= 10 && (p.days != 0 || p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
+	if !precise && p.months > 10 {
 		p.days += (m10 * daysPerMonthE6) / oneE6
 		p.months = (p.months / 10) * 10
 	}
 
 	d10 := p.days % 10
 	// if d10 != 0 && p.days > 10 && (p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
-	if p.days > 10 && (p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
+	// if p.days >= 10 && (p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
+	if p.days > 10 {
 		p.hours += d10 * 24
 		p.days = (p.days / 10) * 10
 	}
 
 	hh10 := p.hours % 10
 	// if hh10 != 0 && p.hours > 10 && (p.minutes != 0 || p.seconds != 0) {
-	if p.days > 10 && (p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
+	// if p.days >= 10 && (p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
+	if p.hours > 10 {
 		p.minutes += hh10 * 60
+		p.hours = (p.hours / 10) * 10
 		// fmt.Println("minutes", p.minutes)
 	}
 
 	mm10 := p.minutes % 10
 	// if mm10 != 0 && p.minutes > 10 && p.seconds != 0 {
-	if p.minutes > 10 && p.seconds != 0 {
+	if p.minutes > 10 {
 		p.seconds += mm10 * 60
 		p.minutes = (p.minutes / 10) * 10
 	}
@@ -723,8 +678,8 @@ func (p *Period) moveFractionToRight() *Period {
 // This is intended for setup code; don't use it for user inputs.
 // By default, the value is normalised.
 // Normalisation can be disabled using the optional flag.
-func MustParse(value string, normalise ...bool) Period {
-	d, err := Parse(value, normalise...)
+func MustParse(value string, normalise bool, precise ...bool) Period {
+	d, err := Parse(value, normalise, precise...)
 	if err != nil {
 		panic(err)
 	}
@@ -745,8 +700,13 @@ func MustParse(value string, normalise ...bool) Period {
 // The zero value can be represented in several ways: all of the following
 // are equivalent: "P0Y", "P0M", "P0W", "P0D", "PT0H", PT0M", PT0S", and "P0".
 // The canonical zero is "P0D".
-func Parse(period string, normalise ...bool) (Period, error) {
-	return ParseWithNormalise(period, len(normalise) == 0 || normalise[0])
+// Note that this will end up flagging precise in AjustRight.
+func Parse(period string, normalize bool, precise ...bool) (Period, error) {
+	usePrecise := false
+	if len(precise) > 0 {
+		usePrecise = precise[0]
+	}
+	return ParseWithNormalise(period, normalize, usePrecise)
 }
 
 // ParseWithNormalise parses strings that specify periods using ISO-8601 rules
@@ -754,7 +714,7 @@ func Parse(period string, normalise ...bool) (Period, error) {
 //
 // This method is deprecated and should not be used. It may be removed in a
 // future version.
-func ParseWithNormalise(period string, normalise bool) (Period, error) {
+func ParseWithNormalise(period string, normalise bool, precise bool) (Period, error) {
 	if period == "" || period == "-" || period == "+" {
 		return Period{}, fmt.Errorf("period.ParseWithNormalise: cannot parse a blank string as a period")
 	}
@@ -765,7 +725,7 @@ func ParseWithNormalise(period string, normalise bool) (Period, error) {
 		return *p, nil
 	}
 
-	p, err := parse(period, normalise)
+	p, err := parse(period, normalise, precise)
 	if err != nil {
 		return Period{}, err
 	}
@@ -774,7 +734,7 @@ func ParseWithNormalise(period string, normalise bool) (Period, error) {
 }
 
 // Parse parse a period
-func parse(input string, normalise bool) (Period, error) {
+func parse(input string, normalise bool, precise bool) (Period, error) {
 	var orig = input
 
 	var parts []rune
@@ -900,7 +860,7 @@ func parse(input string, normalise bool) (Period, error) {
 	period.weeks = 0
 
 	if normalise == true {
-		period = period.Normalise(true)
+		period = period.Normalise(precise)
 	}
 
 	// Prints Size of period.Period struct: 64 bytes
