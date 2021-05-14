@@ -83,7 +83,7 @@ func TestGetDuration(t *testing.T) {
 		"P1W",
 		"P1D",
 		"PT1H",
-		"PT1H30M",
+		"P1MT1H30M",
 		"PT1M",
 		"PT1M5S",
 		"PT1S",
@@ -116,16 +116,17 @@ func BenchmarkParsePeriod(b *testing.B) {
 	var p period.Period
 	var err error
 
+	b.ResetTimer()
 	b.SetBytes(bechmarkBytesPerOp)
 	b.ReportAllocs()
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			p, err = period.Parse("P35M", false)
+			p, err = period.Parse("PT1H4M", false)
 		}
 	})
 
-	// b.Log(p.String())
+	b.Log(p.String())
 	is.True(p != period.Period{})
 	is.NoErr(err) // Parsing should not have caused an error
 }

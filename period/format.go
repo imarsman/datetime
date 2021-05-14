@@ -102,7 +102,7 @@ func (p *Period) String() string {
 		xfmt.D64(p.years).C(yearChar)
 	}
 	if p.months != 0 {
-		xfmt.D64(p.months).C(monthChar)
+		xfmt.D64(p.months).C(minuteMonthChar)
 	}
 
 	if p.days != 0 {
@@ -121,7 +121,7 @@ func (p *Period) String() string {
 		xfmt.D64(p.hours).C(hourChar)
 	}
 	if p.minutes != 0 {
-		xfmt.D64(p.minutes).C(minuteChar)
+		xfmt.D64(p.minutes).C(minuteMonthChar)
 	}
 	if p.seconds != 0 {
 		xfmt.D64(p.seconds).C(secondChar)

@@ -19,11 +19,12 @@ type Period struct {
 }
 
 const yearChar = 'Y'
-const monthChar = 'M'
+
+// const monthChar = 'M'
 const weekChar = 'W'
 const dayChar = 'D'
 const hourChar = 'H'
-const minuteChar = 'M'
+const minuteMonthChar = 'M'
 const secondChar = 'S'
 const periodChar = 'P'
 const timeChar = 'T'
@@ -597,7 +598,7 @@ func Parse(period string, normalise ...bool) (Period, error) {
 // future version.
 func ParseWithNormalise(period string, normalise bool) (Period, error) {
 	if period == "" || period == "-" || period == "+" {
-		return Period{}, fmt.Errorf("cannot parse a blank string as a period")
+		return Period{}, fmt.Errorf("period.ParseWithNormalise: cannot parse a blank string as a period")
 	}
 
 	if period == "P0" {
@@ -630,7 +631,7 @@ func parse(input string, normalise bool) (Period, error) {
 		switch r {
 		case yearChar:
 			return true
-		case monthChar:
+		case minuteMonthChar:
 			return true
 		case weekChar:
 			return true
@@ -654,34 +655,34 @@ func parse(input string, normalise bool) (Period, error) {
 
 	var periodFound bool = false
 
-	for _, c := range input {
-		c = unicode.ToUpper(c)
+	for _, r := range input {
+		r = unicode.ToUpper(r)
 
 		// fmt.Println(string(c))
-		if unicode.IsDigit(c) {
-			parts = append(parts, c)
+		if unicode.IsDigit(r) {
+			parts = append(parts, r)
 			continue
 		}
 
 		// Hnadle non digits
-		if isValidChar(c) == true {
-			if c == periodChar {
+		if isValidChar(r) == true {
+			if r == periodChar {
 				if periodFound == false {
 					periodFound = true
 					continue
 				}
 				xfmt := new(xfmt.Buffer)
-				msg := xfmt.S("only one period indicator allowed ").S(orig)
+				msg := xfmt.S("period.parse: only one period indicator allowed ").S(orig)
 				return Period{}, errors.New(string(msg.Bytes()))
 			}
-			if c == negativeChar {
+			if r == negativeChar {
 				period.negative = true
 				continue
 			}
-			if c == timeChar {
+			if r == timeChar {
 				if isTime == true {
 					xfmt := new(xfmt.Buffer)
-					msg := xfmt.S("time must only be indicated once ").S(orig)
+					msg := xfmt.S("period.parse: time must only be indicated once ").S(orig)
 					return Period{}, errors.New(string(msg.Bytes()))
 				}
 				isTime = true
@@ -693,38 +694,38 @@ func parse(input string, normalise bool) (Period, error) {
 			if err != nil {
 				return Period{}, err
 			}
-			if c == yearChar {
+			if r == yearChar {
 				if isTime == true {
 					xfmt := new(xfmt.Buffer)
-					msg := xfmt.S("non time part after time declared ").S(orig)
+					msg := xfmt.S("period.parse: non time part after time declared ").S(orig)
 					return Period{}, errors.New(string(msg.Bytes()))
 				}
 				period.years = intVal
-			} else if c == monthChar || c == minuteChar {
+			} else if r == minuteMonthChar {
 				if isTime == false {
 					period.months = intVal
 				} else {
 					period.minutes = intVal
 				}
-			} else if c == weekChar {
+			} else if r == weekChar {
 				if isTime == true {
 					xfmt := new(xfmt.Buffer)
-					msg := xfmt.S("non time part after time declared ").S(orig)
+					msg := xfmt.S("period.parse: non time part after time declared ").S(orig)
 					return Period{}, errors.New(string(msg.Bytes()))
 				}
 				period.weeks = intVal
-			} else if c == dayChar {
+			} else if r == dayChar {
 				if isTime == true {
 					xfmt := new(xfmt.Buffer)
-					msg := xfmt.S("non time part after time declared ").S(orig)
+					msg := xfmt.S("period.parse: non time part after time declared ").S(orig)
 					return Period{}, errors.New(string(msg.Bytes()))
 				}
 				period.days = intVal
-			} else if c == hourChar {
+			} else if r == hourChar {
 				period.hours = intVal
-			} else if c == minuteChar {
+			} else if r == minuteMonthChar {
 				period.minutes = intVal
-			} else if c == secondChar {
+			} else if r == secondChar {
 				period.seconds = intVal
 			}
 			parts = make([]rune, 0, 0)
@@ -732,7 +733,7 @@ func parse(input string, normalise bool) (Period, error) {
 		}
 
 		xfmt := new(xfmt.Buffer)
-		msg := xfmt.S("character").C(c).S("is not valid")
+		msg := xfmt.S("period.parse: character").C(r).S("is not valid")
 		return Period{}, errors.New(string(msg.Bytes()))
 	}
 
@@ -743,6 +744,10 @@ func parse(input string, normalise bool) (Period, error) {
 	if normalise == true {
 		period = period.Normalise(true)
 	}
+
+	// Prints Size of period.Period struct: 64 bytes
+	// for P130Y200D
+	// fmt.Printf("Size of %T struct: %d bytes\n", *period, unsafe.Sizeof(*period))
 
 	return *period, nil
 }
