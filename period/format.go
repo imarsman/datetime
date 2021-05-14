@@ -5,7 +5,6 @@
 package period
 
 import (
-	"io"
 	"strings"
 
 	"github.com/imarsman/datetime/xfmt"
@@ -48,7 +47,10 @@ func (p Period) FormatWithoutWeeks() string {
 }
 
 // FormatWithPeriodNames converts the period to human-readable form in a localisable way.
-func (p Period) FormatWithPeriodNames(yearNames, monthNames, weekNames, dayNames, hourNames, minNames, secNames plural.Plurals) string {
+func (p Period) FormatWithPeriodNames(
+	yearNames, monthNames, weekNames, dayNames,
+	hourNames, minNames, secNames plural.Plurals) string {
+
 	p = p.Abs()
 
 	parts := make([]string, 0)
@@ -85,52 +87,45 @@ func appendNonBlank(parts []string, s string) []string {
 }
 
 func (p *Period) String() string {
-	writeField64 := func(w io.Writer, field int64, designator byte) {
-		xfmt := new(xfmt.Buffer)
-		if field != 0 {
-			if field%10 != 0 {
-				xfmt.D64(field)
-				w.Write(xfmt.Bytes())
-			} else {
-				xfmt.D64(field)
-				w.Write(xfmt.Bytes())
-			}
-			w.(io.ByteWriter).WriteByte(designator)
-		}
-	}
-
 	if p.IsZero() == true {
 		return "P0D"
 	}
 
-	buf := new(strings.Builder)
+	xfmt := new(xfmt.Buffer)
 	if p.negative {
-		buf.WriteByte('-')
+		xfmt.C('-')
 	}
 
-	buf.WriteByte('P')
+	xfmt.C('P')
 
-	writeField64(buf, p.years, yearChar)
-	writeField64(buf, p.months, monthChar)
+	if p.years != 0 {
+		xfmt.D64(p.years).C(yearChar)
+	}
+	if p.months != 0 {
+		xfmt.D64(p.months).C(monthChar)
+	}
+
 	if p.days != 0 {
 		if p.days%70 == 0 {
-			writeField64(buf, p.days/7, weekChar)
+			xfmt.D64(p.days / 7).C(dayChar)
 		} else {
-			writeField64(buf, p.days, dayChar)
+			xfmt.D64(p.days).C(dayChar)
 		}
 	}
 
 	if p.hours != 0 || p.minutes != 0 || p.seconds != 0 {
-		buf.WriteByte('T')
+		xfmt.C(timeChar)
 	}
 
-	writeField64(buf, p.hours, hourChar)
-	writeField64(buf, p.minutes, minuteChar)
-	writeField64(buf, p.seconds, secondChar)
+	if p.hours != 0 {
+		xfmt.D64(p.hours).C(hourChar)
+	}
+	if p.minutes != 0 {
+		xfmt.D64(p.minutes).C(minuteChar)
+	}
+	if p.seconds != 0 {
+		xfmt.D64(p.seconds).C(secondChar)
+	}
 
-	return buf.String()
+	return string(xfmt.Bytes())
 }
-
-// func float10(v int16) float32 {
-// 	return float32(v) / 10
-// }

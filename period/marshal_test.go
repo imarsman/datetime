@@ -57,15 +57,15 @@ func TestPeriodJSONMarshalling(t *testing.T) {
 		value period.Period
 		want  string
 	}{
-		{period.New(-1111, -4, -3, -11, -59, -59), `"-P1111Y4M3DT11H59M59S"`},
-		{period.New(-1, -10, -31, -5, -4, -20), `"-P1Y10M31DT5H4M20S"`},
-		{period.New(0, 0, 0, 0, 0, 0), `"P0D"`},
-		{period.New(0, 0, 0, 0, 0, 1), `"PT1S"`},
-		{period.New(0, 0, 0, 0, 1, 0), `"PT1M"`},
-		{period.New(0, 0, 0, 1, 0, 0), `"PT1H"`},
-		{period.New(0, 0, 1, 0, 0, 0), `"P1D"`},
-		{period.New(0, 1, 0, 0, 0, 0), `"P1M"`},
-		{period.New(1, 0, 0, 0, 0, 0), `"P1Y"`},
+		{period.NewPeriod(-1111, -4, -3, -11, -59, -59), `"-P1111Y4M3DT11H59M59S"`},
+		{period.NewPeriod(-1, -10, -31, -5, -4, -20), `"-P1Y10M31DT5H4M20S"`},
+		{period.NewPeriod(0, 0, 0, 0, 0, 0), `"P0D"`},
+		{period.NewPeriod(0, 0, 0, 0, 0, 1), `"PT1S"`},
+		{period.NewPeriod(0, 0, 0, 0, 1, 0), `"PT1M"`},
+		{period.NewPeriod(0, 0, 0, 1, 0, 0), `"PT1H"`},
+		{period.NewPeriod(0, 0, 1, 0, 0, 0), `"P1D"`},
+		{period.NewPeriod(0, 1, 0, 0, 0, 0), `"P1M"`},
+		{period.NewPeriod(1, 0, 0, 0, 0, 0), `"P1Y"`},
 	}
 	for i, c := range cases {
 		var p period.Period
@@ -87,19 +87,19 @@ func TestPeriodTextMarshalling(t *testing.T) {
 		value period.Period
 		want  string
 	}{
-		{period.New(-1111, -4, -3, -11, -59, -59), "-P1111Y4M3DT11H59M59S"},
-		{period.New(-1, -9, -31, -5, -4, -20), "-P1Y9M31DT5H4M20S"},
-		{period.New(0, 0, 0, 0, 0, 0), "P0D"},
-		{period.New(0, 0, 0, 0, 0, 1), "PT1S"},
-		{period.New(0, 0, 0, 0, 1, 0), "PT1M"},
-		{period.New(0, 0, 0, 1, 0, 0), "PT1H"},
-		{period.New(0, 0, 1, 0, 0, 0), "P1D"},
-		{period.New(0, 1, 0, 0, 0, 0), "P1M"},
-		{period.New(1, 0, 0, 0, 0, 0), "P1Y"},
+		{period.NewPeriod(-1111, -4, -3, -11, -59, -59), "-P1111Y4M3DT11H59M59S"},
+		{period.NewPeriod(-1, -9, -31, -5, -4, -20), "-P1Y9M31DT5H4M20S"},
+		{period.NewPeriod(0, 0, 0, 0, 0, 0), "P0D"},
+		{period.NewPeriod(0, 0, 0, 0, 0, 1), "PT1S"},
+		{period.NewPeriod(0, 0, 0, 0, 1, 0), "PT1M"},
+		{period.NewPeriod(0, 0, 0, 1, 0, 0), "PT1H"},
+		{period.NewPeriod(0, 0, 1, 0, 0, 0), "P1D"},
+		{period.NewPeriod(0, 1, 0, 0, 0, 0), "P1M"},
+		{period.NewPeriod(1, 0, 0, 0, 0, 0), "P1Y"},
 	}
 	for i, c := range cases {
 		var p period.Period
-		c.value.Input = c.want
+		// c.value.Input = c.want
 		bb, err := c.value.MarshalText()
 		// fmt.Println("bytes", string(bb))
 		g.Expect(err).NotTo(HaveOccurred(), info(i, c))

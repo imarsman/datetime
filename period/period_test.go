@@ -95,6 +95,7 @@ func TestGetDuration(t *testing.T) {
 		"P-3Y1WT1H14M",
 		"P3Y1WT1H14M",
 		"P-3Y1WT1H1400M",
+		"P120Y120M200D",
 	}
 
 	is := is.New(t)
@@ -102,12 +103,9 @@ func TestGetDuration(t *testing.T) {
 	for _, test := range tests {
 		p, err := period.Parse(test, false)
 		d, _ := p.Duration()
-		simplified := p.Simplify(true)
-		fmt.Printf("Input %-15s period %0-15s normalized %-20s duration %-15v simplified %-15s\n",
-			test, p.String(), p.Normalise(true).String(), d, simplified.String())
-		// t.Log(d, p.String())
+		fmt.Printf("Input %-15s period %0-15s normalized %-20s duration %-15v\n",
+			test, p.String(), p.Normalise(true).String(), d)
 		is.NoErr(err)
-		// t.Logf("Got %20s %20s %20s", test, p.String(), p.Normalise(false).String())
 	}
 
 }
@@ -123,7 +121,7 @@ func BenchmarkParsePeriod(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			p, err = period.Parse("PT1H4M")
+			p, err = period.Parse("P35M", false)
 		}
 	})
 

@@ -16,11 +16,21 @@ import (
 type Period struct {
 	negative                                            bool
 	years, months, weeks, days, hours, minutes, seconds int64
-	Input                                               string
 }
 
-// New create a new Period instance
-func New(years, months, days, hours, minutes, seconds int64) Period {
+const yearChar = 'Y'
+const monthChar = 'M'
+const weekChar = 'W'
+const dayChar = 'D'
+const hourChar = 'H'
+const minuteChar = 'M'
+const secondChar = 'S'
+const periodChar = 'P'
+const timeChar = 'T'
+const negativeChar = '-'
+
+// NewPeriod create a new Period instance
+func NewPeriod(years, months, days, hours, minutes, seconds int64) Period {
 	p := Period{}
 	p.years = years
 	p.months = months
@@ -49,7 +59,7 @@ func New(years, months, days, hours, minutes, seconds int64) Period {
 // Because this implementation uses int16 internally, the paramters must
 // be within the range ± 2^16 / 10.
 func NewYMD(years, months, days int64) Period {
-	return New(years, months, days, 0, 0, 0)
+	return NewPeriod(years, months, days, 0, 0, 0)
 }
 
 // NewHMS creates a simple period without any fractional parts. The fields are initialised verbatim
@@ -60,7 +70,7 @@ func NewYMD(years, months, days int64) Period {
 // Because this implementation uses int16 internally, the paramters must
 // be within the range ± 2^16 / 10.
 func NewHMS(hours, minutes, seconds int64) Period {
-	return New(0, 0, 0, hours, minutes, seconds)
+	return NewPeriod(0, 0, 0, hours, minutes, seconds)
 }
 
 // Years get years for period with proper sign
@@ -135,10 +145,10 @@ func Between(t1, t2 time.Time) (p Period) {
 	year, month, day, hour, min, sec, hundredth := daysDiff(t1, t2)
 
 	if sign < 0 {
-		p = New(-year, -month, -day, -hour, -min, -sec)
+		p = NewPeriod(-year, -month, -day, -hour, -min, -sec)
 		p.seconds -= int64(hundredth)
 	} else {
-		p = New(year, month, day, hour, min, sec)
+		p = NewPeriod(year, month, day, hour, min, sec)
 		p.seconds += int64(hundredth)
 	}
 	return
@@ -212,49 +222,6 @@ const oneE6 = 1000000 // 1e^6
 // const oneYearApprox = time.Duration(float64(365.2425*60*60*24)) * time.Second // 365.2425 days
 const oneYearApprox = oneMonthSeconds * time.Second * 12 // 365.2425 days
 
-const yearChar = 'Y'
-const monthChar = 'M'
-const weekChar = 'W'
-const dayChar = 'D'
-const hourChar = 'H'
-const minuteChar = 'M'
-const secondChar = 'S'
-const periodChar = 'P'
-const timeChar = 'T'
-const negativeChar = '-'
-
-// const decimalChar = '.'
-// const commaChar = ','
-
-// writeField64 write an int64 field formatted with decimals if needed
-
-// PeriodDayNames provides the English default format names for the days part of the period.
-// This is a sequence of plurals where the first match is used, otherwise the last one is used.
-// The last one must include a "%v" placeholder for the number.
-// var PeriodDayNames = plural.FromZero("%v days", "%v day", "%v days")
-
-// // PeriodWeekNames is as for PeriodDayNames but for weeks.
-// var PeriodWeekNames = plural.FromZero("", "%v week", "%v weeks")
-
-// // PeriodMonthNames is as for PeriodDayNames but for months.
-// var PeriodMonthNames = plural.FromZero("", "%v month", "%v months")
-
-// // PeriodYearNames is as for PeriodDayNames but for years.
-// var PeriodYearNames = plural.FromZero("", "%v year", "%v years")
-
-// // PeriodHourNames is as for PeriodDayNames but for hours.
-// var PeriodHourNames = plural.FromZero("", "%v hour", "%v hours")
-
-// // PeriodMinuteNames is as for PeriodDayNames but for minutes.
-// var PeriodMinuteNames = plural.FromZero("", "%v minute", "%v minutes")
-
-// // PeriodSecondNames is as for PeriodDayNames but for seconds.
-// var PeriodSecondNames = plural.FromZero("", "%v second", "%v seconds")
-
-// func (p Period) isNegative() bool {
-// 	return p.negative
-// }
-
 // Abs converts a negative period to a positive one.
 func (p Period) Abs() Period {
 	a, _ := p.absNeg()
@@ -319,7 +286,7 @@ func (p Period) Simplify(precise bool, th ...int) Period {
 	}
 }
 
-func (p Period) doSimplify(precise bool, a, b, c, d int64) Period {
+func (p Period) doSimplify(precise bool, monthMax, hourMax, minuteMax, secondMax int64) Period {
 	if p.years%10 != 0 {
 		return p
 	}
@@ -327,12 +294,12 @@ func (p Period) doSimplify(precise bool, a, b, c, d int64) Period {
 	ap, neg := p.absNeg()
 
 	// single year is dropped if there are some months
-	if ap.years == 10 && 0 < ap.months && ap.months <= a && ap.days == 0 {
+	if ap.years == 10 && 0 < ap.months && ap.months <= monthMax && ap.days == 0 {
 		ap.months += 120
 		ap.years = 0
 	}
 
-	if ap.months%10 != 0 {
+	if ap.months%10 != 0 && ap.months > 10 {
 		// month fraction is dropped for periods of at least ten years (1:120)
 		months := ap.months / 10
 		if !precise && ap.years >= 100 && months == 0 {
@@ -341,7 +308,7 @@ func (p Period) doSimplify(precise bool, a, b, c, d int64) Period {
 		return ap.condNegate(neg)
 	}
 
-	if ap.days%10 != 0 {
+	if ap.days%10 != 0 && ap.days > 10 {
 		// day fraction is dropped for periods of at least a year (1:365)
 		days := ap.days / 10
 		if !precise && (ap.years > 0 || ap.months >= 120) && days == 0 {
@@ -350,31 +317,26 @@ func (p Period) doSimplify(precise bool, a, b, c, d int64) Period {
 		return ap.condNegate(neg)
 	}
 
-	if !precise && ap.days == 10 &&
-		ap.years == 0 &&
-		ap.months == 0 &&
-		0 < ap.hours && ap.hours <= b {
+	if !precise && ap.days == 10 && ap.years == 0 && ap.months == 0 && 0 < ap.hours && ap.hours <= hourMax {
 		ap.hours += 240
 		ap.days = 0
 	}
 
-	if ap.hours%10 != 0 {
+	if ap.hours%10 != 0 && ap.hours > 10 {
 		// hour fraction is dropped for periods of at least a month (1:720)
 		hours := ap.hours / 10
-		if !precise &&
-			(ap.years > 0 || ap.months > 0 || ap.days >= 300) && hours == 0 {
+		if !precise && (ap.years > 0 || ap.months > 0 || ap.days >= 300) && hours == 0 {
 			ap.hours = 0
 		}
 		return ap.condNegate(neg)
 	}
 
-	if ap.hours == 10 &&
-		0 < ap.minutes && ap.minutes <= c {
+	if ap.hours == 10 && 0 < ap.minutes && ap.minutes <= minuteMax {
 		ap.minutes += 600
 		ap.hours = 0
 	}
 
-	if ap.minutes%10 != 0 {
+	if ap.minutes%10 != 0 && ap.minutes > 10 {
 		// minute fraction is dropped for periods of at least a day (1:1440)
 		minutes := ap.minutes / 10
 		if !precise &&
@@ -384,7 +346,7 @@ func (p Period) doSimplify(precise bool, a, b, c, d int64) Period {
 		return ap.condNegate(neg)
 	}
 
-	if ap.minutes == 10 && ap.hours == 0 && 0 < ap.seconds && ap.seconds <= d {
+	if ap.minutes == 10 && ap.hours == 0 && 0 < ap.seconds && ap.seconds <= secondMax {
 		ap.seconds += 600
 		ap.minutes = 0
 	}
@@ -419,66 +381,17 @@ func (p Period) IsPositive() bool {
 	return p.negative == false
 }
 
-// func (p Period) Abs(
-
 // Negate changes the sign of the period.
 func (p Period) Negate() Period {
 	if p.IsNegative() {
-		p.Input = strings.ReplaceAll(p.Input, "-", "")
+		// p.Input = strings.ReplaceAll(p.Input, "-", "")
 		p.negative = false
 		return p
 	}
 	p.negative = true
-	p.Input = "-" + p.Input
+	// p.Input = "-" + p.Input
 	return p
 }
-
-// func (p *Period) String() string {
-// 	writeField64 := func(w io.Writer, field int64, designator byte) {
-// 		xfmt := new(xfmt.Buffer)
-// 		if field != 0 {
-// 			if field%10 != 0 {
-// 				xfmt.D64(field)
-// 				w.Write(xfmt.Bytes())
-// 			} else {
-// 				xfmt.D64(field)
-// 				w.Write(xfmt.Bytes())
-// 			}
-// 			w.(io.ByteWriter).WriteByte(designator)
-// 		}
-// 	}
-
-// 	if *p == (Period{}) {
-// 		return "P0D"
-// 	}
-
-// 	buf := new(strings.Builder)
-// 	if p.negative {
-// 		buf.WriteByte('-')
-// 	}
-
-// 	buf.WriteByte('P')
-
-// 	writeField64(buf, p.years, yearChar)
-// 	writeField64(buf, p.months, monthChar)
-// 	if p.days != 0 {
-// 		if p.days%70 == 0 {
-// 			writeField64(buf, p.days/7, weekChar)
-// 		} else {
-// 			writeField64(buf, p.days, dayChar)
-// 		}
-// 	}
-
-// 	if p.hours != 0 || p.minutes != 0 || p.seconds != 0 {
-// 		buf.WriteByte('T')
-// 	}
-
-// 	writeField64(buf, p.hours, hourChar)
-// 	writeField64(buf, p.minutes, minuteChar)
-// 	writeField64(buf, p.seconds, secondChar)
-
-// 	return buf.String()
-// }
 
 // RunesToString convert runes list to string with no allocation
 //
@@ -557,10 +470,10 @@ func (p *Period) validate() error {
 	}
 
 	if len(f) > 0 {
-		if p.Input == "" {
-			p.Input = p.String()
-		}
-		return fmt.Errorf("%s: integer overflow occurred in %s", p.Input, strings.Join(f, ","))
+		// if p.Input == "" {
+		// 	p.Input = p.String()
+		// }
+		return fmt.Errorf("integer overflow occurred in %s", strings.Join(f, ","))
 	}
 
 	return nil
@@ -688,9 +601,9 @@ func ParseWithNormalise(period string, normalise bool) (Period, error) {
 	}
 
 	if period == "P0" {
-		p := Period{}
-		p.Input = "P0"
-		return p, nil
+		p := new(Period)
+		// p.Input = "P0"
+		return *p, nil
 	}
 
 	p, err := parse(period, normalise)
@@ -707,9 +620,9 @@ func parse(input string, normalise bool) (Period, error) {
 
 	var parts []rune
 
-	period := Period{}
+	period := new(Period)
 	input = strings.ToUpper(input)
-	period.Input = input
+	// period.Input = input
 
 	var isTime bool
 
@@ -790,7 +703,6 @@ func parse(input string, normalise bool) (Period, error) {
 			} else if c == monthChar || c == minuteChar {
 				if isTime == false {
 					period.months = intVal
-					// fmt.Println("months", intVal)
 				} else {
 					period.minutes = intVal
 				}
@@ -824,15 +736,13 @@ func parse(input string, normalise bool) (Period, error) {
 		return Period{}, errors.New(string(msg.Bytes()))
 	}
 
-	// fmt.Println("weeks", period.weeks)
 	period.days += period.weeks * 7
+	// Zero out weeks as we have put them in days
 	period.weeks = 0
-	// fmt.Println("days", period.days)
 
 	if normalise == true {
-		period = *period.Normalise(true)
+		period = period.Normalise(true)
 	}
 
-	// fmt.Println("period", period)
-	return period, nil
+	return *period, nil
 }
