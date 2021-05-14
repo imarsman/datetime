@@ -30,6 +30,34 @@ const periodChar = 'P'
 const timeChar = 'T'
 const negativeChar = '-'
 
+const daysPerYearE4 = 3652425 // 365.2425 days by the Gregorian rule
+const daysPerMonthE4 = 304369 // 30.4369 days per month
+// const daysPerMonthE6 = 30436875 // 30.436875 days per month
+const hundredMSDuration = 100 * time.Millisecond
+
+// https://en.wikipedia.org/wiki/Year
+// An average Gregorian year is 365.2425 days (52.1775 weeks, 8765.82 hours,
+// 525949.2 minutes or 31556952 seconds). For this calendar, a common year is
+// 365 days (8760 hours, 525600 minutes or 31536000 seconds), and a leap year is
+// 366 days (8784 hours, 527040 minutes or 31622400 seconds)
+
+const daysPerMonthE6 = 30436875 // 30.436875 days per month
+
+var oneDay time.Duration = 24 * time.Hour // Number of nanoseconds in a day
+
+const oneMonthSeconds = 2628000                                    // Number of seconds in a month
+const oneMonthApprox time.Duration = oneMonthSeconds * time.Second // 30.436875 days
+
+const oneE4 = 10000 // 1e^4
+
+const oneE5 = 100000 // 1e^5
+
+const oneE6 = 1000000 // 1e^6
+
+// More exact but rounds with small units
+// const oneYearApprox = time.Duration(float64(365.2425*60*60*24)) * time.Second // 365.2425 days
+const oneYearApprox time.Duration = oneMonthSeconds * time.Second * 12 // Nanoseconds in 1 year
+
 // NewPeriod create a new Period instance
 func NewPeriod(years, months, days, hours, minutes, seconds int64) Period {
 	p := Period{}
@@ -72,6 +100,52 @@ func NewYMD(years, months, days int64) Period {
 // be within the range ± 2^16 / 10.
 func NewHMS(hours, minutes, seconds int64) Period {
 	return NewPeriod(0, 0, 0, hours, minutes, seconds)
+}
+
+// NewOf converts a time duration to a Period, and also indicates whether the conversion is precise.
+// Any time duration that spans more than ± 3276 hours will be approximated by assuming that there
+// are 24 hours per day, 365.2425 days per year (as per Gregorian calendar rules), and a month
+// being 1/12 of that (approximately 30.4369 days).
+//
+// The result is not always fully normalised; for time differences less than 3276 hours (about 4.5 months),
+// it will contain zero in the years, months and days fields but the number of days may be up to 3275; this
+// reduces errors arising from the variable lengths of months. For larger time differences, greater than
+// 3276 hours, the days, months and years fields are used as well.
+func NewOf(duration time.Duration) (p Period, precise bool) {
+	var sign int64 = 1
+	d := duration
+	if duration < 0 {
+		sign = -1
+		d = -duration
+	}
+
+	sign10 := sign * 10
+
+	totalHours := int64(d / time.Hour)
+
+	// check for 16-bit overflow - occurs near the 4.5 month mark
+	if totalHours < 3277 {
+		// simple HMS case
+		minutes := d % time.Hour / time.Minute
+		seconds := d % time.Minute / hundredMSDuration
+		return NewPeriod(0, 0, 0, sign10*totalHours, sign10*int64(minutes), sign*int64(seconds)), true
+	}
+
+	totalDays := totalHours / 24 // ignoring daylight savings adjustments
+
+	if totalDays < 3277 {
+		hours := totalHours - totalDays*24
+		minutes := d % time.Hour / time.Minute
+		seconds := d % time.Minute / hundredMSDuration
+		return NewPeriod(0, 0, sign10*totalDays, sign10*hours, sign10*int64(minutes), sign*int64(seconds)), false
+	}
+
+	// TODO it is uncertain whether this is too imprecise and should be improved
+	years := (oneE4 * totalDays) / daysPerYearE4
+	months := ((oneE4 * totalDays) / daysPerMonthE4) - (12 * years)
+	hours := totalHours - totalDays*24
+	totalDays = ((totalDays * oneE4) - (daysPerMonthE4 * months) - (daysPerYearE4 * years)) / oneE4
+	return NewPeriod(sign10*years, sign10*months, sign10*totalDays, sign10*hours, 0, 0), false
 }
 
 // Years get years for period with proper sign
@@ -190,29 +264,6 @@ func daysDiff(t1, t2 time.Time) (year, month, day, hour, min, sec, hundredth int
 
 	return
 }
-
-// https://en.wikipedia.org/wiki/Year
-// An average Gregorian year is 365.2425 days (52.1775 weeks, 8765.82 hours,
-// 525949.2 minutes or 31556952 seconds). For this calendar, a common year is
-// 365 days (8760 hours, 525600 minutes or 31536000 seconds), and a leap year is
-// 366 days (8784 hours, 527040 minutes or 31622400 seconds)
-
-const daysPerMonthE6 = 30436875 // 30.436875 days per month
-
-var oneDay time.Duration = 24 * time.Hour // Number of nanoseconds in a day
-
-const oneMonthSeconds = 2628000                                    // Number of seconds in a month
-const oneMonthApprox time.Duration = oneMonthSeconds * time.Second // 30.436875 days
-
-const oneE4 = 10000 // 1e^4
-
-const oneE5 = 100000 // 1e^5
-
-const oneE6 = 1000000 // 1e^6
-
-// More exact but rounds with small units
-// const oneYearApprox = time.Duration(float64(365.2425*60*60*24)) * time.Second // 365.2425 days
-const oneYearApprox time.Duration = oneMonthSeconds * time.Second * 12 // Nanoseconds in 1 year
 
 // Abs converts a negative period to a positive one.
 func (p Period) Abs() Period {
