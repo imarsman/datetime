@@ -468,11 +468,11 @@ func (p Period) IsZero() bool {
 // of a that; days are all assumed to be 24 hours long.
 func (p Period) Duration() (time.Duration, bool, error) {
 	// remember that the fields are all fixed-point 1E1
-	tdE6, err := totalDaysApproxDuration(p)
+	tdE6, err := ymdApproxDuration(p)
 	if err != nil {
 		return time.Duration(0), false, err
 	}
-	stE3, err := totalSecondsDuration(p)
+	stE3, err := hmsDuration(p)
 	if err != nil {
 		return time.Duration(0), false, err
 	}
@@ -483,7 +483,7 @@ func (p Period) Duration() (time.Duration, bool, error) {
 	return (tdE6 + stE3), tdE6 == 0, nil
 }
 
-func totalSecondsDuration(p Period) (time.Duration, error) {
+func hmsDuration(p Period) (time.Duration, error) {
 	hourDuration := time.Duration(p.hours) * time.Hour
 	minuteDuration := time.Duration(p.minutes) * time.Minute
 	secondDuration := time.Duration(p.seconds) * time.Second
@@ -510,14 +510,7 @@ func totalSecondsDuration(p Period) (time.Duration, error) {
 	return hourminutesecondDuration, nil
 }
 
-func totalDaysApproxDuration(p Period) (time.Duration, error) {
-	// remember that the fields are all fixed-point 1E1
-	// ydE6 := time.Duration(period.years) * oneYearApprox
-	// // fmt.Println(ydE6.Microseconds())
-	// mdE6 := time.Duration(period.months) * oneMonthApprox
-	// ddE6 := time.Duration(period.days) * oneDay
-
-	// return ydE6 + mdE6 + ddE6
+func ymdApproxDuration(p Period) (time.Duration, error) {
 	yearDuration := time.Duration(p.years) * oneYearApprox
 	monthDuration := time.Duration(p.months) * oneMonthApprox
 	dayDuration := time.Duration(p.days) * oneDay
@@ -576,7 +569,7 @@ func (p *Period) Normalise(precise bool) *Period {
 }
 
 func (p *Period) normalise(precise bool) *Period {
-	return p.rippleUp().AdjustToRight(precise)
+	return p.rippleUp(precise).AdjustToRight(precise)
 	// return p.rippleUp(precise)
 }
 
@@ -587,8 +580,8 @@ func (p *Period) normalise(precise bool) *Period {
 // This is currently considered an acceptable cost as if there is an overflow it
 // is handled by leaving the overflowing values alone.
 // Currently precise is not used here but is relevant in the AdjustRight function.
-func (p *Period) rippleUp() *Period {
-	hourminutesecondDuration, err := totalSecondsDuration(*p)
+func (p *Period) rippleUp(precise bool) *Period {
+	hourminutesecondDuration, err := hmsDuration(*p)
 	if err == nil {
 		hourNumber := int64(hourminutesecondDuration / time.Hour)
 		remainder := int64(hourminutesecondDuration % time.Hour)
@@ -603,22 +596,23 @@ func (p *Period) rippleUp() *Period {
 		p.seconds = secondNumber
 	}
 
-	yearMonthDayDuration, err := totalDaysApproxDuration(*p)
-	if err == nil {
-		yearNumber := int64(yearMonthDayDuration / oneYearApprox)
-		remainder := int64(yearMonthDayDuration % oneYearApprox)
+	if !precise {
+		yearMonthDayDuration, err := ymdApproxDuration(*p)
+		if err == nil {
+			yearNumber := int64(yearMonthDayDuration / oneYearApprox)
+			remainder := int64(yearMonthDayDuration % oneYearApprox)
 
-		monthNumber := int64(remainder / int64(oneMonthApprox))
-		remainder = int64(yearMonthDayDuration % oneMonthApprox)
+			monthNumber := int64(remainder / int64(oneMonthApprox))
+			remainder = int64(yearMonthDayDuration % oneMonthApprox)
 
-		dayNumber := int64(remainder / int64(oneDay))
+			dayNumber := int64(remainder / int64(oneDay))
 
-		p.years = yearNumber
-		p.months = monthNumber
-		p.days = dayNumber
+			p.years = yearNumber
+			p.months = monthNumber
+			p.days = dayNumber
 
+		}
 	}
-
 	return p
 }
 

@@ -42,7 +42,7 @@ func (p Period) AddTo(t time.Time) (time.Time, bool, error) {
 	// if wholeYears && wholeMonths && wholeDays {
 	if p.years > 0 || p.months > 0 || p.days > 0 {
 		// in this case, time.AddDate provides an exact solution
-		stE3, err := totalSecondsDuration(p)
+		stE3, err := hmsDuration(p)
 		if err != nil {
 			return time.Time{}, false, err
 		}

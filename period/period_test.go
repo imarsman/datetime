@@ -114,7 +114,7 @@ func TestParsePeriod(t *testing.T) {
 		d, _, err := p.Duration()
 		is.NoErr(err)
 		fmt.Printf("Input %-15s period %0-15s normalized %-20s duration %-15v\n",
-			test, p.String(), p.Normalise(true).String(), d)
+			test, p.String(), p.Normalise(false).String(), d)
 	}
 
 }
