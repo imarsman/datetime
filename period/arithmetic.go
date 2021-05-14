@@ -34,7 +34,7 @@ func (p Period) Add(that Period) Period {
 // is only an approximation (it assumes that all days are 24 hours and every year is 365.2425
 // days, as per Gregorian calendar rules).
 // TODO: test this
-func (p Period) AddTo(t time.Time) (time.Time, bool) {
+func (p Period) AddTo(t time.Time) (time.Time, bool, error) {
 	// wholeYears := (p.years % 1) == 0
 	// wholeMonths := (p.months % 1) == 0
 	// wholeDays := (p.days % 1) == 0
@@ -42,15 +42,22 @@ func (p Period) AddTo(t time.Time) (time.Time, bool) {
 	// if wholeYears && wholeMonths && wholeDays {
 	if p.years > 0 || p.months > 0 || p.days > 0 {
 		// in this case, time.AddDate provides an exact solution
-		stE3 := totalSecondsE3(p)
+		stE3, err := totalSecondsDuration(p)
+		if err != nil {
+			return time.Time{}, false, err
+		}
+
 		// t1 := t.AddDate(int(p.years/10), int(p.months/10), int(p.days/10))
 		t1 := t.AddDate(int(p.years), int(p.months), int(p.days))
-		return t1.Add(stE3 * time.Millisecond), true
+		return t1.Add(stE3 * time.Millisecond), true, nil
 	}
 
-	d, precise := p.Duration()
+	d, precise, err := p.Duration()
+	if err != nil {
+		return time.Time{}, false, err
+	}
 
-	return t.Add(d), precise
+	return t.Add(d), precise, nil
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -81,7 +88,11 @@ func (p Period) ScaleWithOverflowCheck(factor float32) (*Period, error) {
 	// ap, neg := p.absNeg()
 
 	if -0.5 < factor && factor < 0.5 {
-		d, pr1 := p.Duration()
+		d, pr1, err := p.Duration()
+		if err != nil {
+			return &Period{}, err
+		}
+
 		mul := float64(d) * float64(factor)
 		p2, pr2 := NewOf(time.Duration(mul))
 		return p2.Normalise(pr1 && pr2), nil

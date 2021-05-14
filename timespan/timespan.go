@@ -260,22 +260,25 @@ func ParseRFC5545InLocation(text string, location *time.Location) (TimeSpan, err
 	}
 
 	if rest[0] == 'P' {
-		pe, e2 := period.Parse(rest)
+		p, e2 := period.Parse(rest)
 		if e2 != nil {
 			return TimeSpan{}, fmt.Errorf("cannot parse period in %q: %s", text, e2.Error())
 		}
 
-		du, precise := pe.Duration()
+		du, precise, err := p.Duration()
+		if err != nil {
+			return TimeSpan{st, du}, err
+		}
+
 		if precise {
 			return TimeSpan{st, du}, nil
 		}
 
-		et := st.AddDate(int(pe.Years()), int(pe.Months()), int(pe.Days()))
+		et := st.AddDate(int(p.Years()), int(p.Months()), int(p.Days()))
 		return NewTimeSpan(st, et), nil
 	}
 
 	et, err := timestamp.ParseISOInLocation(rest, location)
-	// et, err := parseTimeInLocation(rest, loc)
 
 	return NewTimeSpan(st, et), err
 }

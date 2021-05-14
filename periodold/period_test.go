@@ -1142,7 +1142,8 @@ func BenchmarkTest(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_, err := parse("PT1H4M", true)
+			_, err := parse("P250Y150M200DT1H4M2000S", true)
+			// _, err := parse("PT1H4M", true)
 			if err != nil {
 				b.Log(err)
 			}

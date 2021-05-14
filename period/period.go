@@ -43,7 +43,7 @@ const hundredMSDuration = 100 * time.Millisecond
 
 const daysPerMonthE6 = 30436875 // 30.436875 days per month
 
-var oneDay time.Duration = 24 * time.Hour // Number of nanoseconds in a day
+const oneDay time.Duration = 24 * time.Hour // Number of nanoseconds in a day
 
 const oneMonthSeconds = 2628000                                    // Number of seconds in a month
 const oneMonthApprox time.Duration = oneMonthSeconds * time.Second // 30.436875 days
@@ -314,7 +314,7 @@ func (p Period) absNeg() (Period, bool) {
 // * Three thresholds a, b, c are equivalent to a, b, c, c.
 // * Four thresholds a, b, c, d are used as provided.
 //
-func (p Period) Simplify(precise bool, th ...int) Period {
+func (p *Period) Simplify(precise bool, th ...int) *Period {
 	switch len(th) {
 	case 0:
 		return p.doSimplify(precise, 60, 60, 100, 100)
@@ -329,10 +329,11 @@ func (p Period) Simplify(precise bool, th ...int) Period {
 	}
 }
 
-func (p Period) doSimplify(precise bool, monthMax, hourMax, minuteMax, secondMax int64) Period {
-	if p.years%10 != 0 {
-		return p
-	}
+func (p *Period) doSimplify(precise bool, monthMax, hourMax, minuteMax, secondMax int64) *Period {
+	// What is this for?
+	// if p.years%10 != 0 {
+	// 	return p
+	// }
 
 	ap, neg := p.absNeg()
 
@@ -342,7 +343,8 @@ func (p Period) doSimplify(precise bool, monthMax, hourMax, minuteMax, secondMax
 		ap.years = 0
 	}
 
-	if ap.months%10 != 0 && ap.months > 10 {
+	// if ap.months%10 != 0 && ap.months > 10 {
+	if ap.months > 10 {
 		// month fraction is dropped for periods of at least ten years (1:120)
 		months := ap.months / 10
 		if !precise && ap.years >= 100 && months == 0 {
@@ -407,7 +409,7 @@ func (p Period) doSimplify(precise bool, monthMax, hourMax, minuteMax, secondMax
 }
 
 // condNegate conditionally negate
-func (p Period) condNegate(neg bool) Period {
+func (p *Period) condNegate(neg bool) *Period {
 	if neg {
 		return p.Negate()
 	}
@@ -415,17 +417,17 @@ func (p Period) condNegate(neg bool) Period {
 }
 
 // IsNegative is period negative
-func (p Period) IsNegative() bool {
+func (p *Period) IsNegative() bool {
 	return p.negative == true
 }
 
 // IsPositive returns true if its negative property is false
-func (p Period) IsPositive() bool {
+func (p *Period) IsPositive() bool {
 	return p.negative == false
 }
 
 // Negate changes the sign of the period.
-func (p Period) Negate() Period {
+func (p *Period) Negate() *Period {
 	if p.IsNegative() {
 		p.negative = false
 		return p
@@ -464,32 +466,76 @@ func (p Period) IsZero() bool {
 // timezone information, so the duration is estimated on the basis of a year
 // being 365.2425 days as per Gregorian calendar rules) and a month being 1/12
 // of a that; days are all assumed to be 24 hours long.
-func (p Period) Duration() (time.Duration, bool) {
+func (p Period) Duration() (time.Duration, bool, error) {
 	// remember that the fields are all fixed-point 1E1
-	tdE6 := time.Duration(totalDaysApproxE7(p))
-	stE3 := totalSecondsE3(p)
-	if p.negative == true {
-		return -(tdE6 + stE3), tdE6 == 0
+	tdE6, err := totalDaysApproxDuration(p)
+	if err != nil {
+		return time.Duration(0), false, err
 	}
-	return (tdE6 + stE3), tdE6 == 0
+	stE3, err := totalSecondsDuration(p)
+	if err != nil {
+		return time.Duration(0), false, err
+	}
+
+	if p.negative == true {
+		return -(tdE6 + stE3), tdE6 == 0, nil
+	}
+	return (tdE6 + stE3), tdE6 == 0, nil
 }
 
-func totalSecondsE3(period Period) time.Duration {
+func totalSecondsDuration(p Period) (time.Duration, error) {
+	hourDuration := time.Duration(p.hours) * time.Hour
+	minuteDuration := time.Duration(p.minutes) * time.Minute
+	secondDuration := time.Duration(p.seconds) * time.Second
+	hourminutesecondDuration := (hourDuration + minuteDuration + secondDuration)
+
+	hourNumber := int64(hourminutesecondDuration / time.Hour)
+	remainder := int64(hourminutesecondDuration % time.Hour)
+
+	minuteNumber := remainder / int64(time.Minute)
+	remainder = int64(hourminutesecondDuration % time.Minute)
+
+	secondNumber := remainder / int64(time.Second)
+
+	if hourNumber < 0 && minuteNumber < 0 && secondNumber < 0 {
+		return time.Duration(0), errors.New("Hour, minute, and second duration exceeds maximum")
+	}
+
 	// remember that the fields are all fixed-point 1E1
 	// and these are divided by 1E1
-	hhE3 := time.Duration(period.hours) * time.Hour
-	mmE3 := time.Duration(period.minutes) * time.Minute
-	ssE3 := time.Duration(period.seconds) * time.Second
-	return hhE3 + mmE3 + ssE3
+	// hhE3 := time.Duration(period.hours) * time.Hour
+	// mmE3 := time.Duration(period.minutes) * time.Minute
+	// ssE3 := time.Duration(period.seconds) * time.Second
+	// return hhE3 + mmE3 + ssE3
+	return hourminutesecondDuration, nil
 }
 
-func totalDaysApproxE7(period Period) time.Duration {
+func totalDaysApproxDuration(p Period) (time.Duration, error) {
 	// remember that the fields are all fixed-point 1E1
-	ydE6 := time.Duration(period.years) * oneYearApprox
-	mdE6 := time.Duration(period.months) * oneMonthApprox
-	ddE6 := time.Duration(period.days) * oneDay
+	// ydE6 := time.Duration(period.years) * oneYearApprox
+	// // fmt.Println(ydE6.Microseconds())
+	// mdE6 := time.Duration(period.months) * oneMonthApprox
+	// ddE6 := time.Duration(period.days) * oneDay
 
-	return ydE6 + mdE6 + ddE6
+	// return ydE6 + mdE6 + ddE6
+	yearDuration := time.Duration(p.years) * oneYearApprox
+	monthDuration := time.Duration(p.months) * oneMonthApprox
+	dayDuration := time.Duration(p.days) * oneDay
+	yearMonthDayDuration := yearDuration + monthDuration + dayDuration
+
+	yearNumber := int64(yearMonthDayDuration / oneYearApprox)
+	remainder := int64(yearMonthDayDuration % oneYearApprox)
+
+	monthNumber := int64(remainder / int64(oneMonthApprox))
+	remainder = int64(yearMonthDayDuration % oneMonthApprox)
+
+	dayNumber := int64(remainder / int64(oneDay))
+
+	if yearNumber < 0 && monthNumber < 0 && dayNumber < 0 {
+		return time.Duration(0), errors.New("Year, month, and day duration exceeds maximum")
+	}
+
+	return yearMonthDayDuration, nil
 }
 
 func (p *Period) validate() error {
@@ -524,40 +570,104 @@ func (p *Period) validate() error {
 }
 
 // Normalise normalise period
-func (p Period) Normalise(precise bool) *Period {
+func (p *Period) Normalise(precise bool) *Period {
 	n := p.normalise(precise)
 	return n
 }
 
 func (p *Period) normalise(precise bool) *Period {
-	return p.rippleUp(precise).moveFractionToRight()
+	// return p.rippleUp(precise).moveFractionToRight()
+	return p.rippleUp(precise)
 }
 
 // rippleUp move values up through category if boundaries passed
 func (p *Period) rippleUp(precise bool) *Period {
-	// remember that the fields are all fixed-point 1E1
+	// maxInt64 := math.MaxInt64
 
-	p.minutes += (p.seconds / 600) * 10
-	p.seconds = p.seconds % 600
+	// hourDuration := time.Duration(p.hours) * time.Hour
+	// minuteDuration := time.Duration(p.minutes) * time.Minute
+	// secondDuration := time.Duration(p.seconds) * time.Second
+	// hourminutesecondDuration := (hourDuration + minuteDuration + secondDuration)
+	hourminutesecondDuration, err := totalSecondsDuration(*p)
+	if err == nil {
+		hourNumber := int64(hourminutesecondDuration / time.Hour)
+		remainder := int64(hourminutesecondDuration % time.Hour)
 
-	p.hours += (p.minutes / 600) * 10
-	p.minutes = p.minutes % 600
-	// fmt.Println("hours", p.hours, "minutes", p.minutes)
+		minuteNumber := remainder / int64(time.Minute)
+		remainder = int64(hourminutesecondDuration % time.Minute)
 
-	// 32670-(32670/60)-(32670/3600) = 32760 - 546 - 9.1 = 32204.9
-	if !precise || p.hours > 32204 {
-		p.days += (p.hours / 240) * 10
-		p.hours = p.hours % 240
+		secondNumber := remainder / int64(time.Second)
+
+		p.hours = hourNumber
+		p.minutes = minuteNumber
+		p.seconds = secondNumber
 	}
 
-	if !precise || p.days > 32760 {
-		dE6 := p.days * oneE5
-		p.months += (dE6 / daysPerMonthE6) * 10
-		p.days = (dE6 % daysPerMonthE6) / oneE5
-	}
+	yearMonthDayDuration, err := totalDaysApproxDuration(*p)
+	if err == nil {
+		yearNumber := int64(yearMonthDayDuration / oneYearApprox)
+		remainder := int64(yearMonthDayDuration % oneYearApprox)
 
-	p.years += (p.months / 120) * 10
-	p.months = p.months % 120
+		monthNumber := int64(remainder / int64(oneMonthApprox))
+		remainder = int64(yearMonthDayDuration % oneMonthApprox)
+
+		dayNumber := int64(remainder / int64(oneDay))
+
+		p.years = yearNumber
+		p.months = monthNumber
+		p.days = dayNumber
+
+	}
+	// yearDuration := time.Duration(p.years) * oneYearApprox
+	// monthDuration := time.Duration(p.months) * oneMonthApprox
+	// dayDuration := time.Duration(p.days) * oneDay
+	// yearMonthDayDuration := yearDuration + monthDuration + dayDuration
+
+	// if hourNumber >= 0 && minuteNumber >= 0 && secondNumber >= 0 {
+	// 	p.hours = hourNumber
+	// 	p.minutes = minuteNumber
+	// 	p.seconds = secondNumber
+	// } else {
+	// 	// fmt.Println("hour minute second total exceeds max duration")
+	// }
+
+	// // Have we exceeded the maximum? If not then use the values
+	// if yearNumber >= 0 && monthNumber >= 0 && dayNumber >= 0 {
+	// 	p.years = yearNumber
+	// 	p.months = monthNumber
+	// 	p.days = dayNumber
+	// } else {
+	// 	// fmt.Println("year month day total exceeds max duration")
+	// }
+
+	// // Units below 10 will not be affected
+	// p.minutes += (p.seconds / 600) * 10
+	// // Will not be affected by values below 600
+	// p.seconds = p.seconds % 600
+	// // fmt.Println("hours", p.hours, "minutes", p.minutes)
+
+	// // Units below 10 will not be affected
+	// p.hours += (p.minutes / 600) * 10
+	// // Will not be affected by values below 600
+	// p.minutes = p.minutes % 600
+	// // fmt.Println("hours", p.hours, "minutes", p.minutes)
+
+	// // 32670-(32670/60)-(32670/3600) = 32760 - 546 - 9.1 = 32204.9
+	// if !precise || p.hours > 32204 {
+	// 	p.days += (p.hours / 240) * 10
+	// 	p.hours = p.hours % 240
+	// }
+
+	// if !precise || p.days > 32760 {
+	// 	dE6 := p.days * oneE5
+	// 	p.months += (dE6 / daysPerMonthE6) * 10
+	// 	p.days = (dE6 % daysPerMonthE6) / oneE5
+	// }
+
+	// // Units below 10 will not be affected
+	// p.years += (p.months / 120) * 10
+	// // 5%120 is 5 so will stay the same
+	// p.months = p.months % 120
 	// fmt.Println("hours", p.hours, "minutes", p.minutes)
 
 	return p
@@ -572,31 +682,36 @@ func (p *Period) moveFractionToRight() *Period {
 	// remember that the fields are all fixed-point 1E1
 
 	y10 := p.years % 10
-	if y10 != 0 && p.years > 10 && (p.months != 0 || p.days != 0 || p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
+	// if y10 != 0 && p.years > 10 && (p.months != 0 || p.days != 0 || p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
+	if p.years > 10 && (p.months != 0 || p.days != 0 || p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
 		p.months += y10 * 12
 		p.years = (p.years / 10) * 10
 	}
 
 	m10 := p.months % 10
-	if m10 != 0 && p.months > 10 && (p.days != 0 || p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
+	// if m10 != 0 && p.months > 10 && (p.days != 0 || p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
+	if p.months > 10 && (p.days != 0 || p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
 		p.days += (m10 * daysPerMonthE6) / oneE6
 		p.months = (p.months / 10) * 10
 	}
 
 	d10 := p.days % 10
-	if d10 != 0 && p.days > 10 && (p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
+	// if d10 != 0 && p.days > 10 && (p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
+	if p.days > 10 && (p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
 		p.hours += d10 * 24
 		p.days = (p.days / 10) * 10
 	}
 
 	hh10 := p.hours % 10
-	if hh10 != 0 && p.hours > 10 && (p.minutes != 0 || p.seconds != 0) {
+	// if hh10 != 0 && p.hours > 10 && (p.minutes != 0 || p.seconds != 0) {
+	if p.days > 10 && (p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
 		p.minutes += hh10 * 60
 		// fmt.Println("minutes", p.minutes)
 	}
 
 	mm10 := p.minutes % 10
-	if mm10 != 0 && p.minutes > 10 && p.seconds != 0 {
+	// if mm10 != 0 && p.minutes > 10 && p.seconds != 0 {
+	if p.minutes > 10 && p.seconds != 0 {
 		p.seconds += mm10 * 60
 		p.minutes = (p.minutes / 10) * 10
 	}

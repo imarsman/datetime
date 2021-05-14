@@ -73,7 +73,7 @@ func TestPeriodParser(t *testing.T) {
 
 }
 
-func TestGetDuration(t *testing.T) {
+func TestParsePeriod(t *testing.T) {
 	tests := []string{
 		"P1Y",
 		"P1Y1D",
@@ -87,6 +87,7 @@ func TestGetDuration(t *testing.T) {
 		"PT1M",
 		"PT1M5S",
 		"PT1S",
+		"PT1000S",
 		"P1W",
 		"P3Y1W",
 		"P4W",
@@ -96,16 +97,38 @@ func TestGetDuration(t *testing.T) {
 		"P3Y1WT1H14M",
 		"P-3Y1WT1H1400M",
 		"P120Y120M200D",
+		"P150Y150M200DT1H4M2000S",
+		"P250Y150M200DT1H4M2000S",
 	}
 
 	is := is.New(t)
 
 	for _, test := range tests {
-		p, err := period.Parse(test, false)
-		d, _ := p.Duration()
+		p, _ := period.Parse(test, false)
+		d, _, err := p.Duration()
+		is.NoErr(err)
 		fmt.Printf("Input %-15s period %0-15s normalized %-20s duration %-15v\n",
 			test, p.String(), p.Normalise(true).String(), d)
-		is.NoErr(err)
+	}
+
+}
+
+func TestParsePeriodBad(t *testing.T) {
+	tests := []string{
+		"P300YT1H4M2000S",
+		"P3YT2629999H",
+	}
+
+	is := is.New(t)
+
+	// var err error
+	for _, test := range tests {
+		p, _ := period.Parse(test, false)
+		d, _, err := p.Duration()
+		is.True(err != nil)
+		fmt.Printf("Input %-15s period %0-15s normalized %-20s duration %-15v\n",
+			test, p.String(), p.Normalise(true).String(), d)
+		// is.NoErr(err)
 	}
 
 }
@@ -122,7 +145,7 @@ func BenchmarkParsePeriod(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			p, err = period.Parse("PT1H4M", false)
+			p, err = period.Parse("P250Y150M200DT1H4M2000S", false)
 		}
 	})
 
