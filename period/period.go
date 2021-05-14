@@ -16,7 +16,7 @@ import (
 type Period struct {
 	negative                                            bool
 	years, months, weeks, days, hours, minutes, seconds int64
-	input                                               string
+	Input                                               string
 }
 
 // New create a new Period instance
@@ -193,6 +193,8 @@ func daysDiff(t1, t2 time.Time) (year, month, day, hour, min, sec, hundredth int
 // const daysPerYearE4 = 3652425   // 365.2425 days by the Gregorian rule
 // const daysPerMonth = 30436875   // 30.436875 days per month
 // const daysPerMonthE4 = 304369   // 30.4369 days per month
+// const daysPerMonthE6 = 30436875 // 30.436875 days per month
+// const daysPerMonthE6 = 30436875 // 30.436875 days per month
 const daysPerMonthE6 = 30436875 // 30.436875 days per month
 
 var oneDay = 24 * time.Hour
@@ -262,6 +264,7 @@ func (p Period) Abs() Period {
 func (p Period) absNeg() (Period, bool) {
 	if p.IsNegative() {
 		p.negative = false
+		return p, true
 	}
 	return p, false
 }
@@ -324,9 +327,7 @@ func (p Period) doSimplify(precise bool, a, b, c, d int64) Period {
 	ap, neg := p.absNeg()
 
 	// single year is dropped if there are some months
-	if ap.years == 10 &&
-		0 < ap.months && ap.months <= a &&
-		ap.days == 0 {
+	if ap.years == 10 && 0 < ap.months && ap.months <= a && ap.days == 0 {
 		ap.months += 120
 		ap.years = 0
 	}
@@ -360,7 +361,8 @@ func (p Period) doSimplify(precise bool, a, b, c, d int64) Period {
 	if ap.hours%10 != 0 {
 		// hour fraction is dropped for periods of at least a month (1:720)
 		hours := ap.hours / 10
-		if !precise && (ap.years > 0 || ap.months > 0 || ap.days >= 300) && hours == 0 {
+		if !precise &&
+			(ap.years > 0 || ap.months > 0 || ap.days >= 300) && hours == 0 {
 			ap.hours = 0
 		}
 		return ap.condNegate(neg)
@@ -375,15 +377,14 @@ func (p Period) doSimplify(precise bool, a, b, c, d int64) Period {
 	if ap.minutes%10 != 0 {
 		// minute fraction is dropped for periods of at least a day (1:1440)
 		minutes := ap.minutes / 10
-		if !precise && (ap.years > 0 || ap.months > 0 || ap.days > 0 || ap.hours >= 240) && minutes == 0 {
+		if !precise &&
+			(ap.years > 0 || ap.months > 0 || ap.days > 0 || ap.hours >= 240) && minutes == 0 {
 			ap.minutes = 0
 		}
 		return ap.condNegate(neg)
 	}
 
-	if ap.minutes == 10 &&
-		ap.hours == 0 &&
-		0 < ap.seconds && ap.seconds <= d {
+	if ap.minutes == 10 && ap.hours == 0 && 0 < ap.seconds && ap.seconds <= d {
 		ap.seconds += 600
 		ap.minutes = 0
 	}
@@ -391,7 +392,8 @@ func (p Period) doSimplify(precise bool, a, b, c, d int64) Period {
 	if ap.seconds%10 != 0 {
 		// second fraction is dropped for periods of at least an hour (1:3600)
 		seconds := ap.seconds / 10
-		if !precise && (ap.years > 0 || ap.months > 0 || ap.days > 0 || ap.hours > 0 || ap.minutes >= 600) && seconds == 0 {
+		if !precise &&
+			(ap.years > 0 || ap.months > 0 || ap.days > 0 || ap.hours > 0 || ap.minutes >= 600) && seconds == 0 {
 			ap.seconds = 0
 		}
 	}
@@ -422,12 +424,12 @@ func (p Period) IsPositive() bool {
 // Negate changes the sign of the period.
 func (p Period) Negate() Period {
 	if p.IsNegative() {
-		p.input = strings.ReplaceAll(p.input, "-", "")
+		p.Input = strings.ReplaceAll(p.Input, "-", "")
 		p.negative = false
 		return p
 	}
 	p.negative = true
-	p.input = "-" + p.input
+	p.Input = "-" + p.Input
 	return p
 }
 
@@ -494,7 +496,7 @@ func RunesToString(runes ...rune) string {
 
 // IsZero is period emtpy
 func (p Period) IsZero() bool {
-	return p == Period{}
+	return p.Years() == 0 && p.Months() == 0 && p.Days() == 0 && p.Hours() == 0 && p.Minutes() == 0 && p.Seconds() == 0
 }
 
 // Duration converts a period to the equivalent duration in nanoseconds.
@@ -555,10 +557,10 @@ func (p *Period) validate() error {
 	}
 
 	if len(f) > 0 {
-		if p.input == "" {
-			p.input = p.String()
+		if p.Input == "" {
+			p.Input = p.String()
 		}
-		return fmt.Errorf("%s: integer overflow occurred in %s", p.input, strings.Join(f, ","))
+		return fmt.Errorf("%s: integer overflow occurred in %s", p.Input, strings.Join(f, ","))
 	}
 
 	return nil
@@ -583,6 +585,7 @@ func (p *Period) rippleUp(precise bool) *Period {
 
 	p.hours += (p.minutes / 600) * 10
 	p.minutes = p.minutes % 600
+	// fmt.Println("hours", p.hours, "minutes", p.minutes)
 
 	// 32670-(32670/60)-(32670/3600) = 32760 - 546 - 9.1 = 32204.9
 	if !precise || p.hours > 32204 {
@@ -598,6 +601,7 @@ func (p *Period) rippleUp(precise bool) *Period {
 
 	p.years += (p.months / 120) * 10
 	p.months = p.months % 120
+	// fmt.Println("hours", p.hours, "minutes", p.minutes)
 
 	return p
 }
@@ -615,20 +619,28 @@ func (p *Period) moveFractionToRight() *Period {
 
 	m10 := p.months % 10
 	if m10 != 0 && (p.days != 0 || p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
+		// fmt.Println("years:", p.years, "months:", p.months, "days:", p.days, "hours:", p.hours, "minutes:", p.minutes)
 		p.days += (m10 * daysPerMonthE6) / oneE6
 		p.months = (p.months / 10) * 10
+		// fmt.Println("years:", p.years, "months:", p.months, "days:", p.days, "hours:", p.hours, "minutes:", p.minutes)
 	}
 
 	d10 := p.days % 10
 	if d10 != 0 && (p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
+		// fmt.Println("years:", p.years, "months:", p.months, "days:", p.days, "hours:", p.hours, "minutes:", p.minutes)
 		p.hours += d10 * 24
+		// fmt.Println("years:", p.years, "months:", p.months, "days:", p.days, "hours:", p.hours, "minutes:", p.minutes)
 		p.days = (p.days / 10) * 10
+		// fmt.Println("years:", p.years, "months:", p.months, "days:", p.days, "hours:", p.hours, "minutes:", p.minutes)
 	}
 
+	// fmt.Println("years:", p.years, "months:", p.months, "days:", p.days, "hours:", p.hours, "minutes:", p.minutes)
 	hh10 := p.hours % 10
 	if hh10 != 0 && (p.minutes != 0 || p.seconds != 0) {
 		p.minutes += hh10 * 60
+		// fmt.Println("years:", p.years, "months:", p.months, "days:", p.days, "hours:", p.hours, "minutes:", p.minutes)
 		p.hours = (p.hours / 10) * 10
+		// fmt.Println("years:", p.years, "months:", p.months, "days:", p.days, "hours:", p.hours, "minutes:", p.minutes)
 	}
 
 	mm10 := p.minutes % 10
@@ -681,7 +693,9 @@ func ParseWithNormalise(period string, normalise bool) (Period, error) {
 	}
 
 	if period == "P0" {
-		return Period{}, nil
+		p := Period{}
+		p.Input = "P0"
+		return p, nil
 	}
 
 	p, err := parse(period, normalise)
@@ -698,9 +712,9 @@ func parse(input string, normalise bool) (Period, error) {
 
 	var parts []rune
 
-	period := new(Period)
+	period := Period{}
 	input = strings.ToUpper(input)
-	period.input = input
+	period.Input = input
 
 	var isTime bool
 
@@ -730,7 +744,9 @@ func parse(input string, normalise bool) (Period, error) {
 		}
 	}
 
-	for i, c := range input {
+	var periodFound bool = false
+
+	for _, c := range input {
 		c = unicode.ToUpper(c)
 
 		// fmt.Println(string(c))
@@ -742,12 +758,13 @@ func parse(input string, normalise bool) (Period, error) {
 		// Hnadle non digits
 		if isValidChar(c) == true {
 			if c == periodChar {
-				if i > 0 {
-					xfmt := new(xfmt.Buffer)
-					msg := xfmt.S("only one period indicator allowed ").S(orig)
-					return Period{}, errors.New(string(msg.Bytes()))
+				if periodFound == false {
+					periodFound = true
+					continue
 				}
-				continue
+				xfmt := new(xfmt.Buffer)
+				msg := xfmt.S("only one period indicator allowed ").S(orig)
+				return Period{}, errors.New(string(msg.Bytes()))
 			}
 			if c == negativeChar {
 				period.negative = true
@@ -778,6 +795,7 @@ func parse(input string, normalise bool) (Period, error) {
 			} else if c == monthChar || c == minuteChar {
 				if isTime == false {
 					period.months = intVal
+					// fmt.Println("months", intVal)
 				} else {
 					period.minutes = intVal
 				}
@@ -787,7 +805,6 @@ func parse(input string, normalise bool) (Period, error) {
 					msg := xfmt.S("non time part after time declared ").S(orig)
 					return Period{}, errors.New(string(msg.Bytes()))
 				}
-				// fmt.Println("weeks", intVal)
 				period.weeks = intVal
 			} else if c == dayChar {
 				if isTime == true {
@@ -812,11 +829,14 @@ func parse(input string, normalise bool) (Period, error) {
 		return Period{}, errors.New(string(msg.Bytes()))
 	}
 
+	// fmt.Println("weeks", period.weeks)
 	period.days += period.weeks * 7
+	// fmt.Println("days", period.days)
 
 	if normalise == true {
-		return *period.normalise(true), nil
+		period = *period.Normalise(true)
 	}
-	// fmt.Println("weeks", period.weeks)
-	return *period, nil
+
+	// fmt.Println("period", period)
+	return period, nil
 }

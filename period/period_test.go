@@ -66,7 +66,7 @@ func TestPeriodParser(t *testing.T) {
 	is := is.New(t)
 
 	for _, test := range tests {
-		p, err := period.Parse(test)
+		p, err := period.Parse(test, true)
 		is.NoErr(err)
 		t.Logf("Got %20s %20s %20s", test, p.String(), p.Normalise(false).String())
 	}
@@ -80,6 +80,7 @@ func TestGetDuration(t *testing.T) {
 		"P3Y",
 		"P1M",
 		"P2M",
+		"P1W",
 		"P1D",
 		"PT1H",
 		"PT1H30M",
@@ -87,6 +88,7 @@ func TestGetDuration(t *testing.T) {
 		"PT1M5S",
 		"PT1S",
 		"P1W",
+		"P3Y1W",
 		"P3Y1WT1H14M",
 		"P-3Y1WT1H14M",
 		"P3Y1WT1H14M",
@@ -96,7 +98,7 @@ func TestGetDuration(t *testing.T) {
 	is := is.New(t)
 
 	for _, test := range tests {
-		p, err := period.Parse(test)
+		p, err := period.Parse(test, false)
 		d, _ := p.Duration()
 		simplified := p.Simplify(true)
 		fmt.Printf("Got input %-15s period %0-15s normalized %-20s duration %-15v simplified %-15s\n",

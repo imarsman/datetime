@@ -99,7 +99,7 @@ func (p *Period) String() string {
 		}
 	}
 
-	if *p == (Period{}) {
+	if p.IsZero() == true {
 		return "P0D"
 	}
 
