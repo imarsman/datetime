@@ -607,44 +607,39 @@ func (p *Period) rippleUp(precise bool) *Period {
 }
 
 // moveFractionToRight attempts to remove fractions in higher-order fields by moving their value to the
-// next-lower-order field. For example, fractional years become months.
+// next-lower-order field.
+//
+// The average number of days in a month is 30.436875 days, so getting a period
+// with months in nit will make the adjustment approximate.
 func (p *Period) moveFractionToRight() *Period {
 	// remember that the fields are all fixed-point 1E1
 
 	y10 := p.years % 10
-	if y10 != 0 && (p.months != 0 || p.days != 0 || p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
+	if y10 != 0 && p.years > 10 && (p.months != 0 || p.days != 0 || p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
 		p.months += y10 * 12
 		p.years = (p.years / 10) * 10
 	}
 
 	m10 := p.months % 10
-	if m10 != 0 && (p.days != 0 || p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
-		// fmt.Println("years:", p.years, "months:", p.months, "days:", p.days, "hours:", p.hours, "minutes:", p.minutes)
+	if m10 != 0 && p.months > 10 && (p.days != 0 || p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
 		p.days += (m10 * daysPerMonthE6) / oneE6
 		p.months = (p.months / 10) * 10
-		// fmt.Println("years:", p.years, "months:", p.months, "days:", p.days, "hours:", p.hours, "minutes:", p.minutes)
 	}
 
 	d10 := p.days % 10
-	if d10 != 0 && (p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
-		// fmt.Println("years:", p.years, "months:", p.months, "days:", p.days, "hours:", p.hours, "minutes:", p.minutes)
+	if d10 != 0 && p.days > 10 && (p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
 		p.hours += d10 * 24
-		// fmt.Println("years:", p.years, "months:", p.months, "days:", p.days, "hours:", p.hours, "minutes:", p.minutes)
 		p.days = (p.days / 10) * 10
-		// fmt.Println("years:", p.years, "months:", p.months, "days:", p.days, "hours:", p.hours, "minutes:", p.minutes)
 	}
 
-	// fmt.Println("years:", p.years, "months:", p.months, "days:", p.days, "hours:", p.hours, "minutes:", p.minutes)
 	hh10 := p.hours % 10
-	if hh10 != 0 && (p.minutes != 0 || p.seconds != 0) {
+	if hh10 != 0 && p.hours > 10 && (p.minutes != 0 || p.seconds != 0) {
 		p.minutes += hh10 * 60
-		// fmt.Println("years:", p.years, "months:", p.months, "days:", p.days, "hours:", p.hours, "minutes:", p.minutes)
-		p.hours = (p.hours / 10) * 10
-		// fmt.Println("years:", p.years, "months:", p.months, "days:", p.days, "hours:", p.hours, "minutes:", p.minutes)
+		// fmt.Println("minutes", p.minutes)
 	}
 
 	mm10 := p.minutes % 10
-	if mm10 != 0 && p.seconds != 0 {
+	if mm10 != 0 && p.minutes > 10 && p.seconds != 0 {
 		p.seconds += mm10 * 60
 		p.minutes = (p.minutes / 10) * 10
 	}
@@ -831,6 +826,7 @@ func parse(input string, normalise bool) (Period, error) {
 
 	// fmt.Println("weeks", period.weeks)
 	period.days += period.weeks * 7
+	period.weeks = 0
 	// fmt.Println("days", period.days)
 
 	if normalise == true {

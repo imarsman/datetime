@@ -89,6 +89,8 @@ func TestGetDuration(t *testing.T) {
 		"PT1S",
 		"P1W",
 		"P3Y1W",
+		"P4W",
+		"P2Y3M4W5D",
 		"P3Y1WT1H14M",
 		"P-3Y1WT1H14M",
 		"P3Y1WT1H14M",
@@ -101,8 +103,8 @@ func TestGetDuration(t *testing.T) {
 		p, err := period.Parse(test, false)
 		d, _ := p.Duration()
 		simplified := p.Simplify(true)
-		fmt.Printf("Got input %-15s period %0-15s normalized %-20s duration %-15v simplified %-15s\n",
-			test, p.String(), p.Normalise(false).String(), d, simplified.String())
+		fmt.Printf("Input %-15s period %0-15s normalized %-20s duration %-15v simplified %-15s\n",
+			test, p.String(), p.Normalise(true).String(), d, simplified.String())
 		// t.Log(d, p.String())
 		is.NoErr(err)
 		// t.Logf("Got %20s %20s %20s", test, p.String(), p.Normalise(false).String())
