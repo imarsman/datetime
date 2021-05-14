@@ -1,4 +1,4 @@
-package period
+package periodold
 
 // Set enables use of Period by the flag API.
 func (period *Period) Set(p string) error {

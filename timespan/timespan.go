@@ -200,7 +200,7 @@ func (ts TimeSpan) Format(layout, separator string, useDuration bool) string {
 
 	if useDuration {
 		p := period.Between(s, e)
-		return fmt.Sprintf("%s%s%s", s.Format(layout), separator, p)
+		return fmt.Sprintf("%s%s%v", s.Format(layout), separator, p)
 	}
 
 	return fmt.Sprintf("%s%s%s", s.Format(layout), separator, e.Format(layout))
@@ -270,7 +270,7 @@ func ParseRFC5545InLocation(text string, location *time.Location) (TimeSpan, err
 			return TimeSpan{st, du}, nil
 		}
 
-		et := st.AddDate(pe.Years(), pe.Months(), pe.Days())
+		et := st.AddDate(int(pe.Years()), int(pe.Months()), int(pe.Days()))
 		return NewTimeSpan(st, et), nil
 	}
 

@@ -41,4 +41,4 @@
 //
 // * "PT12M7.5S" is 12 minutes and 7.5 seconds.
 //
-package period
+package periodold

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package period_test
+package periodold
 
 import (
 	"bytes"
@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/imarsman/datetime/period"
 	. "github.com/onsi/gomega"
 )
 
@@ -36,14 +35,14 @@ func TestGobEncoding(t *testing.T) {
 		"P48M",
 	}
 	for i, c := range cases {
-		p := period.MustParse(c, false)
-		var p2 period.Period
-		err := encoder.Encode(&p)
+		period := MustParse(c, false)
+		var p Period
+		err := encoder.Encode(&period)
 		g.Expect(err).NotTo(HaveOccurred(), info(i, c))
 		if err == nil {
 			err = decoder.Decode(&p)
 			g.Expect(err).NotTo(HaveOccurred(), info(i, c))
-			g.Expect(p).To(Equal(p2), info(i, c))
+			g.Expect(p).To(Equal(period), info(i, c))
 		}
 	}
 }
@@ -52,21 +51,21 @@ func TestPeriodJSONMarshalling(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	cases := []struct {
-		value period.Period
+		value Period
 		want  string
 	}{
-		{period.New(-1111, -4, -3, -11, -59, -59), `"-P1111Y4M3DT11H59M59S"`},
-		{period.New(-1, -10, -31, -5, -4, -20), `"-P1Y10M31DT5H4M20S"`},
-		{period.New(0, 0, 0, 0, 0, 0), `"P0D"`},
-		{period.New(0, 0, 0, 0, 0, 1), `"PT1S"`},
-		{period.New(0, 0, 0, 0, 1, 0), `"PT1M"`},
-		{period.New(0, 0, 0, 1, 0, 0), `"PT1H"`},
-		{period.New(0, 0, 1, 0, 0, 0), `"P1D"`},
-		{period.New(0, 1, 0, 0, 0, 0), `"P1M"`},
-		{period.New(1, 0, 0, 0, 0, 0), `"P1Y"`},
+		{New(-1111, -4, -3, -11, -59, -59), `"-P1111Y4M3DT11H59M59S"`},
+		{New(-1, -10, -31, -5, -4, -20), `"-P1Y10M31DT5H4M20S"`},
+		{New(0, 0, 0, 0, 0, 0), `"P0D"`},
+		{New(0, 0, 0, 0, 0, 1), `"PT1S"`},
+		{New(0, 0, 0, 0, 1, 0), `"PT1M"`},
+		{New(0, 0, 0, 1, 0, 0), `"PT1H"`},
+		{New(0, 0, 1, 0, 0, 0), `"P1D"`},
+		{New(0, 1, 0, 0, 0, 0), `"P1M"`},
+		{New(1, 0, 0, 0, 0, 0), `"P1Y"`},
 	}
 	for i, c := range cases {
-		var p period.Period
+		var p Period
 		bb, err := json.Marshal(c.value)
 		g.Expect(err).NotTo(HaveOccurred(), info(i, c))
 		g.Expect(string(bb)).To(Equal(c.want), info(i, c))
@@ -82,21 +81,21 @@ func TestPeriodTextMarshalling(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	cases := []struct {
-		value period.Period
+		value Period
 		want  string
 	}{
-		{period.New(-1111, -4, -3, -11, -59, -59), "-P1111Y4M3DT11H59M59S"},
-		{period.New(-1, -9, -31, -5, -4, -20), "-P1Y9M31DT5H4M20S"},
-		{period.New(0, 0, 0, 0, 0, 0), "P0D"},
-		{period.New(0, 0, 0, 0, 0, 1), "PT1S"},
-		{period.New(0, 0, 0, 0, 1, 0), "PT1M"},
-		{period.New(0, 0, 0, 1, 0, 0), "PT1H"},
-		{period.New(0, 0, 1, 0, 0, 0), "P1D"},
-		{period.New(0, 1, 0, 0, 0, 0), "P1M"},
-		{period.New(1, 0, 0, 0, 0, 0), "P1Y"},
+		{New(-1111, -4, -3, -11, -59, -59), "-P1111Y4M3DT11H59M59S"},
+		{New(-1, -9, -31, -5, -4, -20), "-P1Y9M31DT5H4M20S"},
+		{New(0, 0, 0, 0, 0, 0), "P0D"},
+		{New(0, 0, 0, 0, 0, 1), "PT1S"},
+		{New(0, 0, 0, 0, 1, 0), "PT1M"},
+		{New(0, 0, 0, 1, 0, 0), "PT1H"},
+		{New(0, 0, 1, 0, 0, 0), "P1D"},
+		{New(0, 1, 0, 0, 0, 0), "P1M"},
+		{New(1, 0, 0, 0, 0, 0), "P1Y"},
 	}
 	for i, c := range cases {
-		var p period.Period
+		var p Period
 		bb, err := c.value.MarshalText()
 		g.Expect(err).NotTo(HaveOccurred(), info(i, c))
 		g.Expect(string(bb)).To(Equal(c.want), info(i, c))
@@ -120,7 +119,7 @@ func TestInvalidPeriodText(t *testing.T) {
 		{`P000`, `P000: missing designator at the end`},
 	}
 	for i, c := range cases {
-		var p period.Period
+		var p Period
 		err := p.UnmarshalText([]byte(c.value))
 		g.Expect(err).To(HaveOccurred(), info(i, c))
 		g.Expect(err.Error()).To(Equal(c.want), info(i, c))
