@@ -579,7 +579,7 @@ func (p *Period) normalise(precise bool) *Period {
 // the duration's maximum value, which is 292.471208677536 years in nanoseconds.
 // This is currently considered an acceptable cost as if there is an overflow it
 // is handled by leaving the overflowing values alone.
-// Currently precise is not used here but is relevant in the AdjustRight function.
+// Precise as true will result in no adjustment for years, months, and days.
 func (p *Period) rippleUp(precise bool) *Period {
 	hourminutesecondDuration, err := hmsDuration(*p)
 	if err == nil {
