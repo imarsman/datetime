@@ -9,6 +9,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/ericlagergren/decimal"
 	"github.com/imarsman/datetime/xfmt"
 )
 
@@ -464,8 +465,6 @@ func AdditionsFromDecimalSection(part rune, pre, post int64) (
 		return count
 	}
 
-	// fmt.Println("part", string(part))
-
 	isTimePart := func(r rune) bool {
 		switch r {
 		case yearChar:
@@ -523,7 +522,14 @@ func AdditionsFromDecimalSection(part rune, pre, post int64) (
 
 	len := digitCount(post)
 
-	var postFloat float64 = float64(float64(post) / math.Pow(10, float64(len)))
+	postFloatDecimal := decimal.New(post, int(len))
+
+	postFloat, ok := postFloatDecimal.Float64()
+	if ok == false {
+		err := fmt.Errorf("Problem getting decimal fractional float value for %d", post)
+		return years, months, days, hours, minutes, seconds, subseconds, err
+	}
+
 	var postDecimal int64
 
 	if part == yearChar {

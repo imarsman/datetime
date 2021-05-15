@@ -120,11 +120,37 @@ func TestParsePeriod(t *testing.T) {
 }
 
 func TestGetParts(t *testing.T) {
+	is := is.New(t)
 
-	// is := is.New(t)
-	years, months, days, hours, minutes, seconds, subseconds, err := period.AdditionsFromDecimalSection('S', 13, 575)
+	years, months, days, hours, minutes, seconds, subseconds, err := period.AdditionsFromDecimalSection('I', 13, 575)
 	t.Logf("years %d, months %d, days %d, hours %d, minutes %d, seconds %d, subseconds %d, err %v",
 		years, months, days, hours, minutes, seconds, subseconds, err)
+
+	is.NoErr(err)
+}
+
+func BenchmarkGetParts(b *testing.B) {
+	is := is.New(b)
+
+	var err error
+	var years, months, days, hours, minutes, seconds int64
+	var subseconds int
+
+	b.ResetTimer()
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			years, months, days, hours, minutes, seconds, subseconds, err = period.AdditionsFromDecimalSection(
+				'I', 13, 575)
+		}
+	})
+
+	b.Logf("years %d, months %d, days %d, hours %d, minutes %d, seconds %d, subseconds %d, err %v",
+		years, months, days, hours, minutes, seconds, subseconds, err)
+
+	is.NoErr(err) // Parsing should not have caused an error
 }
 
 func TestParsePeriodBad(t *testing.T) {
