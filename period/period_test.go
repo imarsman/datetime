@@ -119,6 +119,14 @@ func TestParsePeriod(t *testing.T) {
 
 }
 
+func TestGetParts(t *testing.T) {
+
+	// is := is.New(t)
+	years, months, days, hours, minutes, seconds, subseconds, err := period.AdditionsFromDecimalSection('S', 13, 575)
+	t.Logf("years %d, months %d, days %d, hours %d, minutes %d, seconds %d, subseconds %d, err %v",
+		years, months, days, hours, minutes, seconds, subseconds, err)
+}
+
 func TestParsePeriodBad(t *testing.T) {
 	tests := []string{
 		"P300YT1H4M2000S",

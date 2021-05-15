@@ -9,8 +9,6 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/ericlagergren/decimal"
-
 	"github.com/imarsman/datetime/xfmt"
 )
 
@@ -20,6 +18,8 @@ const yearChar = 'Y'
 const weekChar = 'W'
 const dayChar = 'D'
 const hourChar = 'H'
+const minuteChar = 'I'
+const monthChar = 'O'
 const minuteMonthChar = 'M'
 const secondChar = 'S'
 const periodChar = 'P'
@@ -452,20 +452,124 @@ func (p *Period) AdjustToRight(precise bool) *Period {
 
 // AdditionsFromDecimalSection break down decimal section and get allocations to
 // various parts
-func AdditionsFromDecimalSection(part rune, first, last string) (
+func AdditionsFromDecimalSection(part rune, pre, post int64) (
 	years, months, days, hours, minutes, seconds int64, subseconds int, err error) {
 
-	pre, err := strconv.ParseInt(first, 10, 64)
-	if err != nil {
+	digitCount := func(number int64) int64 {
+		var count int64 = 0
+		for number != 0 {
+			number /= 10
+			count++
+		}
+		return count
+	}
+
+	// fmt.Println("part", string(part))
+
+	isTimePart := func(r rune) bool {
+		switch r {
+		case yearChar:
+			return true
+		case monthChar:
+			return true
+		case weekChar:
+			return true
+		case dayChar:
+			return true
+		case hourChar:
+			return true
+		case minuteChar:
+			return true
+		case secondChar:
+			return true
+		default:
+			return false
+		}
+	}
+
+	if !isTimePart(part) {
+		err := fmt.Errorf("Invalid time part %v to float", part)
 		return years, months, days, hours, minutes, seconds, subseconds, err
 	}
-	len := len(last)
-	post, err := strconv.ParseInt(last, 10, 64)
 
-	fmt.Println(pre)
+	var multiplier int64 = 0
+	var fullValue int64 = 0
 
-	x := decimal.New(post, len)
-	fmt.Println(x)
+	if part == yearChar {
+		multiplier = int64(oneYearApprox)
+		fullValue = pre * multiplier
+		years = fullValue / int64(oneYearApprox)
+	} else if part == monthChar {
+		multiplier = int64(oneMonthApprox)
+		fullValue = pre * multiplier
+		months = fullValue / int64(oneMonthApprox)
+	} else if part == dayChar {
+		multiplier = int64(oneDay)
+		fullValue = pre * multiplier
+		days = fullValue / int64(oneDay)
+	} else if part == hourChar {
+		multiplier = int64(time.Hour)
+		fullValue = pre * multiplier
+		hours = fullValue / int64(time.Hour)
+	} else if part == minuteChar {
+		multiplier = int64(time.Minute)
+		fullValue = pre * multiplier
+		minutes = fullValue / int64(time.Minute)
+	} else if part == secondChar {
+		multiplier = int64(time.Second)
+		fullValue = pre * multiplier
+		seconds = fullValue / int64(time.Second)
+	}
+
+	len := digitCount(post)
+
+	var postFloat float64 = float64(float64(post) / math.Pow(10, float64(len)))
+	var postDecimal int64
+
+	if part == yearChar {
+		multiplier = int64(oneYearApprox)
+		postDecimal = int64(postFloat * float64(multiplier))
+	} else if part == monthChar {
+		multiplier = int64(oneMonthApprox)
+		postDecimal = int64(postFloat * float64(multiplier))
+	} else if part == dayChar {
+		multiplier = int64(oneDay)
+		postDecimal = int64(postFloat * float64(multiplier))
+	} else if part == hourChar {
+		multiplier = int64(time.Hour)
+		postDecimal = int64(postFloat * float64(multiplier))
+	} else if part == minuteChar {
+		multiplier = int64(time.Minute)
+		postDecimal = int64(postFloat * float64(multiplier))
+	} else if part == secondChar {
+		multiplier = int64(time.Second)
+		postDecimal = int64(postFloat * float64(multiplier))
+	}
+
+	years += postDecimal / int64(oneYearApprox)
+	remainder := postDecimal % int64(oneYearApprox)
+
+	months += remainder / int64(oneMonthApprox)
+	remainder = remainder % int64(oneMonthApprox)
+
+	days += remainder / int64(oneDay)
+	remainder = remainder % int64(oneDay)
+
+	hours += remainder / int64(time.Hour)
+	remainder = remainder % int64(time.Hour)
+
+	minutes += remainder / int64(time.Minute)
+	remainder = remainder % int64(time.Minute)
+
+	seconds += remainder / int64(time.Second)
+	remainder = remainder % int64(time.Second)
+
+	if years < 0 || months < 0 || days < 0 || hours < 0 || minutes < 0 || seconds < 0 {
+		err := fmt.Errorf("Overflow of value for %v", part)
+		return years, months, days, hours, minutes, seconds, subseconds, err
+	}
+
+	subseconds += int(remainder / int64(time.Millisecond))
 
 	return years, months, days, hours, minutes, seconds, subseconds, nil
 }
@@ -669,14 +773,14 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 					if inDecimal == false {
 						period.months = intVal
 					} else {
-						decimalSection = r
+						decimalSection = monthChar
 						decimalIn = maxSection
 					}
 				} else {
 					if inDecimal == false {
 						period.minutes = intVal
 					} else {
-						decimalSection = r
+						decimalSection = monthChar
 						decimalIn = maxSection
 					}
 				}
