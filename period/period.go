@@ -639,21 +639,60 @@ func ParseWithNormalise(period string, normalise bool, precise bool) (Period, er
 	return p, nil
 }
 
-// Parse parse a period
+const (
+	yearRank = iota
+	monthRank
+	weekRank
+	dayRank
+	hourRank
+	minuteRank
+	secondRank
+)
+
+// func parse(input string, normalise bool, precise bool) (Period, error) {
+// 	period := Period{}
+// 	years, months, days, hours, minutes, seconds, subseconds, isNegative, err := GetParts(input)
+// 	if err != nil {
+// 		return Period{}, err
+// 	}
+
+// 	period.years = years
+// 	period.months = months
+// 	period.days = days
+// 	period.hours = hours
+// 	period.minutes = minutes
+// 	period.seconds = seconds
+// 	period.subseconds = subseconds
+// 	period.negative = isNegative
+
+// 	if normalise == true {
+// 		period = *period.Normalise(precise)
+// 	}
+
+// 	return period, nil
+// }
+
+// GetParts get the parts of a period
 func parse(input string, normalise bool, precise bool) (Period, error) {
+
 	var orig = input
+	var period = Period{}
 
 	var activePart []rune
 	var decimalPart []rune
 	var decimalSection rune
 	var inDecimal bool
-	// var activePart = integerPart
 
-	period := new(Period)
 	input = strings.ToUpper(input)
-	// period.Input = input
 
 	var isTime bool
+
+	checkRank := func(old, new int) (int, error) {
+		if old > new {
+			return 0, fmt.Errorf("Ranks out of order %d and %d", old, new)
+		}
+		return new, nil
+	}
 
 	isValidChar := func(r rune) bool {
 		switch r {
@@ -676,10 +715,6 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 			return true
 		case timeChar:
 			return true
-		// case dotChar:
-		// 	return true
-		// case commaChar:
-		// 	return true
 		default:
 			return false
 		}
@@ -688,6 +723,8 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 	var inPeriod bool = false
 	var maxSection int
 	var decimalIn int
+
+	var currentRank = yearRank
 
 	for i, r := range input {
 		maxSection = i
@@ -768,6 +805,13 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 					msg := xfmt.S("period.parse: non time part after time declared ").S(orig)
 					return Period{}, errors.New(string(msg.Bytes()))
 				}
+				var err error
+				// Check ordering relative to previous
+				currentRank, err = checkRank(currentRank, yearRank)
+				if err != nil {
+					return Period{}, err
+				}
+
 				if inDecimal == false {
 					period.years = intVal
 				} else {
@@ -776,6 +820,13 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 				}
 			} else if r == minuteMonthChar {
 				if isTime == false {
+					var err error
+					// Check ordering relative to previous
+					currentRank, err = checkRank(currentRank, monthRank)
+					if err != nil {
+						return Period{}, err
+					}
+
 					if inDecimal == false {
 						period.months = intVal
 					} else {
@@ -783,6 +834,13 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 						decimalIn = maxSection
 					}
 				} else {
+					var err error
+					// Check ordering relative to previous
+					currentRank, err = checkRank(currentRank, minuteRank)
+					if err != nil {
+						return Period{}, err
+					}
+
 					if inDecimal == false {
 						period.minutes = intVal
 					} else {
@@ -796,6 +854,13 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 					msg := xfmt.S("period.parse: non time part after time declared ").S(orig)
 					return Period{}, errors.New(string(msg.Bytes()))
 				}
+				var err error
+				// Check ordering relative to previous
+				currentRank, err = checkRank(currentRank, weekRank)
+				if err != nil {
+					return Period{}, err
+				}
+
 				if inDecimal == false {
 					period.weeks = intVal
 				} else {
@@ -808,6 +873,13 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 					msg := xfmt.S("period.parse: non time part after time declared ").S(orig)
 					return Period{}, errors.New(string(msg.Bytes()))
 				}
+				var err error
+				// Check ordering relative to previous
+				currentRank, err = checkRank(currentRank, dayRank)
+				if err != nil {
+					return Period{}, err
+				}
+
 				if inDecimal == false {
 					period.days = intVal
 				} else {
@@ -815,6 +887,13 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 					decimalIn = maxSection
 				}
 			} else if r == hourChar {
+				var err error
+				// Check ordering relative to previous
+				currentRank, err = checkRank(currentRank, hourRank)
+				if err != nil {
+					return Period{}, err
+				}
+
 				if inDecimal == false {
 					period.hours = intVal
 				} else {
@@ -822,6 +901,13 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 					decimalIn = maxSection
 				}
 			} else if r == minuteMonthChar {
+				var err error
+				// Check ordering relative to previous
+				currentRank, err = checkRank(currentRank, minuteRank)
+				if err != nil {
+					return Period{}, err
+				}
+
 				if inDecimal == false {
 					period.minutes = intVal
 				} else {
@@ -829,6 +915,13 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 					decimalIn = maxSection
 				}
 			} else if r == secondChar {
+				var err error
+				// Check ordering relative to previous
+				currentRank, err = checkRank(currentRank, secondRank)
+				if err != nil {
+					return Period{}, err
+				}
+
 				if inDecimal == false {
 					period.seconds = intVal
 				} else {
@@ -864,12 +957,12 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 	}
 
 	if normalise == true {
-		period = period.Normalise(precise)
+		period = *period.Normalise(precise)
 	}
 
 	// Prints Size of period.Period struct: 64 bytes
 	// for P130Y200D
 	// fmt.Printf("Size of %T struct: %d bytes\n", *period, unsafe.Sizeof(*period))
 
-	return *period, nil
+	return period, nil
 }

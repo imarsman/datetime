@@ -129,7 +129,7 @@ func TestGetParts(t *testing.T) {
 	is.NoErr(err)
 }
 
-func BenchmarkGetParts(b *testing.B) {
+func BenchmarkGetAdditions(b *testing.B) {
 	is := is.New(b)
 
 	var err error
@@ -152,6 +152,30 @@ func BenchmarkGetParts(b *testing.B) {
 
 	is.NoErr(err) // Parsing should not have caused an error
 }
+
+// func BenchmarkGetParts(b *testing.B) {
+// 	is := is.New(b)
+
+// 	var err error
+// 	var years, months, days, hours, minutes, seconds int64
+// 	var isNegative bool
+// 	var subseconds int
+
+// 	b.ResetTimer()
+// 	b.SetBytes(bechmarkBytesPerOp)
+// 	b.ReportAllocs()
+// 	b.SetParallelism(30)
+// 	b.RunParallel(func(pb *testing.PB) {
+// 		for pb.Next() {
+// 			years, months, days, hours, minutes, seconds, subseconds, isNegative, err = period.GetParts("P250Y150M200DT1H4M2000S")
+// 		}
+// 	})
+
+// 	b.Logf("years %d, months %d, days %d, hours %d, minutes %d, seconds %d, subseconds %d, %v, err %v",
+// 		years, months, days, hours, minutes, seconds, subseconds, isNegative, err)
+
+// 	is.NoErr(err) // Parsing should not have caused an error
+// }
 
 func TestParsePeriodBad(t *testing.T) {
 	tests := []string{

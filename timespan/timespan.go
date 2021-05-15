@@ -260,7 +260,7 @@ func ParseRFC5545InLocation(text string, location *time.Location) (TimeSpan, err
 	}
 
 	if rest[0] == 'P' {
-		p, e2 := period.Parse(rest)
+		p, e2 := period.Parse(rest, true, true)
 		if e2 != nil {
 			return TimeSpan{}, fmt.Errorf("cannot parse period in %q: %s", text, e2.Error())
 		}
