@@ -128,10 +128,10 @@ func TestGetParts(t *testing.T) {
 	}
 
 	parts := []periodParts{
-		{'I', 13, 575},
-		{'H', 200, 5},
-		{'Y', 290, 5},
-		{'Y', 15000000000, 5},
+		{'I', 13, 575},        // 13.575 minutes
+		{'H', 200, 5},         // 200 hours and 30 minutes
+		{'Y', 260, 5},         // 260 years and 6 months
+		{'Y', 15000000000, 5}, // 15 billion years (and 6 months)
 	}
 
 	for _, part := range parts {
@@ -213,12 +213,13 @@ func TestParsePeriodBad(t *testing.T) {
 		is.True(err != nil)
 		fmt.Printf("Input %-15s period %0-15s normalized %-20s duration %-15v\n",
 			test, p.String(), p.Normalise(true).String(), d)
-		// is.NoErr(err)
 	}
 
 }
 
-func BenchmarkParsePeriod(b *testing.B) {
+// Slower with more allocations with a complex period
+// 209.8 ns/op   47.67 MB/s	  160 B/op	  16 allocs/op
+func BenchmarkParsePeriodLong(b *testing.B) {
 	is := is.New(b)
 
 	var p period.Period
@@ -231,6 +232,29 @@ func BenchmarkParsePeriod(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			p, err = period.Parse("P250Y150M200DT1H4M2000S", true)
+		}
+	})
+
+	b.Log(p.String())
+	is.True(p != period.Period{})
+	is.NoErr(err) // Parsing should not have caused an error
+}
+
+// Faster with fewer allocations with a simple period
+// 41.72 ns/op   239.68 MB/s	  16 B/op   2 allocs/op
+func BenchmarkParsePeriodShort(b *testing.B) {
+	is := is.New(b)
+
+	var p period.Period
+	var err error
+
+	b.ResetTimer()
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			p, err = period.Parse("P1M", true)
 		}
 	})
 
