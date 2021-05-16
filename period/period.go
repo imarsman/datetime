@@ -489,7 +489,7 @@ func (p *Period) AdjustToRight(precise bool) *Period {
 
 // AdditionsFromDecimalSection break down decimal section and get allocations to
 // various parts
-func AdditionsFromDecimalSection(part rune, pre, post int64) (
+func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 	years, months, days, hours, minutes, seconds int64, subseconds int, err error) {
 
 	digitCount := func(number int64) int64 {
@@ -546,9 +546,9 @@ func AdditionsFromDecimalSection(part rune, pre, post int64) (
 	if part == yearChar {
 		multiplier = int64(oneYearApprox)
 		// Only use arbitrary precision decimals if we would overflow an int64
-		if pre > maxYears {
+		if whole > maxYears {
 			var fullValueAPD = apd.New(0, 0)
-			_, err = apcContext.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
+			_, err = apcContext.Mul(fullValueAPD, apd.New(whole, 0), apd.New(multiplier, 0))
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
@@ -557,21 +557,21 @@ func AdditionsFromDecimalSection(part rune, pre, post int64) (
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
-			new, err := resultAPD.Int64()
+			wholeValue, err := resultAPD.Int64()
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
-			years = new
+			years = wholeValue
 		} else {
-			fullValue := pre * multiplier
+			fullValue := whole * multiplier
 			years = fullValue / int64(multiplier)
 		}
 	} else if part == monthChar {
 		multiplier = int64(oneMonthApprox)
 		// Only use arbitrary precision decimals if we would overflow an int64
-		if pre > maxMonths {
+		if whole > maxMonths {
 			var fullValueAPD = apd.New(0, 0)
-			_, err = apcContext.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
+			_, err = apcContext.Mul(fullValueAPD, apd.New(whole, 0), apd.New(multiplier, 0))
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
@@ -580,21 +580,21 @@ func AdditionsFromDecimalSection(part rune, pre, post int64) (
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
-			new, err := resultAPD.Int64()
+			wholeValue, err := resultAPD.Int64()
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
-			months = new
+			months = wholeValue
 		} else {
-			fullValue := pre * multiplier
+			fullValue := whole * multiplier
 			months = fullValue / int64(multiplier)
 		}
 	} else if part == dayChar {
 		multiplier = int64(oneDay)
 		// Only use arbitrary precision decimals if we would overflow an int64
-		if pre > maxDays {
+		if whole > maxDays {
 			var fullValueAPD = apd.New(0, 0)
-			_, err = apcContext.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
+			_, err = apcContext.Mul(fullValueAPD, apd.New(whole, 0), apd.New(multiplier, 0))
 			if err != nil {
 
 			}
@@ -603,21 +603,21 @@ func AdditionsFromDecimalSection(part rune, pre, post int64) (
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
-			new, err := resultAPD.Int64()
+			wholeValue, err := resultAPD.Int64()
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
-			days = new
+			days = wholeValue
 		} else {
-			fullValue := pre * multiplier
+			fullValue := whole * multiplier
 			days = fullValue / int64(multiplier)
 		}
 	} else if part == hourChar {
 		multiplier = int64(time.Hour)
 		// Only use arbitrary precision decimals if we would overflow an int64
-		if pre > maxHours {
+		if whole > maxHours {
 			var fullValueAPD = apd.New(0, 0)
-			_, err = apcContext.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
+			_, err = apcContext.Mul(fullValueAPD, apd.New(whole, 0), apd.New(multiplier, 0))
 			if err != nil {
 
 			}
@@ -626,21 +626,21 @@ func AdditionsFromDecimalSection(part rune, pre, post int64) (
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
-			new, err := resultAPD.Int64()
+			wholeValue, err := resultAPD.Int64()
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
-			hours += new
+			hours += wholeValue
 		} else {
-			fullValue := pre * multiplier
+			fullValue := whole * multiplier
 			hours = fullValue / int64(multiplier)
 		}
 	} else if part == minuteChar {
 		multiplier = int64(time.Minute)
 		// Only use arbitrary precision decimals if we would overflow an int64
-		if pre > maxMinutes {
+		if whole > maxMinutes {
 			var fullValueAPD = apd.New(0, 0)
-			_, err = apcContext.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
+			_, err = apcContext.Mul(fullValueAPD, apd.New(whole, 0), apd.New(multiplier, 0))
 			if err != nil {
 
 			}
@@ -649,21 +649,21 @@ func AdditionsFromDecimalSection(part rune, pre, post int64) (
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
-			new, err := resultAPD.Int64()
+			wholeValue, err := resultAPD.Int64()
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
-			minutes += new
+			minutes += wholeValue
 		} else {
-			fullValue := pre * multiplier
+			fullValue := whole * multiplier
 			minutes = fullValue / int64(multiplier)
 		}
 	} else if part == secondChar {
 		multiplier = int64(time.Second)
 		// Only use arbitrary precision decimals if we would overflow an int64
-		if pre > maxSeconds {
+		if whole > maxSeconds {
 			var fullValueAPD = apd.New(0, 0)
-			_, err = apcContext.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
+			_, err = apcContext.Mul(fullValueAPD, apd.New(whole, 0), apd.New(multiplier, 0))
 			if err != nil {
 
 			}
@@ -672,18 +672,18 @@ func AdditionsFromDecimalSection(part rune, pre, post int64) (
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
-			new, err := resultAPD.Int64()
+			wholeValue, err := resultAPD.Int64()
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
-			seconds += new
+			seconds += wholeValue
 		} else {
-			fullValue := pre * multiplier
+			fullValue := whole * multiplier
 			seconds = fullValue / int64(multiplier)
 		}
 	}
 
-	postFloat := float64(post) / math.Pow(10, float64(digitCount(post))) // decimal value of post
+	postFloat := float64(fractional) / math.Pow(10, float64(digitCount(fractional))) // decimal value of post
 
 	var postNano int64 = 0 // Number of nanoseconds in fractrional part
 
@@ -793,18 +793,6 @@ func ParseWithNormalise(period string, normalise bool, precise bool) (Period, er
 	return p, nil
 }
 
-// Ordering of period parts to allow some detection of malformed periods
-
-const (
-	yearRank   = iota // rank order for year part
-	monthRank         // rank order for month part
-	weekRank          // rank order for week part
-	dayRank           // rank order for day part
-	hourRank          // rank order for hour part
-	minuteRank        // rank order for minute part
-	secondRank        // rand order for second part
-)
-
 // GetParts get the parts of a period
 func parse(input string, normalise bool, precise bool) (Period, error) {
 
@@ -815,6 +803,18 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 	var decimalPart []rune
 	var decimalSection rune
 	var inDecimal bool
+
+	// Ordering of period parts to allow some detection of malformed periods
+
+	const (
+		yearRank   = iota // rank order for year part
+		monthRank         // rank order for month part
+		weekRank          // rank order for week part
+		dayRank           // rank order for day part
+		hourRank          // rank order for hour part
+		minuteRank        // rank order for minute part
+		secondRank        // rand order for second part
+	)
 
 	input = strings.ToUpper(input)
 
