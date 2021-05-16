@@ -87,6 +87,22 @@ func appendNonBlank(parts []string, s string) []string {
 }
 
 func (p *Period) String() string {
+	reduce := func(input int64) int64 {
+		// hasRemainder := false
+		var output int64
+		output = input
+		for {
+			intPart := output / 10
+			remainder := output % 10
+			if remainder == 0 {
+				output = intPart
+				continue
+			}
+			break
+		}
+		return output
+	}
+
 	if p.IsZero() == true {
 		return "P0D"
 	}
@@ -125,7 +141,9 @@ func (p *Period) String() string {
 	}
 	if p.seconds != 0 {
 		if p.subseconds != 0 {
-			xfmt.D64(p.seconds).C(dotChar).D(p.subseconds).C(secondChar)
+			reduced := reduce(int64(p.subseconds))
+			// fmt.Println("reduced", reduced)
+			xfmt.D64(p.seconds).C(dotChar).D64(reduced).C(secondChar)
 		} else {
 			xfmt.D64(p.seconds).C(secondChar)
 		}

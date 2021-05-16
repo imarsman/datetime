@@ -124,6 +124,7 @@ func TestParsePeriodWithFractionalParts(t *testing.T) {
 	tests := []string{
 		"P1.5Y",
 		"PT1.5S",
+		"PT1.567S",
 	}
 
 	for _, test := range tests {
