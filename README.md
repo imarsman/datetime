@@ -14,16 +14,16 @@ https://github.com/rickb777/date. That code is for the most part included
 without modification. A separate period handling package is being tested that
 replaces the one from rickb777. Until testing is finished the original period
 parsing package will be kept. Care has been taken to avoid producing incorrect
-periods and durations when the spans evaluated exceed the maximum values for
-Golang's duration type (int64), around 290 years for adjustment of years,
-months, and days or hours, minutes, and seconds. The conversion to a duration
-will result in an error if an overflow occurs. Support for the optional
-fractional part at the end of a period is coming soon. The handling of the
-allocation of the fractional part of a period is done in such a way as to avoid
-expensive calculations except where the incoming value would overflow the int64
-type used to contain period values. The fractional conversion has been tested up
-to a value of 15 billion years. If a fractional part exceeds the maximum int64
-size an arbitrary precision decimal library is used.
+durations when the spans evaluated exceed the maximum values for Golang's
+duration type (int64), around 290 years for adjustment of years, months, and
+days or hours, minutes, and seconds. The conversion to a duration will result in
+an error if an overflow occurs. When allocating sub portions such as years the
+calculations are done in terms of milliseconds instead of nanoseconds to allow
+for very fast non-overflow int64 handling of periods up to about 290,000,000
+years.  This is part of support for a fractional portion of a period section to
+the level of millisecond. The fractional conversion has been tested up to a
+value of 15 billion years. If a fractional part exceeds the maximum int64 size
+an arbitrary precision decimal library is used.
 
 The timestamp parsing of ISO-8601 timestamps is weighted in favour of allowing
 for some non-compliant formatting of parsed input as long as the compliance

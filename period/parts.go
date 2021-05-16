@@ -25,10 +25,10 @@ const hundredMSDuration = 100 * time.Millisecond
 
 const daysPerMonthE6 = 30436875 // 30.436875 days per month
 
-const oneDay time.Duration = 24 * time.Hour // Number of nanoseconds in a day
+const oneDayNS time.Duration = 24 * time.Hour // Number of nanoseconds in a day
 
-const oneMonthSeconds = 2628000                                    // Number of seconds in a month
-const oneMonthApprox time.Duration = oneMonthSeconds * time.Second // 30.436875 days
+const oneMonthSeconds = 2628000                                      // Number of seconds in a month
+const oneMonthApproxNS time.Duration = oneMonthSeconds * time.Second // 30.436875 days
 
 const oneE4 = 10000 // 1e^4
 
@@ -37,8 +37,8 @@ const oneE5 = 100000 // 1e^5
 const oneE6 = 1000000 // 1e^6
 
 // More exact but rounds with small units
-// const oneYearApprox = time.Duration(float64(365.2425*60*60*24)) * time.Second // 365.2425 days
-const oneYearApprox time.Duration = oneMonthSeconds * time.Second * 12 // Nanoseconds in 1 year
+// const oneYearApproxNS = time.Duration(float64(365.2425*60*60*24)) * time.Second // 365.2425 days
+const oneYearApproxNS time.Duration = oneMonthSeconds * time.Second * 12 // Nanoseconds in 1 year
 
 // NewPeriod create a new Period instance
 func NewPeriod(years, months, days, hours, minutes, seconds int64) Period {

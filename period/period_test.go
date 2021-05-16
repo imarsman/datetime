@@ -128,11 +128,12 @@ func TestGetParts(t *testing.T) {
 	}
 
 	parts := []periodParts{
-		{'S', 13, 1575},       // 13.i575 seconds - should resolve to 5 digits
-		{'I', 13, 575},        // 13.575 minutes
+		{'S', 1, 1},           // 1.iseconds - should give 100 ms
+		{'S', 13, 1575},       // 13.1575 seconds - should give 157 ms
+		{'I', 13, 575},        // 13.575 minutes - should give 575 ms
 		{'H', 200, 5},         // 200 hours and 30 minutes
 		{'Y', 260, 5},         // 260 years and 6 months
-		{'Y', 15000000000, 5}, // 15 billion years (and 6 months)
+		{'Y', 15000000000, 5}, // 15 billion years (and 6 months) - over threshold
 	}
 
 	for _, part := range parts {
@@ -175,6 +176,30 @@ func BenchmarkGetAdditions(b *testing.B) {
 // With 'Y', 30000, 575
 // 384.3 ns/op   26.02 MB/s   640 B/op   19 allocs/op
 func BenchmarkGetAdditionsLong(b *testing.B) {
+	is := is.New(b)
+
+	var err error
+	var years, months, days, hours, minutes, seconds int64
+	var subseconds int
+
+	b.ResetTimer()
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			years, months, days, hours, minutes, seconds, subseconds, err = period.AdditionsFromDecimalSection(
+				'Y', 30000000000, 575)
+		}
+	})
+
+	b.Logf("years %d, months %d, days %d, hours %d, minutes %d, seconds %d, subseconds %d, err %v",
+		years, months, days, hours, minutes, seconds, subseconds, err)
+
+	is.NoErr(err) // Parsing should not have caused an error
+}
+
+func BenchmarkGetAdditionsSubThreshold(b *testing.B) {
 	is := is.New(b)
 
 	var err error

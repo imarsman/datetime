@@ -381,18 +381,18 @@ func hmsDuration(p Period) (time.Duration, error) {
 
 // This can overflow with very large input values
 func ymdApproxDuration(p Period) (time.Duration, error) {
-	yearDuration := time.Duration(p.years) * oneYearApprox
-	monthDuration := time.Duration(p.months) * oneMonthApprox
-	dayDuration := time.Duration(p.days) * oneDay
+	yearDuration := time.Duration(p.years) * oneYearApproxNS
+	monthDuration := time.Duration(p.months) * oneMonthApproxNS
+	dayDuration := time.Duration(p.days) * oneDayNS
 	yearMonthDayDuration := yearDuration + monthDuration + dayDuration
 
-	yearNumber := int64(yearMonthDayDuration / oneYearApprox)
-	remainder := int64(yearMonthDayDuration % oneYearApprox)
+	yearNumber := int64(yearMonthDayDuration / oneYearApproxNS)
+	remainder := int64(yearMonthDayDuration % oneYearApproxNS)
 
-	monthNumber := int64(remainder / int64(oneMonthApprox))
-	remainder = int64(yearMonthDayDuration % oneMonthApprox)
+	monthNumber := int64(remainder / int64(oneMonthApproxNS))
+	remainder = int64(yearMonthDayDuration % oneMonthApproxNS)
 
-	dayNumber := int64(remainder / int64(oneDay))
+	dayNumber := int64(remainder / int64(oneDayNS))
 
 	// Return empty duration with error if overflow
 	if yearNumber < 0 && monthNumber < 0 && dayNumber < 0 {
@@ -428,13 +428,13 @@ func (p *Period) rippleUp(precise bool) *Period {
 	if !precise {
 		yearMonthDayDuration, err := ymdApproxDuration(*p)
 		if err == nil {
-			yearNumber := int64(yearMonthDayDuration / oneYearApprox)
-			remainder := int64(yearMonthDayDuration % oneYearApprox)
+			yearNumber := int64(yearMonthDayDuration / oneYearApproxNS)
+			remainder := int64(yearMonthDayDuration % oneYearApproxNS)
 
-			monthNumber := int64(remainder / int64(oneMonthApprox))
-			remainder = int64(yearMonthDayDuration % oneMonthApprox)
+			monthNumber := int64(remainder / int64(oneMonthApproxNS))
+			remainder = int64(yearMonthDayDuration % oneMonthApproxNS)
 
-			dayNumber := int64(remainder / int64(oneDay))
+			dayNumber := int64(remainder / int64(oneDayNS))
 
 			p.years = yearNumber
 			p.months = monthNumber
@@ -492,6 +492,8 @@ func (p *Period) AdjustToRight(precise bool) *Period {
 func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 	years, months, days, hours, minutes, seconds int64, subseconds int, err error) {
 
+	const oneMillion int64 = 1000000
+
 	// Count digits in an integer
 	var digitCount = func(number int64) int64 {
 		var count int64 = 0
@@ -530,17 +532,29 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 		return years, months, days, hours, minutes, seconds, subseconds, err
 	}
 
-	// Tested to work with up to 15 billion years
+	// Tested to work with up to 15 billion years. Max for each part is
+	// multipleied by 1000 because we are not using nanosecond but rather
+	// millisecond level accuracy.
 	// An error will be returned by the apd library if the precision is insufficient.
-	// apcContext := apd.BaseContext.WithPrecision(200) // context for large calculations if necessary
+	// apcContext := apd.BaseContext.WithPrecision(200) // context for large
+	// calculations if necessary
 
-	const maxYears = 290                // Maximum years before failing over to apd
-	const maxMonths = maxYears * 12     // Maximum months before failing over to apd
-	const maxDays = maxYears * 12 * 365 // Maximum hours before failing over to apd
+	// Go formatter will warn about
 
-	const maxHours = maxYears * 12 * 365 * 24             // Maximum hours before failing over to apd
-	const maxMinutes = maxYears * 12 * 365 * 24 * 60      // Maximum minutes before failing over to apd
-	const maxSeconds = maxYears * 12 * 365 * 24 * 60 * 60 // Maximum seconds before failing over to apd
+	const msOneYearApprox = oneYearApproxNS / time.Duration(oneMillion)  // a year of milliseconds
+	const msOneMonthApprox = oneYearApproxNS / time.Duration(oneMillion) // a month of milliseconds
+	const msOneDay = oneDayNS / time.Duration(oneMillion)                // a day of milliseconds
+	const msOneHour = time.Hour / time.Duration(oneMillion)              // an hour of milliseconds
+	const msOneMinute = time.Minute / time.Duration(oneMillion)          // a minute of milliseconds
+	const msOneSecond = time.Second / time.Duration(oneMillion)          // a second of milliseconds
+
+	const maxYears = 290 * 1000                // Maximum years before failing over to apd
+	const maxMonths = maxYears * 12 * 1000     // Maximum months before failing over to apd
+	const maxDays = maxYears * 12 * 365 * 1000 // Maximum hours before failing over to apd
+
+	const maxHours = maxYears * 12 * 365 * 24 * 1000             // Maximum hours before failing over to apd
+	const maxMinutes = maxYears * 12 * 365 * 24 * 60 * 1000      // Maximum minutes before failing over to apd
+	const maxSeconds = maxYears * 12 * 365 * 24 * 60 * 60 * 1000 // Maximum seconds before failing over to apd
 
 	var multiplier int64 = 0 // relative value to multiply by based on period part
 
@@ -567,7 +581,8 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 
 	// Find the section that applies and set it
 	if part == yearChar {
-		multiplier = int64(oneYearApprox)
+		// multiplier = int64(oneYearApproxNS) / oneMillion
+		multiplier = int64(msOneYearApprox)
 		// Only use arbitrary precision decimals if we would overflow an int64
 		if whole > maxYears {
 			years, err = getPart(multiplier, whole)
@@ -579,7 +594,8 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 			years = fullValue / int64(multiplier)
 		}
 	} else if part == monthChar {
-		multiplier = int64(oneMonthApprox)
+		// multiplier = int64(oneMonthApproxNS) / oneMillion
+		multiplier = int64(msOneMonthApprox)
 		// Only use arbitrary precision decimals if we would overflow an int64
 		if whole > maxMonths {
 			months, err = getPart(multiplier, whole)
@@ -591,7 +607,8 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 			months = fullValue / int64(multiplier)
 		}
 	} else if part == dayChar {
-		multiplier = int64(oneDay)
+		// multiplier = int64(oneDayNS) / oneMillion
+		multiplier = int64(msOneDay)
 		// Only use arbitrary precision decimals if we would overflow an int64
 		if whole > maxDays {
 			days, err = getPart(multiplier, whole)
@@ -603,7 +620,8 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 			days = fullValue / int64(multiplier)
 		}
 	} else if part == hourChar {
-		multiplier = int64(time.Hour)
+		// multiplier = int64(time.Hour) / oneMillion
+		multiplier = int64(msOneHour)
 		// Only use arbitrary precision decimals if we would overflow an int64
 		if whole > maxHours {
 			hours, err = getPart(multiplier, whole)
@@ -615,7 +633,7 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 			hours = fullValue / int64(multiplier)
 		}
 	} else if part == minuteChar {
-		multiplier = int64(time.Minute)
+		multiplier = int64(msOneMinute)
 		// Only use arbitrary precision decimals if we would overflow an int64
 		if whole > maxMinutes {
 			minutes, err = getPart(multiplier, whole)
@@ -627,7 +645,7 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 			minutes = fullValue / int64(multiplier)
 		}
 	} else if part == secondChar {
-		multiplier = int64(time.Second)
+		multiplier = int64(msOneSecond)
 		// Only use arbitrary precision decimals if we would overflow an int64
 		if whole > maxSeconds {
 			seconds, err = getPart(multiplier, whole)
@@ -648,25 +666,25 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 	// Overflow of an int64 occurs with about 192 years. The most that a portion
 	// of a time period could be is just under one year. It is safe to do int64
 	// calculations here.
-	years += postNano / int64(oneYearApprox)
-	remainder := postNano % int64(oneYearApprox)
+	years += postNano / int64(msOneYearApprox)
+	remainder := postNano % int64(msOneYearApprox)
 
-	months += remainder / int64(oneMonthApprox)
-	remainder = postNano % int64(oneMonthApprox)
+	months += remainder / int64(msOneMonthApprox)
+	remainder = postNano % int64(msOneMonthApprox)
 
-	days += remainder / int64(oneDay)
-	remainder = postNano % int64(oneDay)
+	days += remainder / int64(msOneDay)
+	remainder = postNano % int64(msOneDay)
 
-	hours += remainder / int64(time.Hour)
-	remainder = postNano % int64(time.Hour)
+	hours += remainder / int64(msOneHour)
+	remainder = postNano % int64(msOneHour)
 
-	minutes += remainder / int64(time.Minute)
-	remainder = postNano % int64(time.Minute)
+	minutes += remainder / int64(msOneMinute)
+	remainder = postNano % int64(msOneMinute)
 
-	seconds += remainder / int64(time.Second)
-	remainder = postNano % int64(time.Second)
+	seconds += remainder / int64(msOneSecond)
+	remainder = postNano % int64(msOneSecond)
 
-	subseconds += int(remainder / int64(time.Millisecond))
+	subseconds += int(remainder)
 
 	return years, months, days, hours, minutes, seconds, subseconds, nil
 }
