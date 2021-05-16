@@ -250,7 +250,6 @@ func TestParsePeriodBad(t *testing.T) {
 
 	is := is.New(t)
 
-	// var err error
 	for _, test := range tests {
 		p, _ := period.Parse(test, false)
 		d, _, err := p.Duration()

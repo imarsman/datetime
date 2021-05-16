@@ -21,9 +21,10 @@ an error if an overflow occurs. When allocating sub portions such as years the
 calculations are done in terms of milliseconds instead of nanoseconds to allow
 for very fast non-overflow int64 handling of periods up to about 290,000,000
 years.  This is part of support for a fractional portion of a period section to
-the level of milliseconds. The fractional conversion has been tested up to a
-value of 15 billion years. If a fractional part exceeds the maximum int64 size
-an arbitrary precision decimal library is used.
+the level of milliseconds with trailing zeros in the franctional seconds part
+removed. The fractional conversion has been tested up to a value of 15 billion
+years. If a fractional part exceeds the maximum int64 size an arbitrary
+precision decimal library is used.
 
 The timestamp parsing of ISO-8601 timestamps is weighted in favour of allowing
 for some non-compliant formatting of parsed input as long as the compliance
@@ -46,4 +47,5 @@ in separate packages, for date, period, timespan, and timestamp.
 Although testing has been done to attempt to ensure correct handling of the
 types represented here, there are likely errors. Please submit any errors as
 issues for this project. More work will be done to test the accuracy and
-handling of the packages.
+handling of the packages. More tests will be added to ensure that the full set
+of functionality for each package is covered.

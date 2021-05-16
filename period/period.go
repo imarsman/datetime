@@ -683,6 +683,7 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 	minutes += remainder / int64(msOneMinute)
 	remainder = postNano % int64(msOneMinute)
 
+	// Subseconds are to the level of millisecond
 	seconds += remainder / int64(msOneSecond)
 	remainder = postNano % int64(msOneSecond)
 
@@ -1067,6 +1068,7 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 		period.hours += hours
 		period.minutes += minutes
 		period.seconds += seconds
+		// Subseconds are to the level of millisecond
 		period.subseconds += subseconds
 	}
 
