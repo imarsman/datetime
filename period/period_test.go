@@ -128,6 +128,7 @@ func TestGetParts(t *testing.T) {
 	}
 
 	parts := []periodParts{
+		{'S', 13, 1575},       // 13.i575 seconds - should resolve to 5 digits
 		{'I', 13, 575},        // 13.575 minutes
 		{'H', 200, 5},         // 200 hours and 30 minutes
 		{'Y', 260, 5},         // 260 years and 6 months
