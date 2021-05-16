@@ -122,13 +122,30 @@ func TestParsePeriod(t *testing.T) {
 func TestGetParts(t *testing.T) {
 	is := is.New(t)
 
-	years, months, days, hours, minutes, seconds, subseconds, err := period.AdditionsFromDecimalSection('I', 13, 575)
-	t.Logf("years %d, months %d, days %d, hours %d, minutes %d, seconds %d, subseconds %d, err %v",
-		years, months, days, hours, minutes, seconds, subseconds, err)
+	type periodParts struct {
+		part      rune
+		pre, post int64
+	}
 
-	is.NoErr(err)
+	parts := []periodParts{
+		{'I', 13, 575},
+		{'H', 200, 5},
+		{'Y', 290, 5},
+		{'Y', 300000, 5},
+	}
+
+	for _, part := range parts {
+		years, months, days, hours, minutes, seconds, subseconds, err := period.AdditionsFromDecimalSection(part.part, part.pre, part.post)
+		t.Logf("years %d, months %d, days %d, hours %d, minutes %d, seconds %d, subseconds %d, err %v",
+			years, months, days, hours, minutes, seconds, subseconds, err)
+
+		is.NoErr(err)
+	}
 }
 
+// No use of arbitrary precision decimals
+// With 'I', 13, 575
+// 15.77 ns/op   633.97 MB/s   0 B/op   0 allocs/op
 func BenchmarkGetAdditions(b *testing.B) {
 	is := is.New(b)
 
@@ -153,30 +170,34 @@ func BenchmarkGetAdditions(b *testing.B) {
 	is.NoErr(err) // Parsing should not have caused an error
 }
 
-// func BenchmarkGetParts(b *testing.B) {
-// 	is := is.New(b)
+// Force use of arbitrary precision decimals
+// With 'Y', 30000, 575
+// 384.3 ns/op   26.02 MB/s   640 B/op   19 allocs/op
+func BenchmarkGetAdditionsLong(b *testing.B) {
+	is := is.New(b)
 
-// 	var err error
-// 	var years, months, days, hours, minutes, seconds int64
-// 	var isNegative bool
-// 	var subseconds int
+	var err error
+	var years, months, days, hours, minutes, seconds int64
+	var subseconds int
 
-// 	b.ResetTimer()
-// 	b.SetBytes(bechmarkBytesPerOp)
-// 	b.ReportAllocs()
-// 	b.SetParallelism(30)
-// 	b.RunParallel(func(pb *testing.PB) {
-// 		for pb.Next() {
-// 			years, months, days, hours, minutes, seconds, subseconds, isNegative, err = period.GetParts("P250Y150M200DT1H4M2000S")
-// 		}
-// 	})
+	b.ResetTimer()
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			years, months, days, hours, minutes, seconds, subseconds, err = period.AdditionsFromDecimalSection(
+				'Y', 30000, 575)
+		}
+	})
 
-// 	b.Logf("years %d, months %d, days %d, hours %d, minutes %d, seconds %d, subseconds %d, %v, err %v",
-// 		years, months, days, hours, minutes, seconds, subseconds, isNegative, err)
+	b.Logf("years %d, months %d, days %d, hours %d, minutes %d, seconds %d, subseconds %d, err %v",
+		years, months, days, hours, minutes, seconds, subseconds, err)
 
-// 	is.NoErr(err) // Parsing should not have caused an error
-// }
+	is.NoErr(err) // Parsing should not have caused an error
+}
 
+// TestParsePeriodBad parse intentionally incorrect periods
 func TestParsePeriodBad(t *testing.T) {
 	tests := []string{
 		"P300YT1H4M2000S",

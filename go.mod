@@ -3,8 +3,9 @@ module github.com/imarsman/datetime
 go 1.16
 
 require (
-	github.com/ericlagergren/decimal v0.0.0-20210307182354-5f8425a47c58
+	github.com/cockroachdb/apd v1.1.0
 	github.com/kr/pretty v0.1.0 // indirect
+	github.com/lib/pq v1.0.0 // indirect
 	github.com/matryer/is v1.4.0
 	github.com/onsi/gomega v1.11.0
 	github.com/rickb777/plural v1.3.0

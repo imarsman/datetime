@@ -9,7 +9,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/ericlagergren/decimal"
+	"github.com/cockroachdb/apd"
 	"github.com/imarsman/datetime/xfmt"
 )
 
@@ -491,89 +491,208 @@ func AdditionsFromDecimalSection(part rune, pre, post int64) (
 		return years, months, days, hours, minutes, seconds, subseconds, err
 	}
 
+	c := apd.BaseContext.WithPrecision(10)
+
 	var multiplier int64 = 0
-	var fullValue int64 = 0
+
+	const maxYears = 290                // Maximum years before failing over to apd
+	const maxMonths = maxYears * 12     // Maximum months before failing over to apd
+	const maxDays = maxYears * 12 * 365 // Maximum hours before failing over to apd
+
+	const maxHours = maxYears * 12 * 365 * 24             // Maximum hours before failing over to apd
+	const maxMinutes = maxYears * 12 * 365 * 24 * 60      // Maximum minutes before failing over to apd
+	const maxSeconds = maxYears * 12 * 365 * 24 * 60 * 60 // Maximum seconds before failing over to apd
 
 	if part == yearChar {
 		multiplier = int64(oneYearApprox)
-		fullValue = pre * multiplier
-		years = fullValue / int64(oneYearApprox)
+		// Only use arbitrary precision decimals if we would overflow an int64
+		if pre > maxYears {
+			var fullValueAPD = apd.New(0, 0)
+			_, err = c.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
+			if err != nil {
+				return 0, 0, 0, 0, 0, 0, 0, err
+			}
+			resultAPD := apd.New(0, 0)
+			_, err := c.QuoInteger(resultAPD, fullValueAPD, apd.New(int64(multiplier), 0))
+			if err != nil {
+				return 0, 0, 0, 0, 0, 0, 0, err
+			}
+			new, err := resultAPD.Int64()
+			if err != nil {
+				return 0, 0, 0, 0, 0, 0, 0, err
+			}
+			years = new
+		} else {
+			fullValue := pre * multiplier
+			years = fullValue / int64(multiplier)
+		}
 	} else if part == monthChar {
 		multiplier = int64(oneMonthApprox)
-		fullValue = pre * multiplier
-		months = fullValue / int64(oneMonthApprox)
+		// Only use arbitrary precision decimals if we would overflow an int64
+		if pre > maxMonths {
+			var fullValueAPD = apd.New(0, 0)
+			_, err = c.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
+			if err != nil {
+				return 0, 0, 0, 0, 0, 0, 0, err
+			}
+			resultAPD := apd.New(0, 0)
+			_, err := c.QuoInteger(resultAPD, fullValueAPD, apd.New(int64(multiplier), 0))
+			if err != nil {
+				return 0, 0, 0, 0, 0, 0, 0, err
+			}
+			new, err := resultAPD.Int64()
+			if err != nil {
+				return 0, 0, 0, 0, 0, 0, 0, err
+			}
+			months = new
+		} else {
+			fullValue := pre * multiplier
+			months = fullValue / int64(multiplier)
+		}
 	} else if part == dayChar {
 		multiplier = int64(oneDay)
-		fullValue = pre * multiplier
-		days = fullValue / int64(oneDay)
+		// Only use arbitrary precision decimals if we would overflow an int64
+		if pre > maxDays {
+			var fullValueAPD = apd.New(0, 0)
+			_, err = c.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
+			if err != nil {
+
+			}
+			resultAPD := apd.New(0, 0)
+			_, err := c.QuoInteger(resultAPD, fullValueAPD, apd.New(int64(multiplier), 0))
+			if err != nil {
+				return 0, 0, 0, 0, 0, 0, 0, err
+			}
+			new, err := resultAPD.Int64()
+			if err != nil {
+				return 0, 0, 0, 0, 0, 0, 0, err
+			}
+			days = new
+		} else {
+			fullValue := pre * multiplier
+			days = fullValue / int64(multiplier)
+		}
 	} else if part == hourChar {
 		multiplier = int64(time.Hour)
-		fullValue = pre * multiplier
-		hours = fullValue / int64(time.Hour)
+		// Only use arbitrary precision decimals if we would overflow an int64
+		if pre > maxHours {
+			var fullValueAPD = apd.New(0, 0)
+			_, err = c.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
+			if err != nil {
+
+			}
+			resultAPD := apd.New(0, 0)
+			_, err := c.QuoInteger(resultAPD, fullValueAPD, apd.New(int64(multiplier), 0))
+			if err != nil {
+				return 0, 0, 0, 0, 0, 0, 0, err
+			}
+			new, err := resultAPD.Int64()
+			if err != nil {
+				return 0, 0, 0, 0, 0, 0, 0, err
+			}
+			hours += new
+		} else {
+			fullValue := pre * multiplier
+			hours = fullValue / int64(multiplier)
+		}
 	} else if part == minuteChar {
 		multiplier = int64(time.Minute)
-		fullValue = pre * multiplier
-		minutes = fullValue / int64(time.Minute)
+		// Only use arbitrary precision decimals if we would overflow an int64
+		if pre > maxMinutes {
+			var fullValueAPD = apd.New(0, 0)
+			_, err = c.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
+			if err != nil {
+
+			}
+			resultAPD := apd.New(0, 0)
+			_, err := c.QuoInteger(resultAPD, fullValueAPD, apd.New(int64(multiplier), 0))
+			if err != nil {
+				return 0, 0, 0, 0, 0, 0, 0, err
+			}
+			new, err := resultAPD.Int64()
+			if err != nil {
+				return 0, 0, 0, 0, 0, 0, 0, err
+			}
+			minutes += new
+		} else {
+			fullValue := pre * multiplier
+			minutes = fullValue / int64(multiplier)
+		}
 	} else if part == secondChar {
 		multiplier = int64(time.Second)
-		fullValue = pre * multiplier
-		seconds = fullValue / int64(time.Second)
+		// Only use arbitrary precision decimals if we would overflow an int64
+		if pre > maxSeconds {
+			var fullValueAPD = apd.New(0, 0)
+			_, err = c.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
+			if err != nil {
+
+			}
+			resultAPD := apd.New(0, 0)
+			_, err := c.QuoInteger(resultAPD, fullValueAPD, apd.New(int64(multiplier), 0))
+			if err != nil {
+				return 0, 0, 0, 0, 0, 0, 0, err
+			}
+			new, err := resultAPD.Int64()
+			if err != nil {
+				return 0, 0, 0, 0, 0, 0, 0, err
+			}
+			seconds += new
+		} else {
+			fullValue := pre * multiplier
+			seconds = fullValue / int64(multiplier)
+		}
 	}
 
-	len := digitCount(post)
+	postFloat := float64(post) / math.Pow(10, float64(digitCount(post))) // decimal value of post
 
-	postFloatDecimal := decimal.New(post, int(len))
+	var postNano int64 = 0 // Number of nanoseconds in fractrional part
 
-	postFloat, ok := postFloatDecimal.Float64()
-	if ok == false {
-		err := fmt.Errorf("Problem getting decimal fractional float value for %d", post)
-		return years, months, days, hours, minutes, seconds, subseconds, err
-	}
-
-	var postDecimal int64
-
+	// Figure out the nanosecond value for the post part
 	if part == yearChar {
 		multiplier = int64(oneYearApprox)
-		postDecimal = int64(postFloat * float64(multiplier))
+		postNano = int64(postFloat * float64(multiplier))
 	} else if part == monthChar {
 		multiplier = int64(oneMonthApprox)
-		postDecimal = int64(postFloat * float64(multiplier))
+		postNano = int64(postFloat * float64(multiplier))
 	} else if part == dayChar {
 		multiplier = int64(oneDay)
-		postDecimal = int64(postFloat * float64(multiplier))
+		postNano = int64(postFloat * float64(multiplier))
 	} else if part == hourChar {
 		multiplier = int64(time.Hour)
-		postDecimal = int64(postFloat * float64(multiplier))
+		postNano = int64(postFloat * float64(multiplier))
 	} else if part == minuteChar {
 		multiplier = int64(time.Minute)
-		postDecimal = int64(postFloat * float64(multiplier))
+		postNano = int64(postFloat * float64(multiplier))
 	} else if part == secondChar {
 		multiplier = int64(time.Second)
-		postDecimal = int64(postFloat * float64(multiplier))
+		postNano = int64(postFloat * float64(multiplier))
 	}
 
-	years += postDecimal / int64(oneYearApprox)
-	remainder := postDecimal % int64(oneYearApprox)
+	// Overflow of an int64 occurs with about 192 years. The most that a portion
+	// of a time period could be is just under one year. It is safe to do
+	// calculations here.
+	years += postNano / int64(oneYearApprox)
+	remainder := postNano % int64(oneYearApprox)
 
 	months += remainder / int64(oneMonthApprox)
-	remainder = remainder % int64(oneMonthApprox)
+	remainder = postNano % int64(oneMonthApprox)
 
 	days += remainder / int64(oneDay)
-	remainder = remainder % int64(oneDay)
+	remainder = postNano % int64(oneDay)
 
 	hours += remainder / int64(time.Hour)
-	remainder = remainder % int64(time.Hour)
+	remainder = postNano % int64(time.Hour)
 
 	minutes += remainder / int64(time.Minute)
-	remainder = remainder % int64(time.Minute)
+	remainder = postNano % int64(time.Minute)
 
 	seconds += remainder / int64(time.Second)
-	remainder = remainder % int64(time.Second)
+	remainder = postNano % int64(time.Second)
 
-	if years < 0 || months < 0 || days < 0 || hours < 0 || minutes < 0 || seconds < 0 {
-		err := fmt.Errorf("Overflow of value for %v", part)
-		return years, months, days, hours, minutes, seconds, subseconds, err
-	}
+	// if years < 0 || months < 0 || days < 0 || hours < 0 || minutes < 0 || seconds < 0 {
+	// 	err := fmt.Errorf("Overflow of value for %v", string(part))
+	// 	return years, months, days, hours, minutes, seconds, subseconds, err
+	// }
 
 	subseconds += int(remainder / int64(time.Millisecond))
 
