@@ -1,8 +1,11 @@
 package period
 
 import (
+	"errors"
 	"math"
 	"time"
+
+	"github.com/imarsman/datetime/timestamp"
 )
 
 // Period a struct to define a period
@@ -164,18 +167,27 @@ func (p *Period) Negate() *Period {
 // being 365.2425 days as per Gregorian calendar rules) and a month being 1/12
 // of a that; days are all assumed to be 24 hours long.
 func (p Period) Duration() (time.Duration, bool, error) {
-	// remember that the fields are all fixed-point 1E1
-	tdE6, err := ymdApproxDuration(p)
-	if err != nil {
-		return time.Duration(0), false, err
-	}
-	stE3, err := hmsDuration(p)
+	// Period part values stored as positive integers with flag for struct
+
+	ymdDuration, err := ymdApproxDuration(p)
 	if err != nil {
 		return time.Duration(0), false, err
 	}
 
-	if p.negative == true {
-		return -(tdE6 + stE3), tdE6 == 0, nil
+	hmsDuration, err := hmsDuration(p)
+	if err != nil {
+		return time.Duration(0), false, err
 	}
-	return (tdE6 + stE3), tdE6 == 0, nil
+
+	_, ok := timestamp.DurationOverflows(ymdDuration, hmsDuration)
+	if ok == false {
+		return time.Duration(0), false, errors.New("Total period duration exceeds maximum")
+	}
+
+	// Negate if negative
+	if p.IsNegative() {
+		return -(ymdDuration + hmsDuration), ymdDuration == 0, nil
+	}
+
+	return (ymdDuration + hmsDuration), ymdDuration == 0, nil
 }

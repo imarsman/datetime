@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/JohnCGriffin/overflow"
 	"github.com/imarsman/datetime/xfmt"
 	// gocache "github.com/patrickmn/go-cache"
 	// https://golang.org/pkg/time/tzdata/
@@ -27,6 +28,55 @@ import (
 	// You can do this in the main package if you choose.
 	// _ "time/tzdata"
 )
+
+// https://stackoverflow.com/questions/25065055/what-is-the-maximum-time-time-in-go/32620397#32620397
+
+// MaxTimestamp max time value
+var MaxTimestamp = time.Unix(1<<63-62135596801, 999999999)
+
+// MinTimestamp the minimum timestamp
+var MinTimestamp = time.Time{}
+
+// YearDiffOverflows do to year values summed exceed the maximum year value
+// Subtractions both ways are tried
+func YearDiffOverflows(startYear int64, endYear int64) bool {
+	if startYear > endYear {
+		return (startYear - endYear) > MaxTimestamp.Unix()
+	}
+	return (endYear - startYear) > MaxTimestamp.Unix()
+}
+
+// YearIsOutOfBounds is year greater than max year or less than min year
+func YearIsOutOfBounds(year int64) bool {
+	return year > MaxTimestamp.Unix() || year < MinTimestamp.Unix()
+}
+
+// TimeIsOutOfBounds is time less than min or greater than max
+func TimeIsOutOfBounds(t time.Time) bool {
+	return t.Unix() < 0 || int64(t.Year()) > MaxTimestamp.Unix()
+}
+
+// YearIsBeyondMax incoming year is greater than the max year
+func YearIsBeyondMax(year int64) bool {
+	return year > MaxTimestamp.Unix()
+}
+
+// YearIsBeyondMin incoming year is less than the min year
+func YearIsBeyondMin(year int64) bool {
+	return year >= MinTimestamp.Unix()
+}
+
+// DurationOverflows does a list of durations overflow int64?
+func DurationOverflows(durations ...time.Duration) (sum int64, ok bool) {
+	for i := 0; i < len(durations); i++ {
+		sum, ok = overflow.Add64(sum, int64(durations[i]))
+		if ok == false {
+			return sum, true
+		}
+	}
+
+	return sum, ok
+}
 
 func init() {
 }

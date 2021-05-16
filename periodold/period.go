@@ -7,6 +7,8 @@ package periodold
 import (
 	"fmt"
 	"time"
+
+	"github.com/imarsman/datetime/timestamp"
 )
 
 const daysPerYearE4 = 3652425   // 365.2425 days by the Gregorian rule
@@ -424,6 +426,13 @@ func (period Period) Duration() (time.Duration, bool) {
 	// remember that the fields are all fixed-point 1E1
 	tdE6 := time.Duration(totalDaysApproxE7(period) * 8640)
 	stE3 := totalSecondsE3(period)
+	// tdE6 := totalSecondsE3(period)
+
+	_, ok := timestamp.DurationOverflows(tdE6, tdE6)
+	if ok == false {
+		return time.Duration(0), false
+	}
+
 	return tdE6*time.Microsecond + stE3*time.Millisecond, tdE6 == 0
 }
 

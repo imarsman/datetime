@@ -3,6 +3,7 @@ module github.com/imarsman/datetime
 go 1.16
 
 require (
+	github.com/JohnCGriffin/overflow v0.0.0-20170615021017-4d914c927216
 	github.com/cockroachdb/apd v1.1.0
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/lib/pq v1.0.0 // indirect

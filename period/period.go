@@ -10,6 +10,7 @@ import (
 	"unicode"
 
 	"github.com/cockroachdb/apd"
+	"github.com/imarsman/datetime/timestamp"
 	"github.com/imarsman/datetime/xfmt"
 )
 
@@ -363,20 +364,25 @@ func hmsDuration(p Period) (time.Duration, error) {
 	secondDuration := time.Duration(p.seconds) * time.Second
 	subSecondDuration := time.Duration(p.subseconds) * time.Millisecond
 
-	hourminutesecondDuration := (hourDuration + minuteDuration + secondDuration + subSecondDuration)
-
-	hourNumber := int64(hourminutesecondDuration / time.Hour)
-	remainder := int64(hourminutesecondDuration % time.Hour)
-
-	minuteNumber := remainder / int64(time.Minute)
-	remainder = int64(hourminutesecondDuration % time.Minute)
-
-	secondNumber := remainder / int64(time.Second)
-
-	// Return empty duration with error if overflow
-	if hourNumber < 0 && minuteNumber < 0 && secondNumber < 0 {
+	_, ok := timestamp.DurationOverflows(hourDuration, minuteDuration, secondDuration, subSecondDuration)
+	if ok == false {
 		return time.Duration(0), errors.New("Hour, minute, and second duration exceeds maximum")
 	}
+
+	hourminutesecondDuration := (hourDuration + minuteDuration + secondDuration + subSecondDuration)
+
+	// hourNumber := int64(hourminutesecondDuration / time.Hour)
+	// remainder := int64(hourminutesecondDuration % time.Hour)
+
+	// minuteNumber := remainder / int64(time.Minute)
+	// remainder = int64(hourminutesecondDuration % time.Minute)
+
+	// secondNumber := remainder / int64(time.Second)
+
+	// // Return empty duration with error if overflow
+	// if hourNumber < 0 && minuteNumber < 0 && secondNumber < 0 {
+	// 	return time.Duration(0), errors.New("Hour, minute, and second duration exceeds maximum")
+	// }
 
 	return hourminutesecondDuration, nil
 }
@@ -386,20 +392,26 @@ func ymdApproxDuration(p Period) (time.Duration, error) {
 	yearDuration := time.Duration(p.years) * oneYearApproxNS
 	monthDuration := time.Duration(p.months) * oneMonthApproxNS
 	dayDuration := time.Duration(p.days) * oneDayNS
-	yearMonthDayDuration := yearDuration + monthDuration + dayDuration
 
-	yearNumber := int64(yearMonthDayDuration / oneYearApproxNS)
-	remainder := int64(yearMonthDayDuration % oneYearApproxNS)
-
-	monthNumber := int64(remainder / int64(oneMonthApproxNS))
-	remainder = int64(yearMonthDayDuration % oneMonthApproxNS)
-
-	dayNumber := int64(remainder / int64(oneDayNS))
-
-	// Return empty duration with error if overflow
-	if yearNumber < 0 && monthNumber < 0 && dayNumber < 0 {
+	_, ok := timestamp.DurationOverflows(yearDuration, monthDuration, dayDuration)
+	if ok == false {
 		return time.Duration(0), errors.New("Year, month, and day duration exceeds maximum")
 	}
+
+	yearMonthDayDuration := yearDuration + monthDuration + dayDuration
+
+	// yearNumber := int64(yearMonthDayDuration / oneYearApproxNS)
+	// remainder := int64(yearMonthDayDuration % oneYearApproxNS)
+
+	// monthNumber := int64(remainder / int64(oneMonthApproxNS))
+	// remainder = int64(yearMonthDayDuration % oneMonthApproxNS)
+
+	// dayNumber := int64(remainder / int64(oneDayNS))
+
+	// Return empty duration with error if overflow
+	// if yearNumber < 0 && monthNumber < 0 && dayNumber < 0 {
+	// 	return time.Duration(0), errors.New("Year, month, and day duration exceeds maximum")
+	// }
 
 	return yearMonthDayDuration, nil
 }
