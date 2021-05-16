@@ -15,11 +15,15 @@ without modification. A separate period handling package is being tested that
 replaces the one from rickb777. Until testing is finished the original period
 parsing package will be kept. Care has been taken to avoid producing incorrect
 periods and durations when the spans evaluated exceed the maximum values for
-Golang's duration type, around 290 years for adjustment of years, months, and
-days or hours, minutes, and seconds. If an overflow is detected the incoming
-values are left as-is. The period parsing package does not handle fractional
-parts. This may change in the future if a reasonable method of handling
-fractional period parts is found.
+Golang's duration type (int64), around 290 years for adjustment of years,
+months, and days or hours, minutes, and seconds. The conversion to a duration
+will result in an error if an overflow occurs. Support for the optional
+fractional part at the end of a period is coming soon. The handling of the
+allocation of the fractional part of a period is done in such a way as to avoid
+expensive calculations except where the incoming value would overflow the int64
+type used to contain period values. The fractional conversion has been tested up
+to a value of 15 billion years. If a fractional part exceeds the maximum int64
+size an arbitrary precision decimal library is used.
 
 The timestamp parsing of ISO-8601 timestamps is weighted in favour of allowing
 for some non-compliant formatting of parsed input as long as the compliance
@@ -31,12 +35,13 @@ timestamp format an attempt is made to parse it as such.
 
 None of the ISO-8601 time types are comprehensive in their handling of the
 possible formats and variations in formats. The ISO-8601 standard is a large and
-complex one and the full specification costs money.
+complex one and the full specification costs money. The goal is to provide
+useful coverage of the ISO-8601 standard.
 
-The code for ISO-8601 date, period, and timespan handling is licenced under the
-BSD-3-Clause Licence. You can read this licence at the end of the LICENCE file
-for this project. The timestamp parsing, date, period, and timespan support are
-used here in separate packages, for date, period, timespan, and timestamp.
+The code for ISO-8601 date, timespan handling is licenced under the BSD-3-Clause
+Licence. You can read this licence at the end of the LICENCE file for this
+project. The timestamp parsing, date, period, and timespan support are used here
+in separate packages, for date, period, timespan, and timestamp.
 
 Although testing has been done to attempt to ensure correct handling of the
 types represented here, there are likely errors. Please submit any errors as

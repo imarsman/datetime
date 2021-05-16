@@ -1,7 +1,6 @@
 package period
 
 import (
-	"errors"
 	"math"
 	"time"
 )
@@ -179,52 +178,4 @@ func (p Period) Duration() (time.Duration, bool, error) {
 		return -(tdE6 + stE3), tdE6 == 0, nil
 	}
 	return (tdE6 + stE3), tdE6 == 0, nil
-}
-
-func hmsDuration(p Period) (time.Duration, error) {
-	hourDuration := time.Duration(p.hours) * time.Hour
-	minuteDuration := time.Duration(p.minutes) * time.Minute
-	secondDuration := time.Duration(p.seconds) * time.Second
-	hourminutesecondDuration := (hourDuration + minuteDuration + secondDuration)
-
-	hourNumber := int64(hourminutesecondDuration / time.Hour)
-	remainder := int64(hourminutesecondDuration % time.Hour)
-
-	minuteNumber := remainder / int64(time.Minute)
-	remainder = int64(hourminutesecondDuration % time.Minute)
-
-	secondNumber := remainder / int64(time.Second)
-
-	if hourNumber < 0 && minuteNumber < 0 && secondNumber < 0 {
-		return time.Duration(0), errors.New("Hour, minute, and second duration exceeds maximum")
-	}
-
-	// remember that the fields are all fixed-point 1E1
-	// and these are divided by 1E1
-	// hhE3 := time.Duration(period.hours) * time.Hour
-	// mmE3 := time.Duration(period.minutes) * time.Minute
-	// ssE3 := time.Duration(period.seconds) * time.Second
-	// return hhE3 + mmE3 + ssE3
-	return hourminutesecondDuration, nil
-}
-
-func ymdApproxDuration(p Period) (time.Duration, error) {
-	yearDuration := time.Duration(p.years) * oneYearApprox
-	monthDuration := time.Duration(p.months) * oneMonthApprox
-	dayDuration := time.Duration(p.days) * oneDay
-	yearMonthDayDuration := yearDuration + monthDuration + dayDuration
-
-	yearNumber := int64(yearMonthDayDuration / oneYearApprox)
-	remainder := int64(yearMonthDayDuration % oneYearApprox)
-
-	monthNumber := int64(remainder / int64(oneMonthApprox))
-	remainder = int64(yearMonthDayDuration % oneMonthApprox)
-
-	dayNumber := int64(remainder / int64(oneDay))
-
-	if yearNumber < 0 && monthNumber < 0 && dayNumber < 0 {
-		return time.Duration(0), errors.New("Year, month, and day duration exceeds maximum")
-	}
-
-	return yearMonthDayDuration, nil
 }

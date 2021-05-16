@@ -356,6 +356,52 @@ func (p *Period) normalise(precise bool) *Period {
 	// return p.rippleUp(precise)
 }
 
+// This can overflow with very large input values
+func hmsDuration(p Period) (time.Duration, error) {
+	hourDuration := time.Duration(p.hours) * time.Hour
+	minuteDuration := time.Duration(p.minutes) * time.Minute
+	secondDuration := time.Duration(p.seconds) * time.Second
+	hourminutesecondDuration := (hourDuration + minuteDuration + secondDuration)
+
+	hourNumber := int64(hourminutesecondDuration / time.Hour)
+	remainder := int64(hourminutesecondDuration % time.Hour)
+
+	minuteNumber := remainder / int64(time.Minute)
+	remainder = int64(hourminutesecondDuration % time.Minute)
+
+	secondNumber := remainder / int64(time.Second)
+
+	// Return empty duration with error if overflow
+	if hourNumber < 0 && minuteNumber < 0 && secondNumber < 0 {
+		return time.Duration(0), errors.New("Hour, minute, and second duration exceeds maximum")
+	}
+
+	return hourminutesecondDuration, nil
+}
+
+// This can overflow with very large input values
+func ymdApproxDuration(p Period) (time.Duration, error) {
+	yearDuration := time.Duration(p.years) * oneYearApprox
+	monthDuration := time.Duration(p.months) * oneMonthApprox
+	dayDuration := time.Duration(p.days) * oneDay
+	yearMonthDayDuration := yearDuration + monthDuration + dayDuration
+
+	yearNumber := int64(yearMonthDayDuration / oneYearApprox)
+	remainder := int64(yearMonthDayDuration % oneYearApprox)
+
+	monthNumber := int64(remainder / int64(oneMonthApprox))
+	remainder = int64(yearMonthDayDuration % oneMonthApprox)
+
+	dayNumber := int64(remainder / int64(oneDay))
+
+	// Return empty duration with error if overflow
+	if yearNumber < 0 && monthNumber < 0 && dayNumber < 0 {
+		return time.Duration(0), errors.New("Year, month, and day duration exceeds maximum")
+	}
+
+	return yearMonthDayDuration, nil
+}
+
 // rippleUp move values up through category if boundaries passed Since this call
 // uses durations to handle moving things around it is possible for the duration
 // for an hour, minute, and second or year, month, and day duraton to overflow
@@ -409,40 +455,30 @@ func (p *Period) AdjustToRight(precise bool) *Period {
 	// remember that the fields are all fixed-point 1E1
 
 	y10 := p.years % 10
-	// if y10 != 0 && p.years > 10 && (p.months != 0 || p.days != 0 || p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
-	// if p.years >= 10 && (p.months != 0 || p.days != 0 || p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
 	if p.years > 10 {
 		p.months += y10 * 12
 		p.years = (p.years / 10) * 10
 	}
 
 	m10 := p.months % 10
-	// if m10 != 0 && p.months > 10 && (p.days != 0 || p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
-	// if p.months >= 10 && (p.days != 0 || p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
 	if !precise && p.months > 10 {
 		p.days += (m10 * daysPerMonthE6) / oneE6
 		p.months = (p.months / 10) * 10
 	}
 
 	d10 := p.days % 10
-	// if d10 != 0 && p.days > 10 && (p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
-	// if p.days >= 10 && (p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
 	if p.days > 10 {
 		p.hours += d10 * 24
 		p.days = (p.days / 10) * 10
 	}
 
 	hh10 := p.hours % 10
-	// if hh10 != 0 && p.hours > 10 && (p.minutes != 0 || p.seconds != 0) {
-	// if p.days >= 10 && (p.hours != 0 || p.minutes != 0 || p.seconds != 0) {
 	if p.hours > 10 {
 		p.minutes += hh10 * 60
 		p.hours = (p.hours / 10) * 10
-		// fmt.Println("minutes", p.minutes)
 	}
 
 	mm10 := p.minutes % 10
-	// if mm10 != 0 && p.minutes > 10 && p.seconds != 0 {
 	if p.minutes > 10 {
 		p.seconds += mm10 * 60
 		p.minutes = (p.minutes / 10) * 10
@@ -465,6 +501,7 @@ func AdditionsFromDecimalSection(part rune, pre, post int64) (
 		return count
 	}
 
+	// Check for whether a rune is a time part
 	isTimePart := func(r rune) bool {
 		switch r {
 		case yearChar:
@@ -486,14 +523,15 @@ func AdditionsFromDecimalSection(part rune, pre, post int64) (
 		}
 	}
 
+	// Exit with invalid characters
 	if !isTimePart(part) {
 		err := fmt.Errorf("Invalid time part %v to float", part)
 		return years, months, days, hours, minutes, seconds, subseconds, err
 	}
 
-	c := apd.BaseContext.WithPrecision(10)
-
-	var multiplier int64 = 0
+	// Tested to work with up to 15 billion years
+	// An error will be returned by the apd library if the precision is insufficient.
+	apcContext := apd.BaseContext.WithPrecision(200) // context for large calculations if necessary
 
 	const maxYears = 290                // Maximum years before failing over to apd
 	const maxMonths = maxYears * 12     // Maximum months before failing over to apd
@@ -503,17 +541,19 @@ func AdditionsFromDecimalSection(part rune, pre, post int64) (
 	const maxMinutes = maxYears * 12 * 365 * 24 * 60      // Maximum minutes before failing over to apd
 	const maxSeconds = maxYears * 12 * 365 * 24 * 60 * 60 // Maximum seconds before failing over to apd
 
+	var multiplier int64 = 0 // relative value to multiply by based on period part
+
 	if part == yearChar {
 		multiplier = int64(oneYearApprox)
 		// Only use arbitrary precision decimals if we would overflow an int64
 		if pre > maxYears {
 			var fullValueAPD = apd.New(0, 0)
-			_, err = c.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
+			_, err = apcContext.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
 			resultAPD := apd.New(0, 0)
-			_, err := c.QuoInteger(resultAPD, fullValueAPD, apd.New(int64(multiplier), 0))
+			_, err := apcContext.QuoInteger(resultAPD, fullValueAPD, apd.New(int64(multiplier), 0))
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
@@ -531,12 +571,12 @@ func AdditionsFromDecimalSection(part rune, pre, post int64) (
 		// Only use arbitrary precision decimals if we would overflow an int64
 		if pre > maxMonths {
 			var fullValueAPD = apd.New(0, 0)
-			_, err = c.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
+			_, err = apcContext.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
 			resultAPD := apd.New(0, 0)
-			_, err := c.QuoInteger(resultAPD, fullValueAPD, apd.New(int64(multiplier), 0))
+			_, err := apcContext.QuoInteger(resultAPD, fullValueAPD, apd.New(int64(multiplier), 0))
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
@@ -554,12 +594,12 @@ func AdditionsFromDecimalSection(part rune, pre, post int64) (
 		// Only use arbitrary precision decimals if we would overflow an int64
 		if pre > maxDays {
 			var fullValueAPD = apd.New(0, 0)
-			_, err = c.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
+			_, err = apcContext.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
 			if err != nil {
 
 			}
 			resultAPD := apd.New(0, 0)
-			_, err := c.QuoInteger(resultAPD, fullValueAPD, apd.New(int64(multiplier), 0))
+			_, err := apcContext.QuoInteger(resultAPD, fullValueAPD, apd.New(int64(multiplier), 0))
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
@@ -577,12 +617,12 @@ func AdditionsFromDecimalSection(part rune, pre, post int64) (
 		// Only use arbitrary precision decimals if we would overflow an int64
 		if pre > maxHours {
 			var fullValueAPD = apd.New(0, 0)
-			_, err = c.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
+			_, err = apcContext.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
 			if err != nil {
 
 			}
 			resultAPD := apd.New(0, 0)
-			_, err := c.QuoInteger(resultAPD, fullValueAPD, apd.New(int64(multiplier), 0))
+			_, err := apcContext.QuoInteger(resultAPD, fullValueAPD, apd.New(int64(multiplier), 0))
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
@@ -600,12 +640,12 @@ func AdditionsFromDecimalSection(part rune, pre, post int64) (
 		// Only use arbitrary precision decimals if we would overflow an int64
 		if pre > maxMinutes {
 			var fullValueAPD = apd.New(0, 0)
-			_, err = c.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
+			_, err = apcContext.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
 			if err != nil {
 
 			}
 			resultAPD := apd.New(0, 0)
-			_, err := c.QuoInteger(resultAPD, fullValueAPD, apd.New(int64(multiplier), 0))
+			_, err := apcContext.QuoInteger(resultAPD, fullValueAPD, apd.New(int64(multiplier), 0))
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
@@ -623,12 +663,12 @@ func AdditionsFromDecimalSection(part rune, pre, post int64) (
 		// Only use arbitrary precision decimals if we would overflow an int64
 		if pre > maxSeconds {
 			var fullValueAPD = apd.New(0, 0)
-			_, err = c.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
+			_, err = apcContext.Mul(fullValueAPD, apd.New(pre, 0), apd.New(multiplier, 0))
 			if err != nil {
 
 			}
 			resultAPD := apd.New(0, 0)
-			_, err := c.QuoInteger(resultAPD, fullValueAPD, apd.New(int64(multiplier), 0))
+			_, err := apcContext.QuoInteger(resultAPD, fullValueAPD, apd.New(int64(multiplier), 0))
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, 0, err
 			}
@@ -669,7 +709,7 @@ func AdditionsFromDecimalSection(part rune, pre, post int64) (
 	}
 
 	// Overflow of an int64 occurs with about 192 years. The most that a portion
-	// of a time period could be is just under one year. It is safe to do
+	// of a time period could be is just under one year. It is safe to do int64
 	// calculations here.
 	years += postNano / int64(oneYearApprox)
 	remainder := postNano % int64(oneYearApprox)
@@ -688,11 +728,6 @@ func AdditionsFromDecimalSection(part rune, pre, post int64) (
 
 	seconds += remainder / int64(time.Second)
 	remainder = postNano % int64(time.Second)
-
-	// if years < 0 || months < 0 || days < 0 || hours < 0 || minutes < 0 || seconds < 0 {
-	// 	err := fmt.Errorf("Overflow of value for %v", string(part))
-	// 	return years, months, days, hours, minutes, seconds, subseconds, err
-	// }
 
 	subseconds += int(remainder / int64(time.Millisecond))
 
@@ -758,38 +793,17 @@ func ParseWithNormalise(period string, normalise bool, precise bool) (Period, er
 	return p, nil
 }
 
+// Ordering of period parts to allow some detection of malformed periods
+
 const (
-	yearRank = iota
-	monthRank
-	weekRank
-	dayRank
-	hourRank
-	minuteRank
-	secondRank
+	yearRank   = iota // rank order for year part
+	monthRank         // rank order for month part
+	weekRank          // rank order for week part
+	dayRank           // rank order for day part
+	hourRank          // rank order for hour part
+	minuteRank        // rank order for minute part
+	secondRank        // rand order for second part
 )
-
-// func parse(input string, normalise bool, precise bool) (Period, error) {
-// 	period := Period{}
-// 	years, months, days, hours, minutes, seconds, subseconds, isNegative, err := GetParts(input)
-// 	if err != nil {
-// 		return Period{}, err
-// 	}
-
-// 	period.years = years
-// 	period.months = months
-// 	period.days = days
-// 	period.hours = hours
-// 	period.minutes = minutes
-// 	period.seconds = seconds
-// 	period.subseconds = subseconds
-// 	period.negative = isNegative
-
-// 	if normalise == true {
-// 		period = *period.Normalise(precise)
-// 	}
-
-// 	return period, nil
-// }
 
 // GetParts get the parts of a period
 func parse(input string, normalise bool, precise bool) (Period, error) {
@@ -817,6 +831,7 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 		switch r {
 		case yearChar:
 			return true
+			// Double duty
 		case minuteMonthChar:
 			return true
 		case weekChar:

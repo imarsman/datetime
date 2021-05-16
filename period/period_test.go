@@ -131,7 +131,7 @@ func TestGetParts(t *testing.T) {
 		{'I', 13, 575},
 		{'H', 200, 5},
 		{'Y', 290, 5},
-		{'Y', 300000, 5},
+		{'Y', 15000000000, 5},
 	}
 
 	for _, part := range parts {
