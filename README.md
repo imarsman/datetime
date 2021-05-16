@@ -49,3 +49,9 @@ types represented here, there are likely errors. Please submit any errors as
 issues for this project. More work will be done to test the accuracy and
 handling of the packages. More tests will be added to ensure that the full set
 of functionality for each package is covered.
+
+One note is that the limits of Golang's time values can be revealed by timespan
+evaluations involving a period that would place and end time beyond Golang's
+maximum time value. More bounds checking will be added.
+
+See: https://stackoverflow.com/questions/25065055/what-is-the-maximum-time-time-in-go/32620397#32620397
