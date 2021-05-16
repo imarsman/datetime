@@ -70,7 +70,7 @@ func (p Period) AddTo(t time.Time) (time.Time, bool, error) {
 // decimal places; each field is only int16.
 //
 // Known issue: scaling by a large reduction factor (i.e. much less than one) doesn't work properly.
-func (p Period) Scale(factor float32) *Period {
+func (p Period) Scale(factor float64) *Period {
 	result, _ := p.ScaleWithOverflowCheck(factor)
 	return result
 }
@@ -83,10 +83,7 @@ func (p Period) Scale(factor float32) *Period {
 // decimal place; each field is only int16.
 //
 // Known issue: scaling by a large reduction factor (i.e. much less than one) doesn't work properly.
-func (p Period) ScaleWithOverflowCheck(factor float32) (*Period, error) {
-	// isNeg := p.IsNegative()
-	// ap, neg := p.absNeg()
-
+func (p Period) ScaleWithOverflowCheck(factor float64) (*Period, error) {
 	if -0.5 < factor && factor < 0.5 {
 		d, pr1, err := p.Duration()
 		if err != nil {
@@ -98,14 +95,16 @@ func (p Period) ScaleWithOverflowCheck(factor float32) (*Period, error) {
 		return p2.Normalise(pr1 && pr2), nil
 	}
 
-	y := int64(float32(p.years) * factor)
-	m := int64(float32(p.months) * factor)
-	d := int64(float32(p.days) * factor)
-	hh := int64(float32(p.hours) * factor)
-	mm := int64(float32(p.minutes) * factor)
-	ss := int64(float32(p.seconds) * factor)
+	y := int64(float64(p.years) * factor)
+	m := int64(float64(p.months) * factor)
+	d := int64(float64(p.days) * factor)
+	hh := int64(float64(p.hours) * factor)
+	mm := int64(float64(p.minutes) * factor)
+	ss := int64(float64(p.seconds) * factor)
+	subsec := int64(float64(p.subseconds) * factor)
 
 	newPeriod := NewPeriod(y, m, d, hh, mm, ss)
+	newPeriod.subseconds = int(subsec)
 	newPeriod.negative = p.IsNegative()
 
 	return newPeriod.Normalise(true), nil

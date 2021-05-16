@@ -245,7 +245,7 @@ func BenchmarkGetAdditionsSubThreshold(b *testing.B) {
 func TestParsePeriodBad(t *testing.T) {
 	tests := []string{
 		"P300YT1H4M2000S",
-		"P3YT2629999H",
+		"P30000YT2629999H",
 	}
 
 	is := is.New(t)

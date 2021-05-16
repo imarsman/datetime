@@ -39,7 +39,7 @@ possible formats and variations in formats. The ISO-8601 standard is a large and
 complex one and the full specification costs money. The goal is to provide
 useful coverage of the ISO-8601 standard.
 
-The code for ISO-8601 date, timespan handling is licenced under the BSD-3-Clause
+The code for ISO-8601 date and timespan handling is licenced under the BSD-3-Clause
 Licence. You can read this licence at the end of the LICENCE file for this
 project. The timestamp parsing, date, period, and timespan support are used here
 in separate packages, for date, period, timespan, and timestamp.
