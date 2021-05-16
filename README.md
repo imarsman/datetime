@@ -21,7 +21,7 @@ an error if an overflow occurs. When allocating sub portions such as years the
 calculations are done in terms of milliseconds instead of nanoseconds to allow
 for very fast non-overflow int64 handling of periods up to about 290,000,000
 years.  This is part of support for a fractional portion of a period section to
-the level of millisecond. The fractional conversion has been tested up to a
+the level of milliseconds. The fractional conversion has been tested up to a
 value of 15 billion years. If a fractional part exceeds the maximum int64 size
 an arbitrary precision decimal library is used.
 

@@ -361,7 +361,9 @@ func hmsDuration(p Period) (time.Duration, error) {
 	hourDuration := time.Duration(p.hours) * time.Hour
 	minuteDuration := time.Duration(p.minutes) * time.Minute
 	secondDuration := time.Duration(p.seconds) * time.Second
-	hourminutesecondDuration := (hourDuration + minuteDuration + secondDuration)
+	subSecondDuration := time.Duration(p.subseconds) * time.Millisecond
+
+	hourminutesecondDuration := (hourDuration + minuteDuration + secondDuration + subSecondDuration)
 
 	hourNumber := int64(hourminutesecondDuration / time.Hour)
 	remainder := int64(hourminutesecondDuration % time.Hour)
@@ -1042,7 +1044,31 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 		if decimalIn != maxSection {
 			return Period{}, fmt.Errorf("period.parse: decimal must end in last character %dnot in %d", maxSection, decimalIn)
 		}
-		fmt.Println("period.parse: got decimal", RunesToString(decimalPart...), "in section", decimalSection)
+		parts := strings.Split(RunesToString(decimalPart...), ".")
+		if len(parts) != 2 {
+			return Period{}, fmt.Errorf("period.parse: 2 parts needed but got %s" + fmt.Sprint(len(parts)))
+
+		}
+		whole, err := strconv.Atoi(parts[0])
+		if err != nil {
+			return Period{}, err
+		}
+		fractional, err := strconv.Atoi(parts[1])
+		if err != nil {
+			return Period{}, err
+		}
+		years, months, days, hours, minutes, seconds, subseconds, err := AdditionsFromDecimalSection(decimalSection, int64(whole), int64(fractional))
+		if err != nil {
+			return Period{}, err
+		}
+		period.years += years
+		period.months += months
+		period.days += days
+		period.hours += hours
+		period.minutes += minutes
+		period.seconds += seconds
+		period.subseconds += subseconds
+		// fmt.Println("period.parse: got decimal", RunesToString(decimalPart...), "in section", string(decimalSection))
 	}
 
 	if normalise == true {

@@ -124,7 +124,11 @@ func (p *Period) String() string {
 		xfmt.D64(p.minutes).C(minuteMonthChar)
 	}
 	if p.seconds != 0 {
-		xfmt.D64(p.seconds).C(secondChar)
+		if p.subseconds != 0 {
+			xfmt.D64(p.seconds).C(dotChar).D(p.subseconds).C(secondChar)
+		} else {
+			xfmt.D64(p.seconds).C(secondChar)
+		}
 	}
 
 	return string(xfmt.Bytes())
