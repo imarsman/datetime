@@ -284,6 +284,27 @@ func BenchmarkParsePeriodLong(b *testing.B) {
 	is.NoErr(err) // Parsing should not have caused an error
 }
 
+func BenchmarkParsePeriodFractional(b *testing.B) {
+	is := is.New(b)
+
+	var p period.Period
+	var err error
+
+	b.ResetTimer()
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			p, err = period.Parse("PT1.5S", true)
+		}
+	})
+
+	b.Log(p.String())
+	is.True(p != period.Period{})
+	is.NoErr(err) // Parsing should not have caused an error
+}
+
 // Faster with fewer allocations with a simple period
 // 41.72 ns/op   239.68 MB/s	  16 B/op   2 allocs/op
 func BenchmarkParsePeriodShort(b *testing.B) {

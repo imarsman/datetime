@@ -1068,7 +1068,6 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 		period.minutes += minutes
 		period.seconds += seconds
 		period.subseconds += subseconds
-		// fmt.Println("period.parse: got decimal", RunesToString(decimalPart...), "in section", string(decimalSection))
 	}
 
 	if normalise == true {
