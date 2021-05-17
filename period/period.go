@@ -776,7 +776,7 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 
 	checkRank := func(old, new int) (int, error) {
 		if old > new {
-			return 0, fmt.Errorf("period.parse: ranks must go in order - %s before %s", rankVals[old], rankVals[new])
+			return 0, fmt.Errorf("period.parse: %s ranks must go in order - %s before %s", input, rankVals[old], rankVals[new])
 		}
 		return new, nil
 	}

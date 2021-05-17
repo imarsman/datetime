@@ -246,6 +246,7 @@ func TestParsePeriodBad(t *testing.T) {
 	tests := []string{
 		"P4M300YT1H4M2000S",
 		"P30000YT2629999.5H16M",
+		"PT1H1Y",
 	}
 
 	is := is.New(t)
