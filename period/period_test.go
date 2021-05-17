@@ -123,6 +123,7 @@ func TestParsePeriodWithFractionalParts(t *testing.T) {
 
 	tests := []string{
 		"P1.5Y",
+		"P260.5W",
 		"P1.5M",
 		"P1.5D",
 		"PT1.5H",
@@ -162,6 +163,7 @@ func TestGetParts(t *testing.T) {
 		{'I', 13, 575},        // 13.575 minutes - should give 575 ms
 		{'H', 200, 5},         // 200 hours and 30 minutes
 		{'Y', 260, 5},         // 260 years and 6 months
+		{'W', 260, 5},         // 260 weeks and .5 week
 		{'Y', 15000000000, 5}, // 15 billion years (and 6 months) - over threshold
 	}
 
