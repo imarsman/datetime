@@ -157,7 +157,7 @@ func TestGetParts(t *testing.T) {
 	}
 
 	parts := []periodParts{
-		{'S', 1, 1},           // 1.iseconds - should give 100 ms
+		{'S', 1, 1},           // 1.1 seconds - should give 100 ms
 		{'S', 13, 1575},       // 13.1575 seconds - should give 157 ms
 		{'I', 13, 575},        // 13.575 minutes - should give 575 ms
 		{'H', 200, 5},         // 200 hours and 30 minutes
@@ -176,7 +176,7 @@ func TestGetParts(t *testing.T) {
 
 // No use of arbitrary precision decimals
 // With 'I', 13, 575
-// 15.77 ns/op   633.97 MB/s   0 B/op   0 allocs/op
+// 15.77 ns/op   0 B/op   0 allocs/op
 func BenchmarkGetAdditions(b *testing.B) {
 	is := is.New(b)
 
@@ -228,6 +228,25 @@ func BenchmarkGetAdditionsLong(b *testing.B) {
 	is.NoErr(err) // Parsing should not have caused an error
 }
 
+// TestParsePeriodBad parse intentionally incorrect periods
+func TestParsePeriodBad(t *testing.T) {
+	tests := []string{
+		"P4M300YT1H4M2000S",
+		"P30000YT2629999.5H16M",
+		"PT1H1Y",
+	}
+
+	is := is.New(t)
+
+	for _, test := range tests {
+		p, err := period.Parse(test, false)
+		t.Log(err)
+		is.True(err != nil)
+		is.Equal(p.String(), "P0D")
+	}
+
+}
+
 func BenchmarkGetAdditionsSubThreshold(b *testing.B) {
 	is := is.New(b)
 
@@ -252,27 +271,10 @@ func BenchmarkGetAdditionsSubThreshold(b *testing.B) {
 	is.NoErr(err) // Parsing should not have caused an error
 }
 
-// TestParsePeriodBad parse intentionally incorrect periods
-func TestParsePeriodBad(t *testing.T) {
-	tests := []string{
-		"P4M300YT1H4M2000S",
-		"P30000YT2629999.5H16M",
-		"PT1H1Y",
-	}
-
-	is := is.New(t)
-
-	for _, test := range tests {
-		p, err := period.Parse(test, false)
-		t.Log(err)
-		is.True(err != nil)
-		is.Equal(p.String(), "P0D")
-	}
-
-}
-
 // Slower with more allocations with a complex period
-// 209.8 ns/op   47.67 MB/s	  160 B/op	  16 allocs/op
+// 148.0 ns/op    48 B/op   6 allocs/op
+// Was
+// 209.8 ns/op   160 B/op  16 allocs/op
 func BenchmarkParsePeriodLong(b *testing.B) {
 	is := is.New(b)
 
@@ -294,6 +296,7 @@ func BenchmarkParsePeriodLong(b *testing.B) {
 	is.NoErr(err) // Parsing should not have caused an error
 }
 
+// 87.91 ns/op 	 40 B/op   2 allocs/o
 func BenchmarkParsePeriodFractional(b *testing.B) {
 	is := is.New(b)
 
@@ -316,7 +319,8 @@ func BenchmarkParsePeriodFractional(b *testing.B) {
 }
 
 // Faster with fewer allocations with a simple period
-// 41.72 ns/op   239.68 MB/s	  16 B/op   2 allocs/op
+// 59.95 ns/op	  8 B/op   1 allocs/op
+// 41.72 ns/op   16 B/op   2 allocs/op
 func BenchmarkParsePeriodShort(b *testing.B) {
 	is := is.New(b)
 
