@@ -176,6 +176,25 @@ func TestGetParts(t *testing.T) {
 	}
 }
 
+// TestParsePeriodBad parse intentionally incorrect periods
+func TestParsePeriodBad(t *testing.T) {
+	tests := []string{
+		"P4M300YT1H4M2000S",
+		"P30000YT2629999.5H16M",
+		"PT1H1Y",
+	}
+
+	is := is.New(t)
+
+	for _, test := range tests {
+		p, err := period.Parse(test, false)
+		t.Log(err)
+		is.True(err != nil)
+		is.Equal(p.String(), "P0D")
+	}
+
+}
+
 // No use of arbitrary precision decimals
 // With 'I', 13, 575
 // 15.77 ns/op   0 B/op   0 allocs/op
@@ -220,7 +239,7 @@ func BenchmarkGetAdditionsLong(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			years, months, days, hours, minutes, seconds, subseconds, err = period.AdditionsFromDecimalSection(
-				'Y', 30000000000, 575)
+				'Y', 200000000, 575)
 		}
 	})
 
@@ -228,25 +247,6 @@ func BenchmarkGetAdditionsLong(b *testing.B) {
 		years, months, days, hours, minutes, seconds, subseconds, err)
 
 	is.NoErr(err) // Parsing should not have caused an error
-}
-
-// TestParsePeriodBad parse intentionally incorrect periods
-func TestParsePeriodBad(t *testing.T) {
-	tests := []string{
-		"P4M300YT1H4M2000S",
-		"P30000YT2629999.5H16M",
-		"PT1H1Y",
-	}
-
-	is := is.New(t)
-
-	for _, test := range tests {
-		p, err := period.Parse(test, false)
-		t.Log(err)
-		is.True(err != nil)
-		is.Equal(p.String(), "P0D")
-	}
-
 }
 
 func BenchmarkGetAdditionsSubThreshold(b *testing.B) {
@@ -289,7 +289,28 @@ func BenchmarkParsePeriodLong(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			p, err = period.Parse("P250000Y150M200DT1H4M2000S", true)
+			p, err = period.Parse("P200150M200DT1H4M2000S", true)
+		}
+	})
+
+	b.Log(p.String())
+	is.True(p != period.Period{})
+	is.NoErr(err) // Parsing should not have caused an error
+}
+
+func BenchmarkParsePeriodLongFractional(b *testing.B) {
+	is := is.New(b)
+
+	var p period.Period
+	var err error
+
+	b.ResetTimer()
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			p, err = period.Parse("P200000000.5Y", true)
 		}
 	})
 

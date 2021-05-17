@@ -1176,7 +1176,6 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 		if err != nil {
 			return Period{}, err
 		}
-		// fmt.Println(years, months, days, hours, minutes, seconds, subseconds)
 		period.years += years
 		period.months += months
 		period.days += days
@@ -1185,7 +1184,6 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 		period.seconds += seconds
 		// Subseconds are to the level of millisecond
 		period.subseconds += subseconds
-		// fmt.Println(period.years, period.months, period.days, period.hours, period.minutes, period.seconds, period.subseconds)
 	}
 
 	period.days += period.weeks * 7

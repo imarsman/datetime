@@ -23,22 +23,22 @@ const oneMillion int64 = 1000000 // one million
 
 // More exact but rounds with small units
 // const nsOoneYearApprox = time.Duration(float64(365.2425*60*60*24)) * time.Second // 365.2425 days
-const nsOneMillisecond time.Duration = time.Millisecond
-const nsOneSecond time.Duration = time.Second
-const nsOneMinute time.Duration = time.Minute
-const nsOneHour time.Duration = time.Hour
-const nsOneDay time.Duration = 24 * time.Hour                             // Number of nanoseconds in a day
-const nsOneMonthApprox time.Duration = oneMonthSeconds * nsOneSecond      // 30.436875 days
-const nsOoneYearApprox time.Duration = oneMonthSeconds * nsOneSecond * 12 // Nanoseconds in 1 year
+const nsOneMillisecond time.Duration = time.Millisecond                   // a millesecond in nanoseconds
+const nsOneSecond time.Duration = time.Second                             // a second in nanoseconds
+const nsOneMinute time.Duration = time.Minute                             // a minute in nanoseconds
+const nsOneHour time.Duration = time.Hour                                 // an hour in nanoseconds
+const nsOneDay time.Duration = 24 * time.Hour                             // a day in nanoseconds
+const nsOneMonthApprox time.Duration = oneMonthSeconds * nsOneSecond      // a month in nanoseconds - approximately
+const nsOoneYearApprox time.Duration = oneMonthSeconds * nsOneSecond * 12 // a year in nanoseconds - approximately
 
-const msOneYearApprox = nsOoneYearApprox / time.Duration(oneMillion)  // a year of milliseconds
-const msOneMonthApprox = nsOneMonthApprox / time.Duration(oneMillion) // a month of milliseconds
-const msOneDay = nsOneDay / time.Duration(oneMillion)                 // a day of milliseconds
-const msOneWeek = msOneDay * 7                                        // a week of milliseconds
-const msOneHour = time.Hour / time.Duration(oneMillion)               // an hour of milliseconds
-const msOneMinute = time.Minute / time.Duration(oneMillion)           // a minute of milliseconds
+const msOneMillisecond = time.Millisecond / time.Duration(oneMillion) // a millisecond
 const msOneSecond = time.Second / time.Duration(oneMillion)           // a second of milliseconds
-const msOneMillisecond = time.Millisecond / time.Duration(oneMillion) // a second of milliseconds
+const msOneMinute = time.Minute / time.Duration(oneMillion)           // a minute of milliseconds
+const msOneHour = time.Hour / time.Duration(oneMillion)               // an hour of milliseconds
+const msOneWeek = msOneDay * 7                                        // a week of milliseconds
+const msOneDay = nsOneDay / time.Duration(oneMillion)                 // a day of milliseconds
+const msOneMonthApprox = nsOneMonthApprox / time.Duration(oneMillion) // a month of milliseconds
+const msOneYearApprox = nsOoneYearApprox / time.Duration(oneMillion)  // a year of milliseconds
 
 // const daysPerMonthE6 = 30436875 // 30.436875 days per month
 const hundredMSDuration = 100 * time.Millisecond
