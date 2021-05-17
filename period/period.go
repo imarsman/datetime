@@ -1035,7 +1035,7 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 
 	if len(decimalPart) > 0 {
 		if int(currentSection) != int(decimalSection) {
-			return Period{}, fmt.Errorf("period.parse: decimal for %s must end in last character %s not in %s",
+			return Period{}, fmt.Errorf("period.parse: decimal for %s must be in last section %s not in %s",
 				input, string(currentSection), string(decimalSection))
 		}
 		parts := strings.Split(RunesToString(decimalPart...), ".")

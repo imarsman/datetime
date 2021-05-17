@@ -252,12 +252,9 @@ func TestParsePeriodBad(t *testing.T) {
 
 	for _, test := range tests {
 		p, err := period.Parse(test, false)
-		t.Log(err, p)
+		t.Log(err)
 		is.True(err != nil)
-		// d, _, err := p.Duration()
-		// is.True(err != nil)
-		// fmt.Printf("Input %-15s period %0-15s normalized %-20s duration %-15v\n",
-		// 	test, p.String(), p.Normalise(true).String(), d)
+		is.Equal(p.String(), "P0D")
 	}
 
 }
