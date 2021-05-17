@@ -581,19 +581,29 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 	var msMultiplier int64 = 0 // relative value to multiply by based on period part
 
 	// Get an apd library fetch of too-large period part
-	var getPart = func(multiplier int64, whole int64) (int64, error) {
+	// 248.8 ns/op   376 B/op   12 allocs/op
+	// From
+	// 301.9 ns/op   480 B/op   15 allocs/op
+	var getPart = func(multiplier int64, value int64) (int64, error) {
 		apdContext := apd.BaseContext.WithPrecision(200) // context for large calculations if necessary
-		var fullValueAPD = apd.New(0, 0)
-		_, err = apdContext.Mul(fullValueAPD, apd.New(whole, 0), apd.New(multiplier, 0))
+
+		// Pre define values that are costly in terms of allocations and bytes used
+		var apdFullValue = new(apd.Decimal)
+		apdResult := new(apd.Decimal)
+		apdMultiplier := apd.New(multiplier, 0)
+
+		// Multiply incoming value by multiplier and assign to full value
+		_, err = apdContext.Mul(apdFullValue, apd.New(value, 0), apdMultiplier)
 		if err != nil {
 			return 0, err
 		}
-		resultAPD := apd.New(0, 0)
-		_, err := apdContext.QuoInteger(resultAPD, fullValueAPD, apd.New(int64(multiplier), 0))
+		// Divide full value by multiplier and assign to result
+		_, err := apdContext.QuoInteger(apdResult, apdFullValue, apdMultiplier)
 		if err != nil {
 			return 0, err
 		}
-		wholeValue, err := resultAPD.Int64()
+		// Get int64 value for result
+		wholeValue, err := apdResult.Int64()
 		if err != nil {
 			return 0, err
 		}
