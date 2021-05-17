@@ -384,10 +384,10 @@ func (p *Period) normalise(precise bool) *Period {
 
 // This can overflow with very large input values
 func hmsDuration(p Period) (time.Duration, error) {
-	hourDuration := time.Duration(p.hours) * time.Hour
-	minuteDuration := time.Duration(p.minutes) * time.Minute
-	secondDuration := time.Duration(p.seconds) * time.Second
-	subSecondDuration := time.Duration(p.subseconds) * time.Millisecond
+	hourDuration := time.Duration(p.hours) * nsOneHour
+	minuteDuration := time.Duration(p.minutes) * nsOneMinute
+	secondDuration := time.Duration(p.seconds) * nsOneSecond
+	subSecondDuration := time.Duration(p.subseconds) * nsOneMillisecond
 
 	_, ok := timestamp.DurationOverflows(hourDuration, minuteDuration, secondDuration, subSecondDuration)
 	if ok == false {
@@ -440,7 +440,7 @@ func hmsMS(p Period) (int64, error) {
 	hoursMS := p.hours * int64(msOneHour)
 	minutesMS := p.minutes * int64(msOneMinute)
 	secondsMS := p.seconds * int64(msOneSecond)
-	subSecondsMS := int64(p.subseconds) * int64(time.Millisecond)
+	subSecondsMS := int64(p.subseconds) * int64(msOneMillisecond)
 
 	_, ok := timestamp.Int64Overflows(hoursMS, minutesMS, secondsMS, subSecondsMS)
 	if ok == false {
@@ -462,7 +462,7 @@ func (p *Period) rippleUp(precise bool) *Period {
 		hourNumber := int64(hourminutesecondDuration / int64(msOneHour))
 		remainder := int64(hourminutesecondDuration % int64(msOneHour))
 
-		minuteNumber := remainder / int64(time.Minute)
+		minuteNumber := remainder / int64(msOneMinute)
 		remainder = int64(hourminutesecondDuration % int64(msOneMinute))
 
 		secondNumber := remainder / int64(msOneSecond)
@@ -481,7 +481,7 @@ func (p *Period) rippleUp(precise bool) *Period {
 			monthNumber := int64(remainder / int64(msOneMonthApprox))
 			remainder = int64(yearMonthDayDuration % int64(msOneMonthApprox))
 
-			dayNumber := int64(remainder / int64(msOneMonthApprox))
+			dayNumber := int64(remainder / int64(msOneDay))
 
 			p.years = yearNumber
 			p.months = monthNumber
@@ -533,17 +533,6 @@ func (p *Period) AdjustToRight(precise bool) *Period {
 
 	return p
 }
-
-const oneMillion int64 = 1000000 // one million
-
-const msOneYearApprox = nsOoneYearApprox / time.Duration(oneMillion)  // a year of milliseconds
-const msOneMonthApprox = nsOneMonthApprox / time.Duration(oneMillion) // a month of milliseconds
-
-const msOneDay = nsOneDay / time.Duration(oneMillion)       // a day of milliseconds
-const msOneWeek = msOneDay * 7                              // a week of milliseconds
-const msOneHour = time.Hour / time.Duration(oneMillion)     // an hour of milliseconds
-const msOneMinute = time.Minute / time.Duration(oneMillion) // a minute of milliseconds
-const msOneSecond = time.Second / time.Duration(oneMillion) // a second of milliseconds
 
 // AdditionsFromDecimalSection break down decimal section and get allocations to
 // various parts
@@ -1003,7 +992,8 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 				if inDecimal == false {
 					period.years = intVal
 				} else {
-					decimalSection = r
+					decimalSection = yearChar
+					currentSection = decimalSection
 				}
 			} else if r == minuteMonthChar {
 				currentSection = r
@@ -1059,7 +1049,8 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 				if inDecimal == false {
 					period.weeks = intVal
 				} else {
-					decimalSection = r
+					decimalSection = weekChar
+					currentSection = decimalSection
 				}
 			} else if r == dayChar {
 				currentSection = r
@@ -1079,7 +1070,8 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 				if inDecimal == false {
 					period.days = intVal
 				} else {
-					decimalSection = r
+					decimalSection = dayChar
+					currentSection = decimalSection
 				}
 			} else if r == hourChar {
 				currentSection = r
@@ -1093,21 +1085,38 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 				if inDecimal == false {
 					period.hours = intVal
 				} else {
-					decimalSection = r
+					decimalSection = hourChar
+					currentSection = decimalSection
 				}
 			} else if r == minuteMonthChar {
 				currentSection = r
 				var err error
-				// Check ordering relative to previous
-				currentRank, err = checkRank(currentRank, minuteRank)
-				if err != nil {
-					return Period{}, err
-				}
+				if isTime == true {
+					// Check ordering relative to previous
+					currentRank, err = checkRank(currentRank, minuteRank)
+					if err != nil {
+						return Period{}, err
+					}
 
-				if inDecimal == false {
-					period.minutes = intVal
+					if inDecimal == false {
+						period.minutes = intVal
+					} else {
+						decimalSection = minuteChar
+						currentSection = decimalSection
+					}
 				} else {
-					decimalSection = r
+					// Check ordering relative to previous
+					currentRank, err = checkRank(currentRank, monthRank)
+					if err != nil {
+						return Period{}, err
+					}
+
+					if inDecimal == false {
+						period.minutes = intVal
+					} else {
+						decimalSection = monthChar
+						currentSection = decimalSection
+					}
 				}
 			} else if r == secondChar {
 				currentSection = r
@@ -1121,7 +1130,8 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 				if inDecimal == false {
 					period.seconds = intVal
 				} else {
-					decimalSection = r
+					decimalSection = secondChar
+					currentSection = decimalSection
 				}
 			}
 
@@ -1166,6 +1176,7 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 		if err != nil {
 			return Period{}, err
 		}
+		// fmt.Println(years, months, days, hours, minutes, seconds, subseconds)
 		period.years += years
 		period.months += months
 		period.days += days
@@ -1174,6 +1185,7 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 		period.seconds += seconds
 		// Subseconds are to the level of millisecond
 		period.subseconds += subseconds
+		// fmt.Println(period.years, period.months, period.days, period.hours, period.minutes, period.seconds, period.subseconds)
 	}
 
 	period.days += period.weeks * 7

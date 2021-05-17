@@ -15,8 +15,31 @@ type Period struct {
 	subseconds                                          int
 }
 
-const daysPerYearE4 = 3652425 // 365.2425 days by the Gregorian rule
-const daysPerMonthE4 = 304369 // 30.4369 days per month
+const daysPerMonthE6 = 30436875 // 30.436875 days per month
+const daysPerYearE4 = 3652425   // 365.2425 days by the Gregorian rule
+const daysPerMonthE4 = 304369   // 30.4369 days per month
+
+const oneMillion int64 = 1000000 // one million
+
+// More exact but rounds with small units
+// const nsOoneYearApprox = time.Duration(float64(365.2425*60*60*24)) * time.Second // 365.2425 days
+const nsOneMillisecond time.Duration = time.Millisecond
+const nsOneSecond time.Duration = time.Second
+const nsOneMinute time.Duration = time.Minute
+const nsOneHour time.Duration = time.Hour
+const nsOneDay time.Duration = 24 * time.Hour                             // Number of nanoseconds in a day
+const nsOneMonthApprox time.Duration = oneMonthSeconds * nsOneSecond      // 30.436875 days
+const nsOoneYearApprox time.Duration = oneMonthSeconds * nsOneSecond * 12 // Nanoseconds in 1 year
+
+const msOneYearApprox = nsOoneYearApprox / time.Duration(oneMillion)  // a year of milliseconds
+const msOneMonthApprox = nsOneMonthApprox / time.Duration(oneMillion) // a month of milliseconds
+const msOneDay = nsOneDay / time.Duration(oneMillion)                 // a day of milliseconds
+const msOneWeek = msOneDay * 7                                        // a week of milliseconds
+const msOneHour = time.Hour / time.Duration(oneMillion)               // an hour of milliseconds
+const msOneMinute = time.Minute / time.Duration(oneMillion)           // a minute of milliseconds
+const msOneSecond = time.Second / time.Duration(oneMillion)           // a second of milliseconds
+const msOneMillisecond = time.Millisecond / time.Duration(oneMillion) // a second of milliseconds
+
 // const daysPerMonthE6 = 30436875 // 30.436875 days per month
 const hundredMSDuration = 100 * time.Millisecond
 
@@ -26,22 +49,13 @@ const hundredMSDuration = 100 * time.Millisecond
 // 365 days (8760 hours, 525600 minutes or 31536000 seconds), and a leap year is
 // 366 days (8784 hours, 527040 minutes or 31622400 seconds)
 
-const daysPerMonthE6 = 30436875 // 30.436875 days per month
-
-const oneDayNS time.Duration = 24 * time.Hour // Number of nanoseconds in a day
-
-const oneMonthSeconds = 2628000                                      // Number of seconds in a month
-const oneMonthApproxNS time.Duration = oneMonthSeconds * time.Second // 30.436875 days
+const oneMonthSeconds = 2628000 // Number of seconds in a month
 
 const oneE4 = 10000 // 1e^4
 
 const oneE5 = 100000 // 1e^5
 
 const oneE6 = 1000000 // 1e^6
-
-// More exact but rounds with small units
-// const oneYearApproxNS = time.Duration(float64(365.2425*60*60*24)) * time.Second // 365.2425 days
-const oneYearApproxNS time.Duration = oneMonthSeconds * time.Second * 12 // Nanoseconds in 1 year
 
 // NewPeriod create a new Period instance
 func NewPeriod(years, months, days, hours, minutes, seconds int64) Period {
