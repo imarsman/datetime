@@ -125,6 +125,11 @@ func TestParsePeriodWithFractionalParts(t *testing.T) {
 		"P1.5Y",
 		"PT1.5S",
 		"PT1.567S",
+		"PT1H14M",
+		// Use comma instead
+		// This does not currently work
+		"PT1,5M",
+		"P1.5M",
 	}
 
 	for _, test := range tests {

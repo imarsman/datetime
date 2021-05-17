@@ -16,7 +16,9 @@ import (
 
 const yearChar = 'Y'
 
-// const monthChar = 'M'
+// Parts of a period
+// month and minute both have the same character, so we have a minuteMonthChar
+
 const weekChar = 'W'
 const dayChar = 'D'
 const hourChar = 'H'
@@ -528,13 +530,15 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 
 	// Go formatter will warn about
 
-	const oneMillion int64 = 1000000                                     // one million
-	const msOneYearApprox = oneYearApproxNS / time.Duration(oneMillion)  // a year of milliseconds
-	const msOneMonthApprox = oneYearApproxNS / time.Duration(oneMillion) // a month of milliseconds
-	const msOneDay = oneDayNS / time.Duration(oneMillion)                // a day of milliseconds
-	const msOneHour = time.Hour / time.Duration(oneMillion)              // an hour of milliseconds
-	const msOneMinute = time.Minute / time.Duration(oneMillion)          // a minute of milliseconds
-	const msOneSecond = time.Second / time.Duration(oneMillion)          // a second of milliseconds
+	const oneMillion int64 = 1000000 // one million
+
+	const msOneYearApprox = oneYearApproxNS / time.Duration(oneMillion)   // a year of milliseconds
+	const msOneMonthApprox = oneMonthApproxNS / time.Duration(oneMillion) // a month of milliseconds
+
+	const msOneDay = oneDayNS / time.Duration(oneMillion)       // a day of milliseconds
+	const msOneHour = time.Hour / time.Duration(oneMillion)     // an hour of milliseconds
+	const msOneMinute = time.Minute / time.Duration(oneMillion) // a minute of milliseconds
+	const msOneSecond = time.Second / time.Duration(oneMillion) // a second of milliseconds
 
 	const maxYears = 290 * 1000                // Maximum years before failing over to apd
 	const maxMonths = maxYears * 12 * 1000     // Maximum months before failing over to apd
@@ -875,6 +879,7 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 			// If we have reached the end of the decimal part, clean up and continue
 			if inDecimal == true {
 				decimalPart = append(decimalPart, activePart...)
+				// activePart = decimalPart
 			} else {
 				s := RunesToString(activePart...)
 				var err error
@@ -917,6 +922,7 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 						period.months = intVal
 					} else {
 						decimalSection = monthChar
+						currentSection = decimalSection
 					}
 				} else {
 					var err error
@@ -929,7 +935,8 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 					if inDecimal == false {
 						period.minutes = intVal
 					} else {
-						decimalSection = monthChar
+						decimalSection = minuteChar
+						currentSection = decimalSection
 					}
 				}
 			} else if r == weekChar {
