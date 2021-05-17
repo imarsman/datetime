@@ -134,6 +134,7 @@ func TestParsePeriodWithFractionalParts(t *testing.T) {
 		// Use comma instead
 		// This does not currently work
 		"PT1,5M",
+		"PT1.5M",
 		"P1.5M",
 	}
 

@@ -14,22 +14,45 @@ import (
 	"github.com/imarsman/datetime/xfmt"
 )
 
+// Y
 const yearChar = 'Y'
 
 // Parts of a period
 // month and minute both have the same character, so we have a minuteMonthChar
 
+// W
 const weekChar = 'W'
+
+// D
 const dayChar = 'D'
+
+// H
 const hourChar = 'H'
+
+// I
 const minuteChar = 'I'
-const monthChar = 'O'
+
+// O
+const monthChar = 'O' // O
+
+// M
 const minuteMonthChar = 'M'
-const secondChar = 'S'
+
+// S
+const secondChar = 'S' // S
+// P
 const periodChar = 'P'
+
+// T
 const timeChar = 'T'
+
+// -
 const negativeChar = '-'
+
+// .
 const dotChar = '.'
+
+// ,
 const commaChar = ','
 
 // NewOf converts a time duration to a Period, and also indicates whether the conversion is precise.
