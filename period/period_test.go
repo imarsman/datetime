@@ -123,7 +123,12 @@ func TestParsePeriodWithFractionalParts(t *testing.T) {
 
 	tests := []string{
 		"P1.5Y",
+		"P1.5M",
+		"P1.5D",
+		"PT1.5H",
+		"PT1.5M",
 		"PT1.5S",
+		"PT1.500S",
 		"PT1.567S",
 		"PT1H14M",
 		// Use comma instead
