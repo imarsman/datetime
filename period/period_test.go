@@ -105,6 +105,7 @@ func TestParsePeriod(t *testing.T) {
 		"P120Y120M200D",
 		"P150Y150M200DT1H4M2000S",
 		"P250Y150M200DT1H4M2000S",
+		"P250000Y150M200DT1H4M2000S",
 	}
 
 	is := is.New(t)
@@ -288,7 +289,7 @@ func BenchmarkParsePeriodLong(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			p, err = period.Parse("P250Y150M200DT1H4M2000S", true)
+			p, err = period.Parse("P250000Y150M200DT1H4M2000S", true)
 		}
 	})
 

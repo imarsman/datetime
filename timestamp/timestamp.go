@@ -66,6 +66,18 @@ func YearIsBeyondMin(year int64) bool {
 	return year >= MinTimestamp.Unix()
 }
 
+// Int64Overflows does a list of int64s overflow int64?
+func Int64Overflows(int64s ...int64) (sum int64, ok bool) {
+	for i := 0; i < len(int64s); i++ {
+		sum, ok = overflow.Add64(sum, int64s[i])
+		if ok == false {
+			return sum, true
+		}
+	}
+
+	return sum, ok
+}
+
 // DurationOverflows does a list of durations overflow int64?
 func DurationOverflows(durations ...time.Duration) (sum int64, ok bool) {
 	for i := 0; i < len(durations); i++ {

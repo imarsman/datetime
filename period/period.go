@@ -401,9 +401,9 @@ func hmsDuration(p Period) (time.Duration, error) {
 
 // This can overflow with very large input values
 func ymdApproxDuration(p Period) (time.Duration, error) {
-	yearDuration := time.Duration(p.years) * oneYearApproxNS
-	monthDuration := time.Duration(p.months) * oneMonthApproxNS
-	dayDuration := time.Duration(p.days) * oneDayNS
+	yearDuration := time.Duration(p.years) * nsOoneYearApprox
+	monthDuration := time.Duration(p.months) * nsOneMonthApprox
+	dayDuration := time.Duration(p.days) * nsOneDay
 
 	_, ok := timestamp.DurationOverflows(yearDuration, monthDuration, dayDuration)
 	if ok == false {
@@ -415,23 +415,57 @@ func ymdApproxDuration(p Period) (time.Duration, error) {
 	return yearMonthDayDuration, nil
 }
 
-// rippleUp move values up through category if boundaries passed Since this call
-// uses durations to handle moving things around it is possible for the duration
-// for an hour, minute, and second or year, month, and day duraton to overflow
-// the duration's maximum value, which is 292.471208677536 years in nanoseconds.
-// This is currently considered an acceptable cost as if there is an overflow it
-// is handled by leaving the overflowing values alone.
+// This can overflow with very large input values though through the use of
+// millisecond level percision this is less likely. Overflow would be at about
+// 294 million years.
+func ymdApproxMS(p Period) (int64, error) {
+	yearsMS := p.years * int64(msOneYearApprox)
+	monthsMS := p.months * int64(msOneMonthApprox)
+	daysMS := p.days * int64(msOneDay)
+
+	_, ok := timestamp.Int64Overflows(yearsMS, monthsMS, daysMS)
+	if ok == false {
+		return 0, errors.New("years, months, and days milliseconds exceeds maximum")
+	}
+
+	yearsMonthsDaysMS := yearsMS + monthsMS + daysMS
+
+	return yearsMonthsDaysMS, nil
+}
+
+// This can overflow with very large input values though through the use of
+// millisecond level percision this is less likely. Overflow would be at about
+// 294 million years.
+func hmsMS(p Period) (int64, error) {
+	hoursMS := p.hours * int64(msOneHour)
+	minutesMS := p.minutes * int64(msOneMinute)
+	secondsMS := p.seconds * int64(msOneSecond)
+	subSecondsMS := int64(p.subseconds) * int64(time.Millisecond)
+
+	_, ok := timestamp.Int64Overflows(hoursMS, minutesMS, secondsMS, subSecondsMS)
+	if ok == false {
+		return 0, errors.New("hours, minutes, seconds, and subseconds milliseconds exceeds maximum")
+	}
+
+	hoursMinuteSecondsMS := (hoursMS + minutesMS + secondsMS + subSecondsMS)
+
+	return hoursMinuteSecondsMS, nil
+}
+
+// rippleUp move values up through categories if boundaries are passed.
+// Note that the resolution for the results is to the millisecond as using
+// nanoseconds will overflow at about 292.471208677536 years.
 // Precise as true will result in no adjustment for years, months, and days.
 func (p *Period) rippleUp(precise bool) *Period {
-	hourminutesecondDuration, err := hmsDuration(*p)
+	hourminutesecondDuration, err := hmsMS(*p)
 	if err == nil {
-		hourNumber := int64(hourminutesecondDuration / time.Hour)
-		remainder := int64(hourminutesecondDuration % time.Hour)
+		hourNumber := int64(hourminutesecondDuration / int64(msOneHour))
+		remainder := int64(hourminutesecondDuration % int64(msOneHour))
 
 		minuteNumber := remainder / int64(time.Minute)
-		remainder = int64(hourminutesecondDuration % time.Minute)
+		remainder = int64(hourminutesecondDuration % int64(msOneMinute))
 
-		secondNumber := remainder / int64(time.Second)
+		secondNumber := remainder / int64(msOneSecond)
 
 		p.hours = hourNumber
 		p.minutes = minuteNumber
@@ -439,15 +473,15 @@ func (p *Period) rippleUp(precise bool) *Period {
 	}
 
 	if !precise {
-		yearMonthDayDuration, err := ymdApproxDuration(*p)
+		yearMonthDayDuration, err := ymdApproxMS(*p)
 		if err == nil {
-			yearNumber := int64(yearMonthDayDuration / oneYearApproxNS)
-			remainder := int64(yearMonthDayDuration % oneYearApproxNS)
+			yearNumber := int64(yearMonthDayDuration / int64(msOneYearApprox))
+			remainder := int64(yearMonthDayDuration % int64(msOneYearApprox))
 
-			monthNumber := int64(remainder / int64(oneMonthApproxNS))
-			remainder = int64(yearMonthDayDuration % oneMonthApproxNS)
+			monthNumber := int64(remainder / int64(msOneMonthApprox))
+			remainder = int64(yearMonthDayDuration % int64(msOneMonthApprox))
 
-			dayNumber := int64(remainder / int64(oneDayNS))
+			dayNumber := int64(remainder / int64(msOneMonthApprox))
 
 			p.years = yearNumber
 			p.months = monthNumber
@@ -500,6 +534,17 @@ func (p *Period) AdjustToRight(precise bool) *Period {
 	return p
 }
 
+const oneMillion int64 = 1000000 // one million
+
+const msOneYearApprox = nsOoneYearApprox / time.Duration(oneMillion)  // a year of milliseconds
+const msOneMonthApprox = nsOneMonthApprox / time.Duration(oneMillion) // a month of milliseconds
+
+const msOneDay = nsOneDay / time.Duration(oneMillion)       // a day of milliseconds
+const msOneWeek = msOneDay * 7                              // a week of milliseconds
+const msOneHour = time.Hour / time.Duration(oneMillion)     // an hour of milliseconds
+const msOneMinute = time.Minute / time.Duration(oneMillion) // a minute of milliseconds
+const msOneSecond = time.Second / time.Duration(oneMillion) // a second of milliseconds
+
 // AdditionsFromDecimalSection break down decimal section and get allocations to
 // various parts
 func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
@@ -551,17 +596,6 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 	// multiplied by 1000 because we are not using nanosecond but rather
 	// millisecond level accuracy.
 	// An error will be returned by the apd library if the precision is insufficient.
-
-	const oneMillion int64 = 1000000 // one million
-
-	const msOneYearApprox = oneYearApproxNS / time.Duration(oneMillion)   // a year of milliseconds
-	const msOneMonthApprox = oneMonthApproxNS / time.Duration(oneMillion) // a month of milliseconds
-
-	const msOneDay = oneDayNS / time.Duration(oneMillion)       // a day of milliseconds
-	const msOneWeek = msOneDay * 7                              // a week of milliseconds
-	const msOneHour = time.Hour / time.Duration(oneMillion)     // an hour of milliseconds
-	const msOneMinute = time.Minute / time.Duration(oneMillion) // a minute of milliseconds
-	const msOneSecond = time.Second / time.Duration(oneMillion) // a second of milliseconds
 
 	// Since the ISO-8601 standard allows for only one decimal section we can
 	// calculate if overflow would occur with 64 bit calculations and fail over
