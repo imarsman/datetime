@@ -537,6 +537,9 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 		}
 	}
 
+	// It should be impossible for an invalid part to come in if the sending
+	// code is correct, but this provides an extra level of verification with no
+	// noticeable performance impact.
 	isTime := isTimePart(part)
 	// Exit with invalid characters
 	if isTime == false {
@@ -548,10 +551,6 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 	// multiplied by 1000 because we are not using nanosecond but rather
 	// millisecond level accuracy.
 	// An error will be returned by the apd library if the precision is insufficient.
-	// apcContext := apd.BaseContext.WithPrecision(200) // context for large
-	// calculations if necessary
-
-	// Go formatter will warn about
 
 	const oneMillion int64 = 1000000 // one million
 
@@ -564,9 +563,13 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 	const msOneMinute = time.Minute / time.Duration(oneMillion) // a minute of milliseconds
 	const msOneSecond = time.Second / time.Duration(oneMillion) // a second of milliseconds
 
+	// Since the ISO-8601 standard allows for only one decimal section we can
+	// calculate if overflow would occur with 64 bit calculations and fail over
+	// to the slower arbitrary precision decimal library without needing to do
+	// sums across sections.
 	const maxYears = 290 * 1000                    // Maximum years before failing over to apd
 	const maxMonths = maxYears * 12 * 1000         // Maximum months before failing over to apd
-	const maxWeeks = maxYears * 12 * 7 * 52 * 1000 // Maximum hours before failing over to apd
+	const maxWeeks = maxYears * 12 * 7 * 52 * 1000 // Maximum weeks before failing over to apd
 	const maxDays = maxYears * 12 * 365 * 1000     // Maximum hours before failing over to apd
 
 	const maxHours = maxYears * 12 * 365 * 24 * 1000             // Maximum hours before failing over to apd
@@ -586,17 +589,28 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 		var apdFullValue = new(apd.Decimal)
 		apdResult := new(apd.Decimal)
 		apdMultiplier := apd.New(multiplier, 0)
+		var err error
+		var condition apd.Condition
 
 		// Multiply incoming value by multiplier and assign to full value
-		_, err = apdContext.Mul(apdFullValue, apd.New(value, 0), apdMultiplier)
+		condition, err = apdContext.Mul(apdFullValue, apd.New(value, 0), apdMultiplier)
 		if err != nil {
 			return 0, err
 		}
+		if condition.Inexact() == true {
+			return 0, fmt.Errorf("inexact calculation with %d", value)
+		}
+
 		// Divide full value by multiplier and assign to result
-		_, err := apdContext.QuoInteger(apdResult, apdFullValue, apdMultiplier)
+		condition, err = apdContext.QuoInteger(apdResult, apdFullValue, apdMultiplier)
 		if err != nil {
 			return 0, err
 		}
+
+		if condition.Inexact() == true {
+			return 0, fmt.Errorf("inexact calculation with %d", value)
+		}
+
 		// Get int64 value for result
 		wholeValue, err := apdResult.Int64()
 		if err != nil {
@@ -613,7 +627,7 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 		if whole > maxYears {
 			years, err = getPart(msMultiplier, whole)
 			if err != nil {
-
+				return 0, 0, 0, 0, 0, 0, 0, err
 			}
 		} else {
 			fullValue := whole * msMultiplier

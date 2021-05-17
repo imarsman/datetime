@@ -169,10 +169,9 @@ func TestGetParts(t *testing.T) {
 
 	for _, part := range parts {
 		years, months, days, hours, minutes, seconds, subseconds, err := period.AdditionsFromDecimalSection(part.part, part.pre, part.post)
+		is.NoErr(err)
 		t.Logf("years %d, months %d, days %d, hours %d, minutes %d, seconds %d, subseconds %d, err %v",
 			years, months, days, hours, minutes, seconds, subseconds, err)
-
-		is.NoErr(err)
 	}
 }
 
