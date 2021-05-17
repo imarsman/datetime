@@ -902,7 +902,6 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 			// If we have reached the end of the decimal part, clean up and continue
 			if inDecimal == true {
 				decimalPart = append(decimalPart, activePart...)
-				// activePart = decimalPart
 			} else {
 				s := RunesToString(activePart...)
 				var err error
@@ -945,6 +944,9 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 						period.months = intVal
 					} else {
 						decimalSection = monthChar
+						// Make sure to update this non standard section
+						// character. Without this error checking at the end
+						// will fail.
 						currentSection = decimalSection
 					}
 				} else {
@@ -959,6 +961,9 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 						period.minutes = intVal
 					} else {
 						decimalSection = minuteChar
+						// Make sure to update this non standard section
+						// character. Without this error checking at the end
+						// will fail.
 						currentSection = decimalSection
 					}
 				}
