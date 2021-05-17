@@ -147,6 +147,9 @@ func (p *Period) String() string {
 		} else {
 			xfmt.D64(p.seconds).C(secondChar)
 		}
+	} else if p.subseconds != 0 {
+		reduced := reduce(int64(p.subseconds))
+		xfmt.C('0').C(dotChar).D64(reduced).C(secondChar)
 	}
 
 	return string(xfmt.Bytes())

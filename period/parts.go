@@ -31,6 +31,9 @@ const nsOneDay time.Duration = 24 * time.Hour                             // a d
 const nsOneMonthApprox time.Duration = oneMonthSeconds * nsOneSecond      // a month in nanoseconds - approximately
 const nsOoneYearApprox time.Duration = oneMonthSeconds * nsOneSecond * 12 // a year in nanoseconds - approximately
 
+// Use milliseconds for sub-second value in period to allow for 1 million times
+// longer periods without having to resort to arbitrary precision decimal
+// library, which is slower and uses more allocations.
 const msOneMillisecond = time.Millisecond / time.Duration(oneMillion) // a millisecond
 const msOneSecond = time.Second / time.Duration(oneMillion)           // a second of milliseconds
 const msOneMinute = time.Minute / time.Duration(oneMillion)           // a minute of milliseconds

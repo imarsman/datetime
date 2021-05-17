@@ -337,7 +337,7 @@ func RunesToString(runes ...rune) string {
 
 // IsZero is period emtpy
 func (p Period) IsZero() bool {
-	return p.Years() == 0 && p.Months() == 0 && p.Days() == 0 && p.Hours() == 0 && p.Minutes() == 0 && p.Seconds() == 0
+	return p.Years() == 0 && p.Months() == 0 && p.Days() == 0 && p.Hours() == 0 && p.Minutes() == 0 && p.Seconds() == 0 && p.subseconds == 0
 }
 
 func (p *Period) validate() error {
@@ -764,6 +764,13 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 	seconds += remainder / int64(msOneSecond)
 	remainder = postMS % int64(msOneSecond)
 
+	// if whole == 0 && part == secondChar {
+	// 	fmt.Println("whole", whole, "postms", postMS)
+	// 	subseconds = int(postMS)
+	// 	// remainder = postMS % int64(msOneSecond)
+	// 	// subseconds += int(remainder)
+	// } else {
+	// }
 	subseconds += int(remainder)
 
 	return years, months, days, hours, minutes, seconds, subseconds, nil
@@ -920,6 +927,9 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 				return Period{}, errors.New(string(msg.Bytes()))
 			}
 			inDecimal = true
+			if len(activePart) == 0 {
+				activePart = append(activePart, '0')
+			}
 			activePart = append(activePart, '.')
 
 			continue

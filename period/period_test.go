@@ -75,7 +75,13 @@ func TestPeriodParser(t *testing.T) {
 
 func TestParsePeriod(t *testing.T) {
 	tests := []string{
+		"PT1S",
+		"PT1M",
+		"PT1H",
+		"P1D",
+		"P1W",
 		"P1Y",
+
 		"P1Y1D",
 		"P3Y",
 		"P1M",
@@ -87,14 +93,10 @@ func TestParsePeriod(t *testing.T) {
 		"PT11H",
 		// Showing shifting of monts to days
 		"P11M",
-		"PT1H",
 		// Showing shifting of minutes to seconds
 		"P1MT1H31M",
-		"PT1M",
 		"PT1M5S",
-		"PT1S",
 		"PT1000S",
-		"P1W",
 		"P3Y1W",
 		"P4W",
 		"P2Y3M4W5D",
@@ -123,6 +125,15 @@ func TestParsePeriodWithFractionalParts(t *testing.T) {
 	is := is.New(t)
 
 	tests := []string{
+		"PT0.5S",
+		"PT.5S",
+		"PT0.5M",
+		"PT.5M",
+		"PT0.5H",
+		"PT.5H",
+		"PT1,5M",
+		"PT1.5M",
+		"P1.5M",
 		"P1.5Y",
 		"P260.5W",
 		"P1.5M",
@@ -135,9 +146,6 @@ func TestParsePeriodWithFractionalParts(t *testing.T) {
 		"PT1H14M",
 		// Use comma instead
 		// This does not currently work
-		"PT1,5M",
-		"PT1.5M",
-		"P1.5M",
 	}
 
 	for _, test := range tests {
