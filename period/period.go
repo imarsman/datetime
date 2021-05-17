@@ -480,8 +480,6 @@ func (p *Period) AdjustToRight(precise bool) *Period {
 func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 	years, months, days, hours, minutes, seconds int64, subseconds int, err error) {
 
-	const oneMillion int64 = 1000000
-
 	// Count digits in an integer
 	var digitCount = func(number int64) int64 {
 		var count int64 = 0
@@ -514,8 +512,9 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 		}
 	}
 
+	isTime := isTimePart(part)
 	// Exit with invalid characters
-	if !isTimePart(part) {
+	if isTime == false {
 		err := fmt.Errorf("Invalid time part %v to float", part)
 		return years, months, days, hours, minutes, seconds, subseconds, err
 	}
@@ -529,6 +528,7 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 
 	// Go formatter will warn about
 
+	const oneMillion int64 = 1000000                                     // one million
 	const msOneYearApprox = oneYearApproxNS / time.Duration(oneMillion)  // a year of milliseconds
 	const msOneMonthApprox = oneYearApproxNS / time.Duration(oneMillion) // a month of milliseconds
 	const msOneDay = oneDayNS / time.Duration(oneMillion)                // a day of milliseconds
@@ -740,11 +740,10 @@ func ParseWithNormalise(period string, normalise bool, precise bool) (Period, er
 // GetParts get the parts of a period
 func parse(input string, normalise bool, precise bool) (Period, error) {
 
-	var orig = input
 	var period = Period{}
 
-	var activePart []rune
-	var decimalPart []rune
+	var activePart []rune = make([]rune, 0, 30)
+	var decimalPart []rune = make([]rune, 0, 30)
 	var decimalSection rune
 	var currentSection rune
 	var inDecimal bool
@@ -761,7 +760,7 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 		secondRank        // rand order for second part
 	)
 
-	var rankVals map[int]string = make(map[int]string)
+	var rankVals map[int]string = make(map[int]string, 6)
 
 	rankVals[yearRank] = "year"
 	rankVals[monthRank] = "month"
@@ -825,7 +824,7 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 		if r == dotChar || r == commaChar {
 			if len(decimalPart) > 0 {
 				xfmt := new(xfmt.Buffer)
-				msg := xfmt.S("period.parse: only one decimal section allowed ").S(orig)
+				msg := xfmt.S("period.parse: only one decimal section allowed ").S(input)
 
 				return Period{}, errors.New(string(msg.Bytes()))
 			}
@@ -846,7 +845,7 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 				}
 				// We have already found a period character P so this is an error
 				xfmt := new(xfmt.Buffer)
-				msg := xfmt.S("period.parse: only one period indicator allowed ").S(orig)
+				msg := xfmt.S("period.parse: only one period indicator allowed ").S(input)
 
 				return Period{}, errors.New(string(msg.Bytes()))
 			}
@@ -861,7 +860,8 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 				// If we are already in a time section this is an error
 				if isTime == true {
 					xfmt := new(xfmt.Buffer)
-					msg := xfmt.S("period.parse: time must only be indicated once ").S(orig)
+					msg := xfmt.S("period.parse: time must only be indicated once ").S(input)
+
 					return Period{}, errors.New(string(msg.Bytes()))
 				}
 				// Set state as being in time
@@ -888,7 +888,7 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 				currentSection = r
 				if isTime == true {
 					xfmt := new(xfmt.Buffer)
-					msg := xfmt.S("period.parse: ").S(input).S(" non time part after time declared ")
+					msg := xfmt.S("period.parse: ").S(input).S(" non time section ").C(currentSection).S(" after time declared ")
 					return Period{}, errors.New(string(msg.Bytes()))
 				}
 				var err error
@@ -936,7 +936,7 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 				currentSection = r
 				if isTime == true {
 					xfmt := new(xfmt.Buffer)
-					msg := xfmt.S("period.parse: non time part after time declared ").S(orig)
+					msg := xfmt.S("period.parse: non time part after time declared ").S(input)
 					return Period{}, errors.New(string(msg.Bytes()))
 				}
 				var err error
@@ -955,7 +955,8 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 				currentSection = r
 				if isTime == true {
 					xfmt := new(xfmt.Buffer)
-					msg := xfmt.S("period.parse: non time part after time declared ").S(orig)
+					msg := xfmt.S("period.parse: non time part after time declared ").S(input)
+
 					return Period{}, errors.New(string(msg.Bytes()))
 				}
 				var err error
@@ -1019,13 +1020,16 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 				inDecimal = false
 			}
 
-			activePart = make([]rune, 0, 0)
+			// Making a new slice will allocate more
+			activePart = activePart[:0]
 
 			continue
 		}
 
+		// We should not have gotten here
 		xfmt := new(xfmt.Buffer)
 		msg := xfmt.S("period.parse: character").C(r).S("is not valid")
+
 		return Period{}, errors.New(string(msg.Bytes()))
 	}
 
@@ -1051,7 +1055,8 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 		if err != nil {
 			return Period{}, err
 		}
-		years, months, days, hours, minutes, seconds, subseconds, err := AdditionsFromDecimalSection(decimalSection, int64(whole), int64(fractional))
+		years, months, days, hours, minutes, seconds, subseconds, err := AdditionsFromDecimalSection(
+			decimalSection, int64(whole), int64(fractional))
 		if err != nil {
 			return Period{}, err
 		}
