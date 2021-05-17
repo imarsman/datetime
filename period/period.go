@@ -888,7 +888,7 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 				currentSection = r
 				if isTime == true {
 					xfmt := new(xfmt.Buffer)
-					msg := xfmt.S("period.parse: non time part after time declared ").S(orig)
+					msg := xfmt.S("period.parse: ").S(input).S(" non time part after time declared ")
 					return Period{}, errors.New(string(msg.Bytes()))
 				}
 				var err error
@@ -1035,7 +1035,7 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 
 	if len(decimalPart) > 0 {
 		if int(currentSection) != int(decimalSection) {
-			return Period{}, fmt.Errorf("period.parse: decimal for %s must be in last section %s not in %s",
+			return Period{}, fmt.Errorf("period.parse: %s decimal must be in last section %s not in %s",
 				input, string(currentSection), string(decimalSection))
 		}
 		parts := strings.Split(RunesToString(decimalPart...), ".")
