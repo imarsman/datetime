@@ -505,7 +505,6 @@ func (p *Period) AdjustToRight(precise bool) *Period {
 func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 	years, months, days, hours, minutes, seconds int64, subseconds int, err error) {
 
-	// var weeks int64
 	// Count digits in an integer
 	var digitCount = func(number int64) int64 {
 		var count int64 = 0
@@ -518,10 +517,6 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 
 	// Check for whether a rune is a time part
 	var isTimePart = func(r rune) bool {
-		// if !(r == yearChar || r == monthChar || r == dayChar || r == hourChar || r == minuteChar || r == secondChar) {
-		// 	return false
-		// }
-		// return true
 		switch r {
 		case yearChar:
 			return true
@@ -550,7 +545,7 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 	}
 
 	// Tested to work with up to 15 billion years. Max for each part is
-	// multipleied by 1000 because we are not using nanosecond but rather
+	// multiplied by 1000 because we are not using nanosecond but rather
 	// millisecond level accuracy.
 	// An error will be returned by the apd library if the precision is insufficient.
 	// apcContext := apd.BaseContext.WithPrecision(200) // context for large
@@ -613,7 +608,6 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 
 	// Find the section that applies and set it
 	if part == yearChar {
-		// multiplier = int64(oneYearApproxNS) / oneMillion
 		msMultiplier = int64(msOneYearApprox)
 		// Only use arbitrary precision decimals if we would overflow an int64
 		if whole > maxYears {
@@ -626,7 +620,6 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 			years = fullValue / int64(msMultiplier)
 		}
 	} else if part == monthChar {
-		// multiplier = int64(oneMonthApproxNS) / oneMillion
 		msMultiplier = int64(msOneMonthApprox)
 		// Only use arbitrary precision decimals if we would overflow an int64
 		if whole > maxMonths {
@@ -655,7 +648,6 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 		// Fractional calculation will need to look at fraction in terms of weeks
 		msMultiplier = int64(msOneWeek)
 	} else if part == dayChar {
-		// multiplier = int64(oneDayNS) / oneMillion
 		msMultiplier = int64(msOneDay)
 		// Only use arbitrary precision decimals if we would overflow an int64
 		if whole > maxDays {
@@ -668,7 +660,6 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 			days = fullValue / int64(msMultiplier)
 		}
 	} else if part == hourChar {
-		// multiplier = int64(time.Hour) / oneMillion
 		msMultiplier = int64(msOneHour)
 		// Only use arbitrary precision decimals if we would overflow an int64
 		if whole > maxHours {
@@ -706,14 +697,17 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 		}
 	}
 
+	// On a fraction of even a year this will not overflow so it is safe to use
+	// built-in types
 	var fractionalFloat = float64(fractional) / math.Pow(10, float64(digitCount(fractional))) // decimal value of post
 
 	// We have already figured out the multiplier so don't need to do that again
 	var postMS = int64(fractionalFloat * float64(msMultiplier)) // nanosecond value for fractional part
 
-	// Overflow of an int64 occurs with about 192 years. The most that a portion
-	// of a time period could be is just under one year. It is safe to do int64
-	// calculations here.
+	// Go through successive stages of division and obtainin of a remainder to
+	// get the portions for a time part and to set up the next division and
+	// remainder calculations.
+
 	years += postMS / int64(msOneYearApprox)
 	remainder := postMS % int64(msOneYearApprox)
 
