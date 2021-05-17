@@ -125,12 +125,17 @@ func TestParsePeriodWithFractionalParts(t *testing.T) {
 	is := is.New(t)
 
 	tests := []string{
+		"P0D",
 		"PT0.5S",
+		// Missing leading zero
 		"PT.5S",
 		"PT0.5M",
+		// Missing leading zero
 		"PT.5M",
 		"PT0.5H",
+		// Missing leading zero
 		"PT.5H",
+		// Use comma instead
 		"PT1,5M",
 		"PT1.5M",
 		"P1.5M",
@@ -144,8 +149,6 @@ func TestParsePeriodWithFractionalParts(t *testing.T) {
 		"PT1.500S",
 		"PT1.567S",
 		"PT1H14M",
-		// Use comma instead
-		// This does not currently work
 	}
 
 	for _, test := range tests {

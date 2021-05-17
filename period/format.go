@@ -103,24 +103,31 @@ func (p *Period) String() string {
 		return output
 	}
 
+	// All zero parts equals "P0D"
 	if p.IsZero() == true {
 		return "P0D"
 	}
 
+	// Begin with negative if period is negative
 	xfmt := new(xfmt.Buffer)
 	if p.negative {
 		xfmt.C('-')
 	}
 
+	// Ensure period indicator character
 	xfmt.C('P')
 
+	// With years
 	if p.years != 0 {
 		xfmt.D64(p.years).C(yearChar)
 	}
+
+	// With months
 	if p.months != 0 {
 		xfmt.D64(p.months).C(minuteMonthChar)
 	}
 
+	// With days
 	if p.days != 0 {
 		if p.days%70 == 0 {
 			xfmt.D64(p.days / 7).C(dayChar)
@@ -129,16 +136,20 @@ func (p *Period) String() string {
 		}
 	}
 
+	// If time section(s)
 	if p.hours != 0 || p.minutes != 0 || p.seconds != 0 {
 		xfmt.C(timeChar)
 	}
 
+	// With hours
 	if p.hours != 0 {
 		xfmt.D64(p.hours).C(hourChar)
 	}
+	// With minutes
 	if p.minutes != 0 {
 		xfmt.D64(p.minutes).C(minuteMonthChar)
 	}
+	// With seconds
 	if p.seconds != 0 {
 		if p.subseconds != 0 {
 			reduced := reduce(int64(p.subseconds))
@@ -147,6 +158,7 @@ func (p *Period) String() string {
 		} else {
 			xfmt.D64(p.seconds).C(secondChar)
 		}
+		// If no seconds but subsection values
 	} else if p.subseconds != 0 {
 		reduced := reduce(int64(p.subseconds))
 		xfmt.C('0').C(dotChar).D64(reduced).C(secondChar)
