@@ -244,18 +244,20 @@ func BenchmarkGetAdditionsSubThreshold(b *testing.B) {
 // TestParsePeriodBad parse intentionally incorrect periods
 func TestParsePeriodBad(t *testing.T) {
 	tests := []string{
-		"P300YT1H4M2000S",
-		"P30000YT2629999H",
+		"P4M300YT1H4M2000S",
+		"P30000YT2629999.5H16M",
 	}
 
 	is := is.New(t)
 
 	for _, test := range tests {
-		p, _ := period.Parse(test, false)
-		d, _, err := p.Duration()
+		p, err := period.Parse(test, false)
+		t.Log(err, p)
 		is.True(err != nil)
-		fmt.Printf("Input %-15s period %0-15s normalized %-20s duration %-15v\n",
-			test, p.String(), p.Normalise(true).String(), d)
+		// d, _, err := p.Duration()
+		// is.True(err != nil)
+		// fmt.Printf("Input %-15s period %0-15s normalized %-20s duration %-15v\n",
+		// 	test, p.String(), p.Normalise(true).String(), d)
 	}
 
 }

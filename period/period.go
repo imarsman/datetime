@@ -371,19 +371,6 @@ func hmsDuration(p Period) (time.Duration, error) {
 
 	hourminutesecondDuration := (hourDuration + minuteDuration + secondDuration + subSecondDuration)
 
-	// hourNumber := int64(hourminutesecondDuration / time.Hour)
-	// remainder := int64(hourminutesecondDuration % time.Hour)
-
-	// minuteNumber := remainder / int64(time.Minute)
-	// remainder = int64(hourminutesecondDuration % time.Minute)
-
-	// secondNumber := remainder / int64(time.Second)
-
-	// // Return empty duration with error if overflow
-	// if hourNumber < 0 && minuteNumber < 0 && secondNumber < 0 {
-	// 	return time.Duration(0), errors.New("Hour, minute, and second duration exceeds maximum")
-	// }
-
 	return hourminutesecondDuration, nil
 }
 
@@ -399,19 +386,6 @@ func ymdApproxDuration(p Period) (time.Duration, error) {
 	}
 
 	yearMonthDayDuration := yearDuration + monthDuration + dayDuration
-
-	// yearNumber := int64(yearMonthDayDuration / oneYearApproxNS)
-	// remainder := int64(yearMonthDayDuration % oneYearApproxNS)
-
-	// monthNumber := int64(remainder / int64(oneMonthApproxNS))
-	// remainder = int64(yearMonthDayDuration % oneMonthApproxNS)
-
-	// dayNumber := int64(remainder / int64(oneDayNS))
-
-	// Return empty duration with error if overflow
-	// if yearNumber < 0 && monthNumber < 0 && dayNumber < 0 {
-	// 	return time.Duration(0), errors.New("Year, month, and day duration exceeds maximum")
-	// }
 
 	return yearMonthDayDuration, nil
 }
@@ -772,6 +746,7 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 	var activePart []rune
 	var decimalPart []rune
 	var decimalSection rune
+	var currentSection rune
 	var inDecimal bool
 
 	// Ordering of period parts to allow some detection of malformed periods
@@ -786,13 +761,22 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 		secondRank        // rand order for second part
 	)
 
+	var rankVals map[int]string = make(map[int]string)
+
+	rankVals[yearRank] = "year"
+	rankVals[monthRank] = "month"
+	rankVals[dayRank] = "day"
+	rankVals[hourRank] = "hour"
+	rankVals[minuteRank] = "minute"
+	rankVals[secondRank] = "second"
+
 	input = strings.ToUpper(input)
 
 	var isTime bool
 
 	checkRank := func(old, new int) (int, error) {
 		if old > new {
-			return 0, fmt.Errorf("Ranks out of order %d and %d", old, new)
+			return 0, fmt.Errorf("period.parse: ranks must go in order - %s before %s", rankVals[old], rankVals[new])
 		}
 		return new, nil
 	}
@@ -825,13 +809,10 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 	}
 
 	var inPeriod bool = false
-	var maxSection int
-	var decimalIn int
 
 	var currentRank = yearRank
 
-	for i, r := range input {
-		maxSection = i
+	for _, r := range input {
 
 		if unicode.IsDigit(r) {
 			activePart = append(activePart, r)
@@ -904,6 +885,7 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 			}
 
 			if r == yearChar {
+				currentSection = r
 				if isTime == true {
 					xfmt := new(xfmt.Buffer)
 					msg := xfmt.S("period.parse: non time part after time declared ").S(orig)
@@ -920,9 +902,9 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 					period.years = intVal
 				} else {
 					decimalSection = r
-					decimalIn = maxSection
 				}
 			} else if r == minuteMonthChar {
+				currentSection = r
 				if isTime == false {
 					var err error
 					// Check ordering relative to previous
@@ -935,7 +917,6 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 						period.months = intVal
 					} else {
 						decimalSection = monthChar
-						decimalIn = maxSection
 					}
 				} else {
 					var err error
@@ -949,10 +930,10 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 						period.minutes = intVal
 					} else {
 						decimalSection = monthChar
-						decimalIn = maxSection
 					}
 				}
 			} else if r == weekChar {
+				currentSection = r
 				if isTime == true {
 					xfmt := new(xfmt.Buffer)
 					msg := xfmt.S("period.parse: non time part after time declared ").S(orig)
@@ -969,9 +950,9 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 					period.weeks = intVal
 				} else {
 					decimalSection = r
-					decimalIn = maxSection
 				}
 			} else if r == dayChar {
+				currentSection = r
 				if isTime == true {
 					xfmt := new(xfmt.Buffer)
 					msg := xfmt.S("period.parse: non time part after time declared ").S(orig)
@@ -988,9 +969,9 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 					period.days = intVal
 				} else {
 					decimalSection = r
-					decimalIn = maxSection
 				}
 			} else if r == hourChar {
+				currentSection = r
 				var err error
 				// Check ordering relative to previous
 				currentRank, err = checkRank(currentRank, hourRank)
@@ -1002,9 +983,9 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 					period.hours = intVal
 				} else {
 					decimalSection = r
-					decimalIn = maxSection
 				}
 			} else if r == minuteMonthChar {
+				currentSection = r
 				var err error
 				// Check ordering relative to previous
 				currentRank, err = checkRank(currentRank, minuteRank)
@@ -1016,9 +997,9 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 					period.minutes = intVal
 				} else {
 					decimalSection = r
-					decimalIn = maxSection
 				}
 			} else if r == secondChar {
+				currentSection = r
 				var err error
 				// Check ordering relative to previous
 				currentRank, err = checkRank(currentRank, secondRank)
@@ -1030,7 +1011,6 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 					period.seconds = intVal
 				} else {
 					decimalSection = r
-					decimalIn = maxSection
 				}
 			}
 
@@ -1054,8 +1034,9 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 	period.weeks = 0
 
 	if len(decimalPart) > 0 {
-		if decimalIn != maxSection {
-			return Period{}, fmt.Errorf("period.parse: decimal must end in last character %dnot in %d", maxSection, decimalIn)
+		if int(currentSection) != int(decimalSection) {
+			return Period{}, fmt.Errorf("period.parse: decimal for %s must end in last character %s not in %s",
+				input, string(currentSection), string(decimalSection))
 		}
 		parts := strings.Split(RunesToString(decimalPart...), ".")
 		if len(parts) != 2 {
