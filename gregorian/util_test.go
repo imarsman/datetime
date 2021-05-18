@@ -26,7 +26,7 @@ func TestIsLeap(t *testing.T) {
 		{2500, false},
 	}
 	for _, c := range cases {
-		got := IsLeap(c.year)
+		got := IsLeap(int64(c.year))
 		if got != c.expected {
 			t.Errorf("TestIsLeap(%d) == %v, want %v", c.year, got, c.expected)
 		}
@@ -42,7 +42,7 @@ func TestDaysInYear(t *testing.T) {
 		{2001, 365},
 	}
 	for _, c := range cases {
-		got1 := DaysInYear(c.year)
+		got1 := DaysInYear(int64(c.year))
 		if got1 != c.expected {
 			t.Errorf("DaysInYear(%d) == %v, want %v", c.year, got1, c.expected)
 		}
@@ -69,7 +69,7 @@ func TestDaysIn(t *testing.T) {
 		{2001, time.December, 31},
 	}
 	for _, c := range cases {
-		got1 := DaysIn(c.year, c.month)
+		got1 := DaysIn(int64(c.year), c.month)
 		if got1 != c.expected {
 			t.Errorf("DaysIn(%d, %d) == %v, want %v", c.year, c.month, got1, c.expected)
 		}

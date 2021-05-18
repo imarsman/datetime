@@ -181,14 +181,46 @@ func (d Date) Weekday() time.Weekday {
 	return time.Weekday((int32(wdayZero) + int32(d.day)%7 + 7) % 7)
 }
 
+func weeksInYear(year int64) int {
+	p := math.Mod(float64(year+(year/4)-(year/100)+(year/400)), 7)
+	return int(p)
+}
+
 // ISOWeek returns the ISO 8601 year and week number in which d occurs.
 // Week ranges from 1 to 53. Jan 01 to Jan 03 of year n might belong to
 // week 52 or 53 of year n-1, and Dec 29 to Dec 31 might belong to week 1
 // of year n+1.
-func (d Date) ISOWeek() (year, week int) {
-	t := decode(d.day)
-	return t.ISOWeek()
-}
+// func (d Date) ISOWeek() (year, week int) {
+// 	t := decode(d.day)
+// 	return t.ISOWeek()
+// }
+
+// ISOWeek returns the ISO 8601 year and week number in which t occurs.
+// Week ranges from 1 to 53. Jan 01 to Jan 03 of year n might belong to
+// week 52 or 53 of year n-1, and Dec 29 to Dec 31 might belong to week 1
+// of year n+1.
+// func (d Date) ISOWeek() (year, week int) {
+// 	// According to the rule that the first calendar week of a calendar year is
+// 	// the week including the first Thursday of that year, and that the last one is
+// 	// the week immediately preceding the first calendar week of the next calendar year.
+// 	// See https://www.iso.org/obp/ui#iso:std:iso:8601:-1:ed-1:v1:en:term:3.1.1.23 for details.
+
+// 	// weeks start with Monday
+// 	// Monday Tuesday Wednesday Thursday Friday Saturday Sunday
+// 	// 1      2       3         4        5      6        7
+// 	// +3     +2      +1        0        -1     -2       -3
+// 	// the offset to Thursday
+// 	abs := t.abs()
+// 	d := Thursday - absWeekday(abs)
+// 	// handle Sunday
+// 	if d == 4 {
+// 		d = -3
+// 	}
+// 	// find the Thursday of the calendar week
+// 	abs += uint64(d) * secondsPerDay
+// 	year, _, _, yday := absDate(abs, false)
+// 	return year, yday/7 + 1
+// }
 
 // IsZero reports whether t represents the zero date.
 func (d Date) IsZero() bool {
@@ -276,12 +308,12 @@ func (d Date) DaysSinceEpoch() (days PeriodOfDays) {
 
 // IsLeap simply tests whether a given year is a leap year, using the Gregorian calendar algorithm.
 func IsLeap(year int) bool {
-	return gregorian.IsLeap(year)
+	return gregorian.IsLeap(int64(year))
 }
 
 // DaysIn gives the number of days in a given month, according to the Gregorian calendar.
 func DaysIn(year int, month time.Month) int {
-	return gregorian.DaysIn(year, month)
+	return gregorian.DaysIn(int64(year), month)
 }
 
 // DatesInRange get dates in range.

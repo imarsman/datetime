@@ -161,32 +161,6 @@ func TestParsePeriodWithFractionalParts(t *testing.T) {
 
 }
 
-func TestGetParts(t *testing.T) {
-	is := is.New(t)
-
-	type periodParts struct {
-		part      rune
-		pre, post int64
-	}
-
-	parts := []periodParts{
-		{'S', 1, 1},           // 1.1 seconds - should give 100 ms
-		{'S', 13, 1575},       // 13.1575 seconds - should give 157 ms
-		{'I', 13, 575},        // 13.575 minutes - should give 575 ms
-		{'H', 200, 5},         // 200 hours and 30 minutes
-		{'Y', 260, 5},         // 260 years and 6 months
-		{'W', 260, 5},         // 260 weeks and .5 week
-		{'Y', 15000000000, 5}, // 15 billion years (and 6 months) - over threshold
-	}
-
-	for _, part := range parts {
-		years, months, days, hours, minutes, seconds, subseconds, err := period.AdditionsFromDecimalSection(part.part, part.pre, part.post)
-		is.NoErr(err)
-		t.Logf("years %d, months %d, days %d, hours %d, minutes %d, seconds %d, subseconds %d, err %v",
-			years, months, days, hours, minutes, seconds, subseconds, err)
-	}
-}
-
 // TestParsePeriodBad parse intentionally incorrect periods
 func TestParsePeriodBad(t *testing.T) {
 	tests := []string{
@@ -231,6 +205,32 @@ func BenchmarkGetAdditions(b *testing.B) {
 		years, months, days, hours, minutes, seconds, subseconds, err)
 
 	is.NoErr(err) // Parsing should not have caused an error
+}
+
+func TestGetFractionalParts(t *testing.T) {
+	is := is.New(t)
+
+	type periodParts struct {
+		part      rune
+		pre, post int64
+	}
+
+	parts := []periodParts{
+		{'S', 1, 1},           // 1.1 seconds - should give 100 ms
+		{'S', 13, 1575},       // 13.1575 seconds - should give 157 ms
+		{'I', 13, 575},        // 13.575 minutes - should give 575 ms
+		{'H', 200, 5},         // 200 hours and 30 minutes
+		{'Y', 260, 5},         // 260 years and 6 months
+		{'W', 260, 5},         // 260 weeks and .5 week
+		{'Y', 15000000000, 5}, // 15 billion years (and 6 months) - over threshold
+	}
+
+	for _, part := range parts {
+		years, months, days, hours, minutes, seconds, subseconds, err := period.AdditionsFromDecimalSection(part.part, part.pre, part.post)
+		is.NoErr(err)
+		t.Logf("years %d, months %d, days %d, hours %d, minutes %d, seconds %d, subseconds %d, err %v",
+			years, months, days, hours, minutes, seconds, subseconds, err)
+	}
 }
 
 // Force use of arbitrary precision decimals
