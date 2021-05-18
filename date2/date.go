@@ -5,6 +5,7 @@ package date2
 // license that can be found in the LICENSE file.
 
 import (
+	"errors"
 	"math"
 	"time"
 
@@ -56,6 +57,31 @@ type Date struct {
 	ce    bool
 }
 
+func (d Date) yearAbs() int64 {
+	if d.year < 0 {
+		return -d.year
+	}
+	return d.year
+}
+
+func (d Date) check() error {
+	if d.month == 0 || d.day == 0 {
+		return errors.New("Zero month or day")
+	}
+	return nil
+}
+
+func (d Date) clean() (Date, error) {
+	err := d.check()
+	if err != nil {
+		return Date{}, err
+	}
+	if d.year == 0 {
+		d.year = 1
+	}
+	return d, nil
+}
+
 // New returns the Date value corresponding to the given year, month, and day.
 //
 // The month and day may be outside their usual ranges and will be normalized
@@ -72,27 +98,46 @@ func New(year int64, month time.Month, day int) Date {
 }
 
 // IsCE is the year CE
-func (d Date) IsCE() bool {
-	if d.year == 0 {
-		return true
+func (d Date) IsCE() (bool, error) {
+	err := d.check()
+	if err != nil {
+		return false, err
 	}
-	return d.year > 0
+	d, err = d.clean()
+	if err != nil {
+		return false, err
+	}
+	return d.year > 0, nil
 }
 
 // Year get year for date
-func (d Date) Year() int64 {
-	if d.year == 0 {
-		return 1
+func (d Date) Year() (int64, error) {
+	d, err := d.clean()
+	if err != nil {
+		return 0, err
 	}
-	return d.year
+
+	return d.year, nil
 }
 
 // Month get month for year
-func (d Date) Month() time.Month {
-	return d.month
+func (d Date) Month() (time.Month, error) {
+	err := d.check()
+	if err != nil {
+		return 0, err
+	}
+
+	return d.month, nil
 }
 
-func (d Date) daysInMonth() int {
+func (d Date) daysInMonth() (int, error) {
+	err := d.check()
+	if err != nil {
+		return 0, err
+	}
+
+	year := d.yearAbs()
+
 	days := 31
 	// Faster than if statement
 	switch d.month {
@@ -110,7 +155,7 @@ func (d Date) daysInMonth() int {
 		days = 30
 	case 2:
 		// February
-		isLeap := IsLeap(d.year)
+		isLeap := IsLeap(year)
 		if isLeap == false {
 			days = 28
 		} else {
@@ -118,10 +163,14 @@ func (d Date) daysInMonth() int {
 		}
 	}
 
-	return days
+	return days, nil
 }
 
-func (d Date) dayOfYear() int {
+func (d Date) dayOfYear() (int, error) {
+	err := d.check()
+	if err != nil {
+		return 0, err
+	}
 	days := 0
 	copy := d
 	for i := 1; i < 13; i++ {
@@ -133,17 +182,22 @@ func (d Date) dayOfYear() int {
 			days += d.day
 			break
 		}
-		days += copy.daysInMonth()
+		val, _ := copy.daysInMonth()
+		days += val
 	}
 
-	return days
+	return days, nil
 }
 
-func (d Date) dayOfWeek() int {
-	dow1Jan := d.dayOfWeek1Jan()
+func (d Date) dayOfWeek() (int, error) {
+	err := d.check()
+	if err != nil {
+		return 0, err
+	}
+	dow1Jan, _ := d.dayOfWeek1Jan()
 	dow := dow1Jan
 
-	doy := d.dayOfYear()
+	doy, _ := d.dayOfYear()
 
 	dow--
 	for i := 0; i < doy; i++ {
@@ -154,21 +208,30 @@ func (d Date) dayOfWeek() int {
 		}
 	}
 
-	return dow
+	return dow, nil
 }
 
-func (d Date) dayOfWeek1Jan() int {
+func (d Date) dayOfWeek1Jan() (int, error) {
+	err := d.check()
+	if err != nil {
+		return 0, err
+	}
 	// https://en.wikipedia.org/wiki/Determination_of_the_day_of_the_week
 	// Formula by Gauss
 
 	// Inputs
 	// Year number A, month number M, day number D.
-	// set C = A \ 100, Y = A % 100, and the value is (1+5((Y−1)%4)+3(Y−1)+5(C%4))%7
-	c := d.year / 100
-	y := d.year % 100
+	// set C = A \ 100, Y = A % 100, and the value is
+	// (1+5((Y−1)%4)+3(Y−1)+5(C%4))%7
+	year := d.yearAbs()
+	if year < 0 {
+		year = -year
+	}
+	c := year / 100
+	y := year % 100
 	result := (1 + 5*((y-1)%4) + 3*(y-1) + 5*(c%4)) % 7
 
-	return int(result)
+	return int(result), nil
 }
 
 func isoWeekOfYearForDate(doy int, dow time.Weekday) int {
@@ -177,7 +240,9 @@ func isoWeekOfYearForDate(doy int, dow time.Weekday) int {
 }
 
 func isoWeeksInYear(year int64) int {
-	year = int64(math.Abs(float64(year)))
+	if year < 0 {
+		year = -year
+	}
 	year = gregorian.AdjustYear(year)
 
 	p := math.Mod(float64(year+(year/4)-(year/100)+(year/400)), 7)
@@ -197,16 +262,16 @@ func isoWeeksInYear(year int64) int {
 
 // NewOfDays returns the Date value corresponding to the given period since the
 // epoch (1st January 1970), which may be negative.
-func NewOfDays(p PeriodOfDays) Date {
-	return Date{}
-}
+// func NewOfDays(p PeriodOfDays) Date {
+// 	return Date{}
+// }
 
 // Date returns the Date value corresponding to the given period since the
 // epoch (1st January 1970), which may be negative.
-func (p PeriodOfDays) Date() Date {
-	// return Date{p}
-	return Date{}
-}
+// func (p PeriodOfDays) Date() Date {
+// 	// return Date{p}
+// 	return Date{}
+// }
 
 // Today returns today's date according to the current local time.
 func Today() Date {
@@ -270,24 +335,23 @@ func (d Date) Date() (year int64, month time.Month, day int) {
 
 // LastDayOfMonth returns the last day of the month specified by d.
 // The first day of the month is 1.
-func (d Date) LastDayOfMonth() int {
-	// y, m, _ := d.Date()
-	// return DaysIn(y, m)
-	return 0
+func (d Date) LastDayOfMonth() (int, error) {
+	dim, err := d.daysInMonth()
+	if err != nil {
+		return 0, err
+	}
+	return dim, nil
 }
 
 // Day returns the day of the month specified by d.
 // The first day of the month is 1.
 func (d Date) Day() int {
-	// t := decode(d.day)
-	// return t.Day()
-	return 0
+	return d.day
 }
 
 // Month returns the month of the year specified by d.
 // func (d Date) Month() time.Month {
-// 	t := decode(d.day)
-// 	return t.Month()
+// 	return d.month
 // }
 
 // Year returns the year specified by d.

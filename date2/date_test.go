@@ -42,41 +42,53 @@ const bechmarkBytesPerOp int64 = 10
 // }
 
 func TestDayOfYear(t *testing.T) {
+	is := is.New(t)
+	// test := []Date
+
 	tests := []Date{
+		New(-1000, 3, 1),
+		New(1000, 3, 1),
 		New(2020, 3, 1),
 		New(2021, 3, 1),
 	}
 	for _, d := range tests {
-		dayOfYear := d.dayOfYear()
+		dayOfYear, err := d.dayOfYear()
+		is.NoErr(err)
 		t.Log("Days of year", d.year, "month", d.month, "day", d.day, dayOfYear)
 	}
 }
 
 func TestDayInMonth(t *testing.T) {
+	is := is.New(t)
 	tests := []Date{
 		New(2020, 2, 18),
 		New(2021, 2, 18),
 	}
 	for _, p := range tests {
-		days := p.daysInMonth()
+		days, err := p.daysInMonth()
+		is.NoErr(err)
 		t.Log("Days in year", p.year, "month", p.month, days)
 	}
 }
 
 func TestDayOfWeek1Jan(t *testing.T) {
+	is := is.New(t)
 	tests := []Date{
+		New(-1000, 5, 1),
 		New(2018, 5, 18),
 		New(2019, 5, 18),
 		New(2020, 5, 18),
 		New(2021, 5, 18),
 	}
 	for _, d := range tests {
-		dow := d.dayOfWeek1Jan()
+		dow, err := d.dayOfWeek1Jan()
+		is.NoErr(err)
 		t.Log("Day of week 1 Jan for", d.year, dow)
 	}
 }
 
 func TestDayOfWeek(t *testing.T) {
+	is := is.New(t)
 	tests := []Date{
 		New(2018, 3, 1),
 		New(2019, 3, 1),
@@ -84,7 +96,8 @@ func TestDayOfWeek(t *testing.T) {
 		New(2021, 3, 1),
 	}
 	for _, d := range tests {
-		dow := d.dayOfWeek()
+		dow, err := d.dayOfWeek()
+		is.NoErr(err)
 		t.Log("Day of week", d.year, d.month, d.day, dow)
 	}
 }
@@ -98,9 +111,9 @@ func TestIsLeap(t *testing.T) {
 		2004,
 	}
 
-	for _, v := range tests {
-		isLeap := IsLeap(v)
-		t.Log("year", v, "isLeap", isLeap)
+	for _, y := range tests {
+		isLeap := IsLeap(y)
+		t.Log("year", y, "isLeap", isLeap)
 	}
 }
 
@@ -490,6 +503,7 @@ func BenchmarkDayOfWeek1Jan(b *testing.B) {
 
 	d := New(2020, 3, 1)
 	var dow int
+	var err error
 
 	b.ResetTimer()
 	b.SetBytes(bechmarkBytesPerOp)
@@ -497,10 +511,11 @@ func BenchmarkDayOfWeek1Jan(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			dow = d.dayOfWeek1Jan()
+			dow, err = d.dayOfWeek1Jan()
 		}
 	})
 
+	is.NoErr(err)
 	b.Log("day of week for 1 January,", d.year, dow)
 	is.True(dow != 0)
 }
@@ -508,6 +523,7 @@ func BenchmarkDayOfWeek1Jan(b *testing.B) {
 //  2.220 ns/op	  0 B/op   0 allocs/op
 func BenchmarkDaysInMonth(b *testing.B) {
 	is := is.New(b)
+	var err error
 
 	d := New(2020, 3, 1)
 	var dayOfYear int
@@ -518,10 +534,11 @@ func BenchmarkDaysInMonth(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			dayOfYear = d.daysInMonth()
+			dayOfYear, err = d.daysInMonth()
 		}
 	})
 
+	is.NoErr(err)
 	b.Log("days in month", dayOfYear)
 	is.True(dayOfYear != 0)
 }
@@ -529,6 +546,7 @@ func BenchmarkDaysInMonth(b *testing.B) {
 // 8.101 ns/op   0 B/op	  0 allocs/op
 func BenchmarkDayOfYear(b *testing.B) {
 	is := is.New(b)
+	var err error
 
 	d := New(2020, 3, 1)
 	var dayOfYear int
@@ -539,9 +557,10 @@ func BenchmarkDayOfYear(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			dayOfYear = d.dayOfYear()
+			dayOfYear, err = d.dayOfYear()
 		}
 	})
+	is.NoErr(err)
 
 	b.Log("day of year", dayOfYear)
 	is.True(dayOfYear != 0)
@@ -550,6 +569,7 @@ func BenchmarkDayOfYear(b *testing.B) {
 // 10.25 ns/op   0 B/op   0 allocs/op
 func BenchmarkDayOfWeek(b *testing.B) {
 	is := is.New(b)
+	var err error
 
 	d := New(2020, 3, 1)
 	var dayOfWeek int
@@ -560,9 +580,10 @@ func BenchmarkDayOfWeek(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			dayOfWeek = d.dayOfWeek()
+			dayOfWeek, err = d.dayOfWeek()
 		}
 	})
+	is.NoErr(err)
 
 	b.Log("day of week", dayOfWeek)
 	is.True(dayOfWeek != 0)

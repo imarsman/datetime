@@ -6,6 +6,9 @@ import (
 
 // IsLeap simply tests whether a given year is a leap year, using the Gregorian calendar algorithm.
 func IsLeap(year int64) bool {
+	if year < 0 {
+		year = -year
+	}
 	if year == 0 {
 		return false
 	}
