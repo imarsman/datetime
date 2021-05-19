@@ -64,46 +64,50 @@ func (d Date) yearAbs() int64 {
 	return d.year
 }
 
-func (d Date) check() error {
-	if d.month == 0 || d.day == 0 {
+// Validate validates that the date is basically OK
+func (d Date) Validate() error {
+	if d.IsZero() {
 		return errors.New("Zero month or day")
 	}
 	return nil
 }
 
-func (d Date) clean() (Date, error) {
-	err := d.check()
-	if err != nil {
-		return Date{}, err
-	}
+func (d *Date) clean() error {
 	if d.year == 0 {
 		d.year = 1
 	}
-	return d, nil
+
+	return nil
 }
 
-// New returns the Date value corresponding to the given year, month, and day.
+// NewDate returns the Date value corresponding to the given year, month, and day.
 //
 // The month and day may be outside their usual ranges and will be normalized
 // during the conversion.
-func New(year int64, month time.Month, day int) Date {
+func NewDate(year int64, month time.Month, day int) (Date, error) {
 	d := Date{}
+
 	var ce bool
 	d.year, ce = gregorianYear(year)
 	d.month = month
 	d.day = day
 	d.ce = ce
 
-	return d
+	err := d.clean()
+	if err != nil {
+		return Date{}, err
+	}
+	err = d.Validate()
+	if err != nil {
+		return Date{}, err
+	}
+
+	return d, nil
 }
 
 // IsCE is the year CE
 func (d Date) IsCE() (bool, error) {
-	err := d.check()
-	if err != nil {
-		return false, err
-	}
-	d, err = d.clean()
+	err := d.clean()
 	if err != nil {
 		return false, err
 	}
@@ -112,7 +116,7 @@ func (d Date) IsCE() (bool, error) {
 
 // Year get year for date
 func (d Date) Year() (int64, error) {
-	d, err := d.clean()
+	err := d.clean()
 	if err != nil {
 		return 0, err
 	}
@@ -122,7 +126,7 @@ func (d Date) Year() (int64, error) {
 
 // Month get month for year
 func (d Date) Month() (time.Month, error) {
-	err := d.check()
+	err := d.clean()
 	if err != nil {
 		return 0, err
 	}
@@ -130,8 +134,14 @@ func (d Date) Month() (time.Month, error) {
 	return d.month, nil
 }
 
+// Day returns the day of the month specified by d.
+// The first day of the month is 1.
+func (d Date) Day() int {
+	return d.day
+}
+
 func (d Date) daysInMonth() (int, error) {
-	err := d.check()
+	err := d.clean()
 	if err != nil {
 		return 0, err
 	}
@@ -166,8 +176,11 @@ func (d Date) daysInMonth() (int, error) {
 	return days, nil
 }
 
-func (d Date) dayOfYear() (int, error) {
-	err := d.check()
+// YearDay returns the day of the year specified by d, in the range [1,365] for
+// non-leap years, and [1,366] in leap years. The functionality should be the
+// same as for the Go time.YearDay func.
+func (d Date) YearDay() (int, error) {
+	err := d.clean()
 	if err != nil {
 		return 0, err
 	}
@@ -189,15 +202,18 @@ func (d Date) dayOfYear() (int, error) {
 	return days, nil
 }
 
-func (d Date) dayOfWeek() (int, error) {
-	err := d.check()
+// WeekDay the day of the week for date as specified by time.Weekday
+// A Weekday specifies a day of the week (Sunday = 0, ...).
+// The English name for time.Weekday can be obtained with time.Weekday.String()
+func (d Date) WeekDay() (int, error) {
+	err := d.clean()
 	if err != nil {
 		return 0, err
 	}
 	dow1Jan, _ := d.dayOfWeek1Jan()
 	dow := dow1Jan
 
-	doy, _ := d.dayOfYear()
+	doy, _ := d.YearDay()
 
 	dow--
 	for i := 0; i < doy; i++ {
@@ -212,7 +228,7 @@ func (d Date) dayOfWeek() (int, error) {
 }
 
 func (d Date) dayOfWeek1Jan() (int, error) {
-	err := d.check()
+	err := d.clean()
 	if err != nil {
 		return 0, err
 	}
@@ -239,6 +255,11 @@ func isoWeekOfYearForDate(doy int, dow time.Weekday) int {
 	return woy
 }
 
+// ISOWeeksInYear get number of ISO weeks in year
+func (d Date) ISOWeeksInYear() int {
+	return isoWeeksInYear(d.year)
+}
+
 func isoWeeksInYear(year int64) int {
 	if year < 0 {
 		year = -year
@@ -250,82 +271,33 @@ func isoWeeksInYear(year int64) int {
 	if p == 4 || p-1 == 3 {
 		weeks++
 	}
+
 	return weeks
 }
 
-// // NewAt returns the Date value corresponding to the given time.
-// // Note that the date is computed relative to the time zone specified by
-// // the given Time value.
-// func NewAt(t time.Time) Date {
-// 	return Date{}
-// }
-
-// NewOfDays returns the Date value corresponding to the given period since the
-// epoch (1st January 1970), which may be negative.
-// func NewOfDays(p PeriodOfDays) Date {
-// 	return Date{}
-// }
-
-// Date returns the Date value corresponding to the given period since the
-// epoch (1st January 1970), which may be negative.
-// func (p PeriodOfDays) Date() Date {
-// 	// return Date{p}
-// 	return Date{}
-// }
-
 // Today returns today's date according to the current local time.
 func Today() Date {
-	// t := time.Now()
-	// return Date{encode(t)}
-	return Date{}
+	t := time.Now()
+	d, _ := NewDate(int64(t.Year()), t.Month(), t.Day())
+
+	return d
 }
 
-// TodayUTC returns today's date according to the current UTC time.
-func TodayUTC() Date {
-	// t := time.Now().UTC()
-	// return Date{encode(t)}
-	return Date{}
+// Min returns the smallest representable date.
+func Min() Date {
+	gy, _ := gregorianYear(math.MinInt64)
+	d, _ := NewDate(gy, 1, 1)
+
+	return d
 }
 
-// TodayIn returns today's date according to the current time relative to
-// the specified location.
-func TodayIn(loc *time.Location) Date {
-	// t := time.Now().In(loc)
-	// return Date{encode(t)}
-	return Date{}
+// Max returns the largest representable date.
+func Max() Date {
+	gy, _ := gregorianYear(math.MaxInt64)
+	d, _ := NewDate(gy, 1, 1)
+
+	return d
 }
-
-// // Min returns the smallest representable date.
-// func Min() Date {
-// 	return Date{day: PeriodOfDays(math.MinInt32)}
-// }
-
-// // Max returns the largest representable date.
-// func Max() Date {
-// 	return Date{day: PeriodOfDays(math.MaxInt32)}
-// }
-
-// UTC returns a Time value corresponding to midnight on the given date,
-// UTC time.  Note that midnight is the beginning of the day rather than the end.
-// func (d Date) UTC() time.Time {
-// 	return decode(d.day)
-// }
-
-// Local returns a Time value corresponding to midnight on the given date,
-// local time.  Note that midnight is the beginning of the day rather than the end.
-
-// func (d Date) Local() time.Time {
-// 	return d.In(time.Local)
-// }
-
-// In returns a Time value corresponding to midnight on the given date,
-// relative to the specified time zone.  Note that midnight is the beginning
-// of the day rather than the end.
-// func (d Date) In(loc *time.Location) time.Time {
-// 	t := decode(d.day).In(loc)
-// 	_, offset := t.Zone()
-// 	return t.Add(time.Duration(-offset) * time.Second)
-// }
 
 // Date returns the year, month, and day of d.
 // The first day of the month is 1.
@@ -343,13 +315,7 @@ func (d Date) LastDayOfMonth() (int, error) {
 	return dim, nil
 }
 
-// Day returns the day of the month specified by d.
-// The first day of the month is 1.
-func (d Date) Day() int {
-	return d.day
-}
-
-// Month returns the month of the year specified by d.
+// // Month returns the month of the year specified by d.
 // func (d Date) Month() time.Month {
 // 	return d.month
 // }
@@ -358,13 +324,6 @@ func (d Date) Day() int {
 // func (d Date) Year() int {
 // 	t := decode(d.day)
 // 	return t.Year()
-// }
-
-// YearDay returns the day of the year specified by d, in the range [1,365] for
-// non-leap years, and [1,366] in leap years.
-// func (d Date) YearDay() int {
-// 	t := decode(d.day)
-// 	return t.YearDay()
 // }
 
 // Weekday returns the day of the week specified by d.
@@ -394,29 +353,30 @@ func (d Date) Equal(u Date) bool {
 	return d.day == u.day
 }
 
-// Before reports whether the date d is before u.
-func (d Date) Before(u Date) bool {
+// IsBefore reports whether the date d is before u.
+func (d Date) IsBefore(u Date) bool {
 	return d.day < u.day
 }
 
-// After reports whether the date d is after u.
-func (d Date) After(u Date) bool {
+// IsAfter reports whether the date d is after u.
+func (d Date) IsAfter(u Date) bool {
 	return d.day > u.day
 }
 
-// Min returns the earlier of two dates.
-func (d Date) Min(u Date) Date {
+// MinDate returns the earlier of two dates.
+func (d Date) MinDate(u Date) Date {
 	if d.day > u.day {
 		return u
 	}
 	return d
 }
 
-// Max returns the later of two dates.
-func (d Date) Max(u Date) Date {
+// MaxDate returns the later of two dates.
+func (d Date) MaxDate(u Date) Date {
 	if d.day < u.day {
 		return u
 	}
+
 	return d
 }
 

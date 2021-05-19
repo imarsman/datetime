@@ -24,24 +24,7 @@ const zeroYear int64 = 0
 const zeroMonth int64 = 1
 const zeroDay int64 = 1
 
-// func fromGregorianYear(year int64) int64 {
-// 	if year < 0 {
-// 		// return StartYear + epochYearGregorian - year
-// 		return StartYear - year
-// 	}
-// 	return StartYear + (epochYearGregorian - year)
-// }
-
 func gregorianYear(inputYear int64) (year int64, isCE bool) {
-	// if year > 0 {
-	// 	return 0, errors.New("parse.toGregorianYear: ncoming value must be < 0")
-	// }
-	// var diff int64
-	// if year > (StartYear - epochYearGregorian) {
-	// 	diff = StartYear - year + epochYearGregorian
-	// } else {
-	// 	diff = year - StartYear - epochYearGregorian
-	// }
 	year = inputYear
 	if year == 0 {
 		return 1, true

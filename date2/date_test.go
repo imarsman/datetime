@@ -6,6 +6,7 @@ package date2
 
 import (
 	"testing"
+	"time"
 
 	"github.com/matryer/is"
 )
@@ -41,62 +42,94 @@ const bechmarkBytesPerOp int64 = 10
 // 		yd == yt && wd == wt
 // }
 
+type dateParts struct {
+	y int64
+	m int64
+	d int
+}
+
+func TestMaxMinDates(t *testing.T) {
+	d := Max()
+	t.Log("max year", d.year, "month", d.month, "day", d.day)
+	d = Min()
+	t.Log("min year", d.year, "month", d.month, "day", d.day)
+}
 func TestDayOfYear(t *testing.T) {
 	is := is.New(t)
 	// test := []Date
 
-	tests := []Date{
-		New(-1000, 3, 1),
-		New(1000, 3, 1),
-		New(2020, 3, 1),
-		New(2021, 3, 1),
+	var partList = []dateParts{
+		{-1000, 5, 18},
+		{1000, 3, 1},
+		{2019, 5, 18},
+		{2020, 3, 18},
+		{2021, 3, 1},
 	}
-	for _, d := range tests {
-		dayOfYear, err := d.dayOfYear()
+
+	for _, p := range partList {
+		d, err := NewDate(p.y, time.Month(p.m), p.d)
+		dayOfYear, err := d.YearDay()
 		is.NoErr(err)
 		t.Log("Days of year", d.year, "month", d.month, "day", d.day, dayOfYear)
 	}
 }
 
-func TestDayInMonth(t *testing.T) {
+func TestDaysInMonth(t *testing.T) {
 	is := is.New(t)
-	tests := []Date{
-		New(2020, 2, 18),
-		New(2021, 2, 18),
+
+	var partList = []dateParts{
+		{2020, 2, 18},
+		{2021, 2, 18},
 	}
-	for _, p := range tests {
-		days, err := p.daysInMonth()
+	for _, p := range partList {
+		d, err := NewDate(p.y, time.Month(p.m), p.d)
+		days, err := d.daysInMonth()
 		is.NoErr(err)
-		t.Log("Days in year", p.year, "month", p.month, days)
+		t.Log("Days in year", d.year, "month", d.month, "days", days)
 	}
 }
 
 func TestDayOfWeek1Jan(t *testing.T) {
 	is := is.New(t)
-	tests := []Date{
-		New(-1000, 5, 1),
-		New(2018, 5, 18),
-		New(2019, 5, 18),
-		New(2020, 5, 18),
-		New(2021, 5, 18),
+
+	var partList = []dateParts{
+		{-1000, 5, 18},
+		{2018, 5, 18},
+		{2019, 5, 18},
+		{2020, 5, 18},
+		{2021, 5, 18},
 	}
-	for _, d := range tests {
+
+	var err error
+	var d Date
+
+	for _, p := range partList {
+		d, err = NewDate(p.y, time.Month(p.m), p.d)
 		dow, err := d.dayOfWeek1Jan()
 		is.NoErr(err)
 		t.Log("Day of week 1 Jan for", d.year, dow)
 	}
+
+	is.NoErr(err)
 }
 
 func TestDayOfWeek(t *testing.T) {
 	is := is.New(t)
-	tests := []Date{
-		New(2018, 3, 1),
-		New(2019, 3, 1),
-		New(2020, 3, 1),
-		New(2021, 3, 1),
+
+	var partList = []dateParts{
+		{2018, 3, 1},
+		{2019, 3, 1},
+		{2020, 3, 1},
+		{2021, 3, 1},
 	}
-	for _, d := range tests {
-		dow, err := d.dayOfWeek()
+
+	var err error
+	var d Date
+
+	for _, p := range partList {
+		d, err = NewDate(p.y, time.Month(p.m), p.d)
+		is.NoErr(err)
+		dow, err := d.WeekDay()
 		is.NoErr(err)
 		t.Log("Day of week", d.year, d.month, d.day, dow)
 	}
@@ -106,6 +139,8 @@ func TestIsLeap(t *testing.T) {
 	tests := []int64{
 		0,
 		1000,
+		2000,
+		3000,
 		1984,
 		2000,
 		2004,
@@ -117,13 +152,14 @@ func TestIsLeap(t *testing.T) {
 	}
 }
 
-func TestIsWeekNumer(t *testing.T) {
+func TestWeekNumer(t *testing.T) {
 
 	iterate := func(t *testing.T, start, end int64) {
 		is := is.New(t)
 		is.True(start < end)
 
 		for i := start; i < end; i++ {
+
 			weeks := isoWeeksInYear(i)
 			if weeks == 53 {
 				t.Log("weeks in year", i, weeks)
@@ -131,6 +167,7 @@ func TestIsWeekNumer(t *testing.T) {
 		}
 	}
 
+	t.Log("Printing all years with 53 weeks. The rest have 52")
 	iterate(t, -50, -1)
 	iterate(t, 0, 50)
 	iterate(t, 1000, 1010)
@@ -501,9 +538,10 @@ func TestToGregorianYear(t *testing.T) {
 func BenchmarkDayOfWeek1Jan(b *testing.B) {
 	is := is.New(b)
 
-	d := New(2020, 3, 1)
+	d, err := NewDate(2020, 3, 1)
+	is.NoErr(err)
+
 	var dow int
-	var err error
 
 	b.ResetTimer()
 	b.SetBytes(bechmarkBytesPerOp)
@@ -525,7 +563,9 @@ func BenchmarkDaysInMonth(b *testing.B) {
 	is := is.New(b)
 	var err error
 
-	d := New(2020, 3, 1)
+	d, err := NewDate(2020, 3, 1)
+	is.NoErr(err)
+
 	var dayOfYear int
 
 	b.ResetTimer()
@@ -548,7 +588,9 @@ func BenchmarkDayOfYear(b *testing.B) {
 	is := is.New(b)
 	var err error
 
-	d := New(2020, 3, 1)
+	d, err := NewDate(2020, 3, 1)
+	is.NoErr(err)
+
 	var dayOfYear int
 
 	b.ResetTimer()
@@ -557,7 +599,7 @@ func BenchmarkDayOfYear(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			dayOfYear, err = d.dayOfYear()
+			dayOfYear, err = d.YearDay()
 		}
 	})
 	is.NoErr(err)
@@ -571,7 +613,8 @@ func BenchmarkDayOfWeek(b *testing.B) {
 	is := is.New(b)
 	var err error
 
-	d := New(2020, 3, 1)
+	d, err := NewDate(2020, 3, 1)
+	is.NoErr(err)
 	var dayOfWeek int
 
 	b.ResetTimer()
@@ -580,11 +623,10 @@ func BenchmarkDayOfWeek(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			dayOfWeek, err = d.dayOfWeek()
+			dayOfWeek, err = d.WeekDay()
 		}
 	})
 	is.NoErr(err)
 
-	b.Log("day of week", dayOfWeek)
 	is.True(dayOfWeek != 0)
 }
