@@ -9,7 +9,66 @@ import (
 	"time"
 )
 
-const secondsPerDay = 60 * 60 * 24
+// Month a month - int
+type Month int
+
+const (
+	// January the month of January
+	January Month = 1 + iota
+	// February the month of February
+	February
+	// March the month of March
+	March
+	// April the month of April
+	April
+	// May the month of May
+	May
+	// June the month of June
+	June
+	// July the month of July
+	July
+	// August the month of August
+	August
+	// September the month of September
+	September
+	// October the month of October
+	October
+	// November the month of November
+	November
+	// December the month of December
+	December
+)
+
+type Weekday int
+
+const (
+	// Monday the day Monday
+	Monday Weekday = 1 + iota
+	// Tuesday the day Tuesday
+	Tuesday
+	// Wednesday the day Wednesday
+	Wednesday
+	// Thursday the day Thursday
+	Thursday
+	// Friday the day Friday
+	Friday
+	// Saturday the day Saturday
+	Saturday
+	// Sunday the day Sunday
+	Sunday
+)
+
+const (
+	secondsPerMinute = 60
+	secondsPerHour   = 60 * secondsPerMinute
+	secondsPerDay    = 24 * secondsPerHour
+	secondsPerWeek   = 7 * secondsPerDay
+	daysPer400Years  = 365*400 + 97
+	daysPer100Years  = 365*100 + 24
+	daysPer4Years    = 365*4 + 1
+)
+
+// const secondsPerDay = 60 * 60 * 24
 
 const billion = 1000000000
 
@@ -18,6 +77,8 @@ const epochYearGregorian int64 = 1970
 // StartYear the beginning of the universe
 // const StartYear = -billion * 15
 const StartYear = epochYearGregorian - epochYearGregorian
+
+const absoluteZeroYear = math.MinInt64
 
 // Gregorian epock year
 const zeroYear int64 = 0

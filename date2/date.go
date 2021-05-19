@@ -115,29 +115,81 @@ func (d Date) IsCE() (bool, error) {
 }
 
 // Year get year for date
-func (d Date) Year() (int64, error) {
-	err := d.clean()
-	if err != nil {
-		return 0, err
-	}
+func (d Date) Year() int64 {
+	// err := d.clean()
+	// if err != nil {
+	// 	return 0, err
+	// }
 
-	return d.year, nil
+	return d.year
 }
 
 // Month get month for year
-func (d Date) Month() (time.Month, error) {
-	err := d.clean()
-	if err != nil {
-		return 0, err
-	}
+func (d Date) Month() time.Month {
+	// err := d.clean()
+	// if err != nil {
+	// 	return 0, err
+	// }
 
-	return d.month, nil
+	return d.month
 }
 
 // Day returns the day of the month specified by d.
 // The first day of the month is 1.
 func (d Date) Day() int {
 	return d.day
+}
+
+/*
+// daysBefore[m] counts the number of days in a non-leap year
+// before month m begins. There is an entry for m=12, counting
+// the number of days before January of next year (365).
+var daysBefore = [...]int32{
+	0,
+	31,
+	31 + 28,
+	31 + 28 + 31,
+	31 + 28 + 31 + 30,
+	31 + 28 + 31 + 30 + 31,
+	31 + 28 + 31 + 30 + 31 + 30,
+	31 + 28 + 31 + 30 + 31 + 30 + 31,
+	31 + 28 + 31 + 30 + 31 + 30 + 31 + 31,
+	31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30,
+	31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31,
+	31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30,
+	31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30 + 31,
+}
+
+	// Add in days before this month.
+	d += uint64(daysBefore[month-1])
+	if isLeap(year) && month >= March {
+		d++ // February 29
+	}
+
+*/
+
+// norm returns nhi, nlo such that
+//	hi * base + lo == nhi * base + nlo
+//	0 <= nlo < base
+// From Go time package
+// Example
+// Normalize month, overflowing into year.
+// m := int(month) - 1
+// year, m = norm(year, m, 12)
+// month = Month(m) + 1
+
+func norm(hi, lo, base int64) (nhi, nlo int64) {
+	if lo < 0 {
+		n := (-lo-1)/base + 1
+		hi -= n
+		lo += n * base
+	}
+	if lo >= base {
+		n := lo / base
+		hi += n
+		lo -= n * base
+	}
+	return hi, lo
 }
 
 func (d Date) daysInMonth() (int, error) {
@@ -225,6 +277,35 @@ func (d Date) WeekDay() (int, error) {
 	}
 
 	return dow, nil
+}
+
+// daysSinceEpoch takes a year and returns the number of days from
+// the absolute epoch to the start of that year.
+// This is basically (year - zeroYear) * 365, but accounting for leap days.
+// From Go time package
+func daysSinceEpoch(year int64) uint64 {
+	y := uint64(int64(year) - absoluteZeroYear)
+
+	// Add in days from 400-year cycles.
+	n := y / 400
+	y -= 400 * n
+	d := daysPer400Years * n
+
+	// Add in 100-year cycles.
+	n = y / 100
+	y -= 100 * n
+	d += daysPer100Years * n
+
+	// Add in 4-year cycles.
+	n = y / 4
+	y -= 4 * n
+	d += daysPer4Years * n
+
+	// Add in non-leap years.
+	n = y
+	d += 365 * n
+
+	return d
 }
 
 func (d Date) dayOfWeek1Jan() (int, error) {
