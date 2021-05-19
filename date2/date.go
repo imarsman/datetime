@@ -73,10 +73,9 @@ func (d Date) Validate() error {
 }
 
 func (d *Date) clean() error {
-	if d.year == 0 {
-		d.year = 1
+	if d.year <= 0 {
+		d.year--
 	}
-
 	return nil
 }
 

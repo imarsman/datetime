@@ -97,7 +97,7 @@ func TestDaysSinceEpoch(t *testing.T) {
 	}
 	for _, y := range list {
 		days := daysSinceEpoch(y)
-		t.Logf("Days since epoch for %d %d", y, days)
+		t.Logf("Days since epoch for year %d = %d", y, days)
 	}
 }
 

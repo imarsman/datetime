@@ -2,10 +2,7 @@ package utility
 
 import "strings"
 
-/**
- * @var		func	digitCount
- * @global
- */
+// DigitCount count digits in an int64 number
 func DigitCount(number int64) int64 {
 	var count int64 = 0
 	for number != 0 {

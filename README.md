@@ -42,14 +42,15 @@ to parse the incoming timestamp. If the incoming timestamp is in a Unix
 timestamp format an attempt is made to parse it as such.
 
 For an interesting task a date package is being worked on which has no time
-portion. It is based on the Gregorian calendar and is designed to allow
-reasonably accurate work with dates over a very large range, larger than the
-Golang time package, which is based on nanoseconds, does. Dates assume UTC as
-the idea of timezones is perhaps not something as meaningful over millions or
-billions of years. A clock package is planned as well and a big time package is
-possible by combining the date and clock package. This is essentially similar to
-a time package that used a larger numerical type to hold time values, such as an
-int128.
+portion. It is based on the Gregorian calendar and amounts to a proleptic
+Gregorian calendar, an extension of the Gregorian calendar before its initial
+use and is designed to allow reasonably accurate work with dates over a very
+large range, larger than the Golang time package, which is based on nanoseconds,
+does. Dates assume UTC as the idea of timezones is perhaps not something as
+meaningful over millions or billions of years. A clock package is planned as
+well and a big time package is possible by combining the date and clock package.
+This is essentially similar to a time package that used a larger numerical type
+to hold time values, such as an int128.
 
 The large date package was first thought of when it was realized that ISO 8601
 periods could be produced which exceeded the Golang time library's timestamp
