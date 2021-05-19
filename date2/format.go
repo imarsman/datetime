@@ -6,6 +6,9 @@ package date2
 
 import (
 	"fmt"
+
+	"github.com/imarsman/datetime/utility"
+	"github.com/imarsman/datetime/xfmt"
 )
 
 // These are predefined layouts for use in Date.Format and Date.Parse.
@@ -34,11 +37,20 @@ const (
 // with possibly extra year digits beyond the prescribed four-digit minimum
 // and with a + or - sign prefix (e.g. , "+12345-06-07", "-0987-06-05").
 func (d Date) String() string {
+
+	// Count digits in an integer
+
 	year, month, day := d.Date()
-	if 0 <= year && year < 10000 {
-		return fmt.Sprintf("%04d-%02d-%02d", year, month, day)
-	}
-	return fmt.Sprintf("%+05d-%02d-%02d", year, month, day)
+
+	digits := utility.DigitCount(year)
+	xfmt := new(xfmt.Buffer)
+	xfmt.S("%0").D(int(digits)).C('d').C('-').S("%02d").C('-').S("%02d")
+	format := utility.BytesToString(xfmt.Bytes()...)
+	return fmt.Sprintf(format, year, month, day)
+	// if 0 <= year && year < 10000 {
+	// 	return fmt.Sprintf("%04d-%02d-%02d", year, month, day)
+	// }
+	// return fmt.Sprintf("%+05d-%02d-%02d", year, month, day)
 }
 
 // FormatISO returns a textual representation of the date value formatted

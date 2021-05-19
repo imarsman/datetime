@@ -11,6 +11,7 @@ import (
 
 	"github.com/cockroachdb/apd"
 	"github.com/imarsman/datetime/timestamp"
+	"github.com/imarsman/datetime/utility"
 	"github.com/imarsman/datetime/xfmt"
 )
 
@@ -319,20 +320,6 @@ func (p *Period) condNegate(neg bool) *Period {
 		return p.Negate()
 	}
 	return p
-}
-
-// RunesToString convert runes list to string with no allocation
-//
-// WriteRune is more complex than WriteByte so can't inline
-//
-// A small cost a few ns in testing is incurred for using a string builder.
-// There are no heap allocations using strings.Builder.
-func RunesToString(runes ...rune) string {
-	var sb = new(strings.Builder)
-	for i := 0; i < len(runes); i++ {
-		sb.WriteRune(runes[i])
-	}
-	return sb.String()
 }
 
 // IsZero is period emtpy
@@ -977,7 +964,7 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 			if inDecimal == true {
 				decimalPart = append(decimalPart, activePart...)
 			} else {
-				s := RunesToString(activePart...)
+				s := utility.RunesToString(activePart...)
 				var err error
 				intVal, err = strconv.ParseInt(s, 10, 64)
 				if err != nil {
@@ -1168,7 +1155,7 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 			return Period{}, fmt.Errorf("period.parse: %s decimal must be in last section %s not in %s",
 				input, string(currentSection), string(decimalSection))
 		}
-		parts := strings.Split(RunesToString(decimalPart...), ".")
+		parts := strings.Split(utility.RunesToString(decimalPart...), ".")
 		if len(parts) != 2 {
 			return Period{}, fmt.Errorf("period.parse: 2 parts needed but got %s" + fmt.Sprint(len(parts)))
 

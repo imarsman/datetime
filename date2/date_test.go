@@ -70,7 +70,7 @@ func TestDayOfYear(t *testing.T) {
 		d, err := NewDate(p.y, time.Month(p.m), p.d)
 		dayOfYear, err := d.YearDay()
 		is.NoErr(err)
-		t.Log("Days of year", dayOfYear, "year", d.Year(), "month", d.Month(), "day", d.Day())
+		t.Log("Days into year", dayOfYear, "for year", d.Year(), "month", d.Month(), "day", d.Day())
 	}
 }
 
@@ -97,7 +97,7 @@ func TestDaysSinceEpoch(t *testing.T) {
 	}
 	for _, y := range list {
 		days := daysSinceEpoch(y)
-		t.Logf("Days since epock for %d %d", y, days)
+		t.Logf("Days since epoch for %d %d", y, days)
 	}
 }
 
@@ -213,6 +213,26 @@ func TestToGregorianYear(t *testing.T) {
 		// year := fromGregorianYear(tests[i])
 		year, isCE := gregorianYear(tests[i])
 		t.Log(tests[i], "year", year, "isCE", isCE)
+	}
+}
+
+func TestString(t *testing.T) {
+	var partList = []dateParts{
+		{2018, 3, 1},
+		{2019, 3, 1},
+		{2020, 3, 1},
+		{2021, 3, 1},
+		{1, 3, 1},
+		{1000000, 3, 1},
+		{-1000000, 3, 1},
+	}
+
+	// var err error
+	// var d Date
+
+	for _, p := range partList {
+		d, _ := NewDate(p.y, time.Month(p.m), p.d)
+		t.Log(d.String())
 	}
 }
 
@@ -661,4 +681,25 @@ func BenchmarkDayOfWeek(b *testing.B) {
 	is.NoErr(err)
 
 	is.True(dayOfWeek != 0)
+}
+
+// 11.81 ns/op   0 B/op	  0 allocs/op
+func BenchmarkNewDate(b *testing.B) {
+	is := is.New(b)
+	var err error
+	var d Date
+	is.NoErr(err)
+
+	b.ResetTimer()
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			d, err = NewDate(2020, 3, 1)
+		}
+	})
+	is.NoErr(err)
+	is.True(d.IsZero() == false)
+	b.Log(d)
 }

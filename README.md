@@ -51,6 +51,11 @@ possible by combining the date and clock package. This is essentially similar to
 a time package that used a larger numerical type to hold time values, such as an
 int128.
 
+The large date package was first thought of when it was realized that ISO 8601
+periods could be produced which exceeded the Golang time library's timestamp
+capacity. It is not known where this will lead but some interesting things could
+result.
+
 The code for ISO-8601 date and timespan handling is licenced under the BSD-3-Clause
 Licence. You can read this licence at the end of the LICENCE file for this
 project.

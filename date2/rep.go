@@ -1,8 +1,10 @@
 package date2
 
-// Copyright 2015 The Go Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+// This package represents date whose zero value is 1 CE. It stores years as
+// int64 values and as such the minimum and maximum possible years are very
+// large. The Golang time package is used both for representing dates and times
+// and for doing timing operations. This package is oriented toward doing things
+// with dates.
 
 import (
 	"math"
@@ -39,8 +41,10 @@ const (
 	December
 )
 
+// Weekday a weekday (int)
 type Weekday int
 
+// From Golang time package
 const (
 	// Monday the day Monday
 	Monday Weekday = 1 + iota
@@ -58,6 +62,7 @@ const (
 	Sunday
 )
 
+// From Golang time package
 const (
 	secondsPerMinute = 60
 	secondsPerHour   = 60 * secondsPerMinute
@@ -68,22 +73,20 @@ const (
 	daysPer4Years    = 365*4 + 1
 )
 
-// const secondsPerDay = 60 * 60 * 24
-
 const billion = 1000000000
 
 const epochYearGregorian int64 = 1970
 
 // StartYear the beginning of the universe
-// const StartYear = -billion * 15
 const StartYear = epochYearGregorian - epochYearGregorian
 
+const absoluteMaxYear = math.MaxInt64
 const absoluteZeroYear = math.MinInt64
 
 // Gregorian epock year
-const zeroYear int64 = 0
-const zeroMonth int64 = 1
-const zeroDay int64 = 1
+// const zeroYear int64 = 0
+// const zeroMonth int64 = 1
+// const zeroDay int64 = 1
 
 func gregorianYear(inputYear int64) (year int64, isCE bool) {
 	year = inputYear
@@ -93,7 +96,7 @@ func gregorianYear(inputYear int64) (year int64, isCE bool) {
 	if year > (StartYear) {
 		year = StartYear + year
 	} else {
-		year = StartYear - int64(math.Abs(float64(year)))
+		year = StartYear - -year
 	}
 	return year, year > 0
 }
