@@ -547,7 +547,7 @@ func TestToGregorianYear(t *testing.T) {
 // 	t.Logf("Took %v to check %s  %d times", time.Since(start), format, count)
 // }
 
-func BenchmarkDaysSinceEpock(b *testing.B) {
+func BenchmarkDaysSinceEpoch(b *testing.B) {
 	is := is.New(b)
 
 	var days uint64

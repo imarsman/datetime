@@ -41,6 +41,16 @@ step fails a number of non-ISO-8601 formats are tried in a loop in a best effort
 to parse the incoming timestamp. If the incoming timestamp is in a Unix
 timestamp format an attempt is made to parse it as such.
 
+For an interesting task a date package is being worked on which has no time
+portion. It is based on the Gregorian calendar and is designed to allow
+reasonably accurate work with dates over a very large range, larger than the
+Golang time package, which is based on nanoseconds, does. Dates assume UTC as
+the idea of timezones is perhaps not something as meaningful over millions or
+billions of years. A clock package is planned as well and a big time package is
+possible by combining the date and clock package. This is essentially similar to
+a time package that used a larger numerical type to hold time values, such as an
+int128.
+
 The code for ISO-8601 date and timespan handling is licenced under the BSD-3-Clause
 Licence. You can read this licence at the end of the LICENCE file for this
 project.
