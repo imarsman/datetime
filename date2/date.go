@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/imarsman/datetime/gregorian"
-	"github.com/imarsman/datetime/period"
+	"github.com/imarsman/datetime/utility"
 )
 
 // PeriodOfDays describes a period of time measured in whole days. Negative values
@@ -52,8 +52,8 @@ const ZeroDays PeriodOfDays = 0
 //
 type Date struct {
 	year  int64
-	month time.Month
-	day   int
+	month int64
+	day   int64
 	ce    bool
 }
 
@@ -83,7 +83,7 @@ func (d *Date) clean() error {
 //
 // The month and day may be outside their usual ranges and will be normalized
 // during the conversion.
-func NewDate(year int64, month time.Month, day int) (Date, error) {
+func NewDate(year int64, month int64, day int64) (Date, error) {
 	d := Date{}
 
 	var ce bool
@@ -124,7 +124,7 @@ func (d Date) Year() int64 {
 }
 
 // Month get month for year
-func (d Date) Month() time.Month {
+func (d Date) Month() int64 {
 	// err := d.clean()
 	// if err != nil {
 	// 	return 0, err
@@ -135,67 +135,52 @@ func (d Date) Month() time.Month {
 
 // Day returns the day of the month specified by d.
 // The first day of the month is 1.
-func (d Date) Day() int {
+func (d Date) Day() int64 {
 	return d.day
 }
 
-/*
-// daysBefore[m] counts the number of days in a non-leap year
-// before month m begins. There is an entry for m=12, counting
-// the number of days before January of next year (365).
-var daysBefore = [...]int32{
-	0,
-	31,
-	31 + 28,
-	31 + 28 + 31,
-	31 + 28 + 31 + 30,
-	31 + 28 + 31 + 30 + 31,
-	31 + 28 + 31 + 30 + 31 + 30,
-	31 + 28 + 31 + 30 + 31 + 30 + 31,
-	31 + 28 + 31 + 30 + 31 + 30 + 31 + 31,
-	31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30,
-	31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31,
-	31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30,
-	31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30 + 31,
-}
+// AddDate add the value of years, months, and days to the date tied to
+// function. The remainder can be used to extend calculations to
+// time parts. The time package AddDate call does not mutate the reciever by
+// acting on a pointer so this one does the same.
+func (d Date) AddDate(year, mon int64, day int64) (Date, int64, error) {
+	// var mon int64
+	// var day int64
+	var remainder int64
+	year, mon = utility.Norm(year, mon, 12)
+	d.month = d.month + mon
+	mon, day = utility.Norm(mon, day, 12)
+	d.day = d.day + day
+	// _, remainder = utility.Norm(day, remainder, 12)
 
+	// TODO: Assess this logic. It is based on the time package logic but that
+	// deals with clock portions not dealt with here. The goal is to add any
+	// days missing in the current year to the calculated day value.
+	daysSince := daysSinceEpoch(d.year)
 	// Add in days before this month.
-	d += uint64(daysBefore[month-1])
-	if isLeap(year) && month >= March {
-		d++ // February 29
+	daysSince += uint64(utility.DaysBefore[d.month-1])
+	if IsLeap(d.year) && Month(d.month) >= March {
+		daysSince++ // February 29
 	}
 
-*/
+	// Add in days before today.
+	daysSince += uint64(day - 1)
+	d.day += int64(daysSince)
 
-// norm returns nhi, nlo such that
-//	hi * base + lo == nhi * base + nlo
-//	0 <= nlo < base
-// From Go time package
-// Example
-// Normalize month, overflowing into year.
-// m := int(month) - 1
-// year, m = norm(year, m, 12)
-// month = Month(m) + 1
+	// t := time.Now()
+	// t.AddDate()
 
-func norm(hi, lo, base int64) (nhi, nlo int64) {
-	if lo < 0 {
-		n := (-lo-1)/base + 1
-		hi -= n
-		lo += n * base
-	}
-	if lo >= base {
-		n := lo / base
-		hi += n
-		lo -= n * base
-	}
-	return hi, lo
+	return d, remainder, nil
 }
 
-func (d Date) daysInMonth() (int, error) {
+func (d Date) daysInMonth() (int64, error) {
 	err := d.clean()
 	if err != nil {
 		return 0, err
 	}
+
+	// t := time.Now()
+	// t.AddDate()
 
 	year := d.yearAbs()
 
@@ -224,21 +209,21 @@ func (d Date) daysInMonth() (int, error) {
 		}
 	}
 
-	return days, nil
+	return int64(days), nil
 }
 
 // YearDay returns the day of the year specified by d, in the range [1,365] for
 // non-leap years, and [1,366] in leap years. The functionality should be the
 // same as for the Go time.YearDay func.
-func (d Date) YearDay() (int, error) {
+func (d Date) YearDay() (int64, error) {
 	err := d.clean()
 	if err != nil {
 		return 0, err
 	}
-	days := 0
+	var days int64 = 0
 	copy := d
 	for i := 1; i < 13; i++ {
-		copy.month = time.Month(i)
+		copy.month = int64(i)
 		if copy.month > d.month {
 			break
 		}
@@ -267,7 +252,7 @@ func (d Date) WeekDay() (int, error) {
 	doy, _ := d.YearDay()
 
 	dow--
-	for i := 0; i < doy; i++ {
+	for i := 0; i < int(doy); i++ {
 		if dow == 7 {
 			dow = 1
 		} else {
@@ -358,7 +343,7 @@ func isoWeeksInYear(year int64) int {
 // Today returns today's date according to the current local time.
 func Today() Date {
 	t := time.Now()
-	d, _ := NewDate(int64(t.Year()), t.Month(), t.Day())
+	d, _ := NewDate(int64(t.Year()), int64(t.Month()), int64(t.Day()))
 
 	return d
 }
@@ -381,13 +366,13 @@ func Max() Date {
 
 // Date returns the year, month, and day of d.
 // The first day of the month is 1.
-func (d Date) Date() (year int64, month time.Month, day int) {
+func (d Date) Date() (year int64, month int64, day int64) {
 	return d.year, d.month, d.day
 }
 
 // LastDayOfMonth returns the last day of the month specified by d.
 // The first day of the month is 1.
-func (d Date) LastDayOfMonth() (int, error) {
+func (d Date) LastDayOfMonth() (int64, error) {
 	dim, err := d.daysInMonth()
 	if err != nil {
 		return 0, err
@@ -477,11 +462,11 @@ func (d Date) Add(days PeriodOfDays) Date {
 // The addition of all fields is performed before normalisation of any; this can affect
 // the result. For example, adding 0y 1m 3d to September 28 gives October 31 (not
 // November 1).
-func (d Date) AddDate(years, months, days int) Date {
-	// t := decode(d.day).AddDate(years, months, days)
-	// return Date{encode(t)}
-	return Date{}
-}
+// func (d Date) AddDate(years, months, days int) Date {
+// 	// t := decode(d.day).AddDate(years, months, days)
+// 	// return Date{encode(t)}
+// 	return Date{}
+// }
 
 // AddPeriod returns the date corresponding to adding the given period. If the
 // period's fields are be negative, this results in an earlier date.
@@ -496,9 +481,10 @@ func (d Date) AddDate(years, months, days int) Date {
 // delta.Normalise(false) as the input.
 //
 // See the description for AddDate.
-func (d Date) AddPeriod(delta period.Period) Date {
-	return d.AddDate(int(delta.Years()), int(delta.Months()), int(delta.Days()))
-}
+// func (d Date) AddPeriod(delta period.Period) (Date, error) {
+// 	newDate, err := d.AddDate(delta.Years(), delta.Months(), delta.Days())
+// 	return newDate, err
+// }
 
 // Sub returns d-u as the number of days between the two dates.
 // func (d Date) Sub(u Date) (days PeriodOfDays) {

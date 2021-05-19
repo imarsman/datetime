@@ -6,7 +6,6 @@ package date2
 
 import (
 	"testing"
-	"time"
 
 	"github.com/matryer/is"
 )
@@ -45,7 +44,7 @@ const bechmarkBytesPerOp int64 = 10
 type dateParts struct {
 	y int64
 	m int64
-	d int
+	d int64
 }
 
 func TestMaxMinDates(t *testing.T) {
@@ -67,7 +66,7 @@ func TestDayOfYear(t *testing.T) {
 	}
 
 	for _, p := range partList {
-		d, err := NewDate(p.y, time.Month(p.m), p.d)
+		d, err := NewDate(p.y, p.m, p.d)
 		dayOfYear, err := d.YearDay()
 		is.NoErr(err)
 		t.Log("Days into year", dayOfYear, "for year", d.Year(), "month", d.Month(), "day", d.Day())
@@ -82,7 +81,7 @@ func TestDaysInMonth(t *testing.T) {
 		{2021, 2, 18},
 	}
 	for _, p := range partList {
-		d, err := NewDate(p.y, time.Month(p.m), p.d)
+		d, err := NewDate(p.y, p.m, p.d)
 		days, err := d.daysInMonth()
 		is.NoErr(err)
 		t.Log("Days in year", d.year, "month", d.month, "days", days)
@@ -116,7 +115,7 @@ func TestDayOfWeek1Jan(t *testing.T) {
 	var d Date
 
 	for _, p := range partList {
-		d, err = NewDate(p.y, time.Month(p.m), p.d)
+		d, err = NewDate(p.y, p.m, p.d)
 		dow, err := d.dayOfWeek1Jan()
 		is.NoErr(err)
 		t.Log("Day of week 1 Jan for", d.year, dow)
@@ -139,7 +138,7 @@ func TestDayOfWeek(t *testing.T) {
 	var d Date
 
 	for _, p := range partList {
-		d, err = NewDate(p.y, time.Month(p.m), p.d)
+		d, err = NewDate(p.y, p.m, p.d)
 		is.NoErr(err)
 		dow, err := d.WeekDay()
 		is.NoErr(err)
@@ -231,7 +230,7 @@ func TestString(t *testing.T) {
 	// var d Date
 
 	for _, p := range partList {
-		d, _ := NewDate(p.y, time.Month(p.m), p.d)
+		d, _ := NewDate(p.y, p.m, p.d)
 		t.Log(d.String())
 	}
 }
@@ -618,7 +617,7 @@ func BenchmarkDaysInMonth(b *testing.B) {
 	d, err := NewDate(2020, 3, 1)
 	is.NoErr(err)
 
-	var dayOfYear int
+	var dayOfYear int64
 
 	b.ResetTimer()
 	b.SetBytes(bechmarkBytesPerOp)
@@ -643,7 +642,7 @@ func BenchmarkDayOfYear(b *testing.B) {
 	d, err := NewDate(2020, 3, 1)
 	is.NoErr(err)
 
-	var dayOfYear int
+	var dayOfYear int64
 
 	b.ResetTimer()
 	b.SetBytes(bechmarkBytesPerOp)
