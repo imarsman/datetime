@@ -215,6 +215,38 @@ func TestToGregorianYear(t *testing.T) {
 	}
 }
 
+func TestAddDate(t *testing.T) {
+	type datePartsWithAdd struct {
+		y    int64
+		m    int64
+		d    int64
+		addY int64
+		addM int64
+		addD int64
+	}
+
+	var partList = []datePartsWithAdd{
+		// {2018, 3, 1},
+		{2019, 3, 1, 3, 10, 1},
+		// {2020, 3, 1},
+		// {2021, 3, 1},
+		// {1, 3, 1},
+		// {1000000, 3, 1},
+		// {-1000000, 3, 1},
+	}
+
+	// var err error
+	// var d Date
+
+	for _, p := range partList {
+		d, _ := NewDate(p.y, p.m, p.d)
+		t.Logf("Add years %d months %d days %d", p.addY, p.addM, p.addD)
+		t.Logf("Pre add years %d months %d days %d", d.year, d.month, d.day)
+		d, _, _ = d.AddParts(2, 10, 14)
+		t.Logf("Post add years %d months %d days %d", d.year, d.month, d.day)
+	}
+}
+
 func TestString(t *testing.T) {
 	var partList = []dateParts{
 		{2018, 3, 1},
@@ -565,6 +597,25 @@ func TestString(t *testing.T) {
 
 // 	t.Logf("Took %v to check %s  %d times", time.Since(start), format, count)
 // }
+
+func BenchmarkAddParts(b *testing.B) {
+	is := is.New(b)
+
+	var err error
+	d, _ := NewDate(2019, 3, 1)
+
+	b.ResetTimer()
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			d, _, err = d.AddParts(70, 10, 14)
+		}
+	})
+
+	is.NoErr(err)
+}
 
 func BenchmarkDaysSinceEpoch(b *testing.B) {
 	is := is.New(b)

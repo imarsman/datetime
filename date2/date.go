@@ -6,6 +6,7 @@ package date2
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"time"
 
@@ -139,38 +140,117 @@ func (d Date) Day() int64 {
 	return d.day
 }
 
-// AddDate add the value of years, months, and days to the date tied to
-// function. The remainder can be used to extend calculations to
-// time parts. The time package AddDate call does not mutate the reciever by
-// acting on a pointer so this one does the same.
-func (d Date) AddDate(year, mon int64, day int64) (Date, int64, error) {
-	// var mon int64
-	// var day int64
-	var remainder int64
-	year, mon = utility.Norm(year, mon, 12)
-	d.month = d.month + mon
-	mon, day = utility.Norm(mon, day, 12)
-	d.day = d.day + day
-	// _, remainder = utility.Norm(day, remainder, 12)
-
-	// TODO: Assess this logic. It is based on the time package logic but that
-	// deals with clock portions not dealt with here. The goal is to add any
-	// days missing in the current year to the calculated day value.
-	daysSince := daysSinceEpoch(d.year)
-	// Add in days before this month.
-	daysSince += uint64(utility.DaysBefore[d.month-1])
-	if IsLeap(d.year) && Month(d.month) >= March {
-		daysSince++ // February 29
+// AddDays add days to a date
+func (d Date) AddDays(add int64) (date Date, err error) {
+	d2 := d
+	newYear := false
+	for {
+		daysInMonth, err := d2.daysInMonth()
+		if err != nil {
+			return Date{}, err
+		}
+		if d2.month >= 12 {
+			d2.year++
+			newYear = true
+		}
+		if add > daysInMonth {
+			if newYear {
+				d2.month = 1
+				newYear = false
+			}
+			if d2.day == daysInMonth {
+				d2.day = 1
+			} else {
+				d2.day++
+			}
+			d2.month++
+			d2.day = 1
+			fmt.Println("month", d2.month, "day", d2.day)
+			add = add - daysInMonth - 1
+		} else {
+			d2.day += daysInMonth - add - 1
+			break
+		}
 	}
 
-	// Add in days before today.
-	daysSince += uint64(day - 1)
-	d.day += int64(daysSince)
+	return d2, nil
+}
 
-	// t := time.Now()
-	// t.AddDate()
+// AddMonths add months to a date
+// TODO: decide if it would be good to add days
+func (d Date) AddMonths(add int64) (d2 Date, err error) {
+	d2 = d
+	var daysCount int64 = 0
+	startDays, _ := d2.daysInMonth()
+	startDays -= d2.day
+	for i := 0; int64(i) < add; i++ {
+		daysInMonth, _ := d2.daysInMonth()
+		d2, _ = d2.AddDays(daysInMonth)
+		daysCount += daysInMonth
+		// if d2.month > 12 {
+		// 	d2.year++
+		// 	d2.month = 1
+		// } else {
+		// 	d2.month++
+		// }
+	}
+	daysCount -= d.day
 
-	return d, remainder, nil
+	return d2, nil
+}
+
+// AddParts add the number of months to a starting month
+// function. The remainder can be used to extend calculations to
+// time parts. The time package AddParts call does not mutate the reciever by
+// acting on a pointer so this one does the same.
+func (d Date) AddParts(years, months, days int64) (Date, int64, error) {
+	// var err error
+	dFinal := d
+
+	m := days
+	y := years
+
+	var remainder int64
+
+	// Normalize month, overflowing into year.
+	y, m = utility.Norm(y, m, 12)
+	dFinal.year += y
+
+	dFinal, _ = dFinal.AddMonths(m)
+	dFinal, _ = dFinal.AddMonths(months)
+
+	dFinal, _ = dFinal.AddDays(days)
+
+	return dFinal, remainder, nil
+}
+
+// TODO: Decide whether to account for leap days
+func (d Date) addYears(years int64) (Date, error) {
+	d2 := d
+	// dDays := daysSinceEpoch(d.year)
+
+	d2.year += years
+	// d2Days := daysSinceEpoch(d2.year)
+
+	// var days int64
+	// if dDays > d2Days {
+	// 	days = int64(dDays) - int64(d2Days)
+	// } else {
+	// 	days = int64(d2Days) - int64(dDays)
+	// }
+
+	d3 := d2
+	// for {
+	// 	monthDays, _ := d3.daysInMonth()
+	// 	if days+monthDays < days {
+	// 		days = days + monthDays
+	// 	} else {
+	// 		diff := days - monthDays
+	// 		days += diff
+	// 		break
+	// 	}
+	// }
+	return d3, nil
 }
 
 func (d Date) daysInMonth() (int64, error) {
@@ -178,9 +258,6 @@ func (d Date) daysInMonth() (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-
-	// t := time.Now()
-	// t.AddDate()
 
 	year := d.yearAbs()
 
@@ -446,10 +523,10 @@ func (d Date) MaxDate(u Date) Date {
 }
 
 // Add returns the date d plus the given number of days. The parameter may be negative.
-func (d Date) Add(days PeriodOfDays) Date {
-	// 	return Date{d.day + days}
-	return Date{}
-}
+// func (d Date) Add(days PeriodOfDays) Date {
+// 	// 	return Date{d.day + days}
+// 	return Date{}
+// }
 
 // AddDate returns the date corresponding to adding the given number of years,
 // months, and days to d. For example, AddData(-1, 2, 3) applied to
