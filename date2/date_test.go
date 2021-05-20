@@ -226,24 +226,18 @@ func TestAddDate(t *testing.T) {
 	}
 
 	var partList = []datePartsWithAdd{
-		// {2018, 3, 1},
 		{2019, 3, 1, 3, 10, 1},
-		// {2020, 3, 1},
-		// {2021, 3, 1},
-		// {1, 3, 1},
-		// {1000000, 3, 1},
-		// {-1000000, 3, 1},
+		{2019, 1, 1, 1, 0, 0},
+		{2019, 1, 1, 0, 12, 0},
+		{2019, 1, 1, 14, 0, 0},
 	}
 
-	// var err error
-	// var d Date
-
-	for _, p := range partList {
-		d, _ := NewDate(p.y, p.m, p.d)
-		t.Logf("Add years %d months %d days %d", p.addY, p.addM, p.addD)
-		t.Logf("Pre add years %d months %d days %d", d.year, d.month, d.day)
-		d, _, _ = d.AddParts(2, 10, 14)
-		t.Logf("Post add years %d months %d days %d", d.year, d.month, d.day)
+	for _, dt := range partList {
+		d, _ := NewDate(dt.y, dt.m, dt.d)
+		t.Logf("Pre %s", d.String())
+		t.Logf("Add %d years,  %d months, %d days", dt.addY, dt.addM, dt.addD)
+		d, _, _ = d.AddParts(dt.addY, dt.addM, dt.addD)
+		t.Logf("Post %s", d.String())
 	}
 }
 
@@ -617,7 +611,7 @@ func BenchmarkAddParts(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			d, _, err = d.AddParts(70, 10, 14)
+			d, _, err = d.AddParts(0, 12, 0)
 		}
 	})
 
