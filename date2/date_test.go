@@ -603,7 +603,7 @@ func BenchmarkAddParts(b *testing.B) {
 	is := is.New(b)
 
 	var err error
-	d, _ := NewDate(2019, 3, 1)
+	var d Date
 
 	b.ResetTimer()
 	b.SetBytes(bechmarkBytesPerOp)
@@ -611,10 +611,12 @@ func BenchmarkAddParts(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			d, _, err = d.AddParts(0, 12, 0)
+			d, _ = NewDate(2019, 3, 1)
+			d, _, err = d.AddParts(1000, 0, 0)
 		}
 	})
 
+	b.Log("caculated", d.String())
 	is.NoErr(err)
 }
 

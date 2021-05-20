@@ -209,7 +209,11 @@ func (d Date) AddDays(add int64) (date Date, err error) {
 	// fmt.Println("add", add)
 	newYear := false
 	for add > 0 {
-		daysInMonth, err := d2.daysInMonth()
+		// We will deal with leap days elsewhere
+		dNeutral := d2
+		dNeutral.year = 2019
+		daysInMonth, _ := dNeutral.daysInMonth()
+
 		if err != nil {
 			return Date{}, err
 		}
@@ -243,14 +247,14 @@ func (d Date) AddDays(add int64) (date Date, err error) {
 // TODO: decide if it would be good to add days
 func (d Date) AddMonths(add int64) (d2 Date, err error) {
 	d2 = d
-	// fmt.Println("d2", d2.String())
 	var daysCount int64 = 0
-	startDays, _ := d2.daysInMonth()
-	startDays -= d2.day
+	// We will deal with leap days elsewhere
+	dNeutral := d2
+	dNeutral.year = 2019
+	daysInMonth, _ := dNeutral.daysInMonth()
+	daysInMonth -= d2.day
 	for i := 0; int64(i) < add; i++ {
-		daysInMonth, _ := d2.daysInMonth()
 		d2, _ = d2.AddDays(daysInMonth)
-		// fmt.Println("d2", d2.String())
 		daysCount += daysInMonth
 	}
 	daysCount -= d.day
