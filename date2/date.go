@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/imarsman/datetime/gregorian"
-	"github.com/imarsman/datetime/utility"
 )
 
 // PeriodOfDays describes a period of time measured in whole days. Negative values
@@ -140,6 +139,65 @@ func (d Date) Day() int64 {
 	return d.day
 }
 
+// SubtractDays add days to a date
+func (d Date) SubtractDays(subtract int64) (date Date, err error) {
+	d2 := d
+	fmt.Println(d.String(), subtract)
+	newYear := false
+	for {
+		daysInMonth, err := d2.daysInMonth()
+		if err != nil {
+			return Date{}, err
+		}
+		// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
+		if d2.month == 1 && d2.day == 1 {
+			fmt.Println("equal")
+			d2.year--
+			newYear = true
+		}
+		if subtract > daysInMonth {
+			// fmt.Println("d2.day", d2.day)
+			if newYear {
+				// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
+				d2.day = 1
+				d2.month = 12
+
+				newYear = false
+			}
+			// if d2.day == daysInMonth {
+			// 	// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
+			// 	subtract = subtract - d2.day
+			// 	// fmt.Println("d2.day", d2.day)
+			// 	d2.day = 1
+
+			// 	continue
+			// } else {
+			// 	// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
+			// 	// d2.day--
+			// 	// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
+			// }
+			fmt.Println("d2.day", d2.day)
+			d2.month--
+			fmt.Println("subtract", subtract, "daysinmonth", daysInMonth, "d2.day", d2.day, "d2", d2.String())
+			subtract = subtract - daysInMonth
+			d2.day -= subtract
+			fmt.Println("subtract", subtract, "daysinmonth", daysInMonth, "d2.day", d2.day, "d2", d2.String())
+			// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
+		} else {
+			// subtract = subtract - d2.day
+			// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
+			fmt.Println("subtract", subtract, "daysinmonth", daysInMonth, "d2.day", d2.day, "d2", d2.String())
+			d2.day = d2.day - subtract
+			fmt.Println("subtract", subtract, "daysinmonth", daysInMonth, "d2.day", d2.day, "d2", d2.String())
+			fmt.Println("d2.day", d2.day)
+			// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
+			break
+		}
+	}
+
+	return d2, nil
+}
+
 // AddDays add days to a date
 func (d Date) AddDays(add int64) (date Date, err error) {
 	d2 := d
@@ -207,16 +265,17 @@ func (d Date) AddParts(years, months, days int64) (Date, int64, error) {
 	// var err error
 	dFinal := d
 
-	m := days
-	y := years
+	// m := days
+	// y := years
 
 	var remainder int64
 
 	// Normalize month, overflowing into year.
-	y, m = utility.Norm(y, m, 12)
-	dFinal.year += y
+	// y, m = utility.Norm(y, m, 12)
+	// dFinal.year += y
+	dFinal, _ = dFinal.addYears(years)
 
-	dFinal, _ = dFinal.AddMonths(m)
+	// dFinal, _ = dFinal.AddMonths(m)
 	dFinal, _ = dFinal.AddMonths(months)
 
 	dFinal, _ = dFinal.AddDays(days)
@@ -227,11 +286,12 @@ func (d Date) AddParts(years, months, days int64) (Date, int64, error) {
 // TODO: Decide whether to account for leap days
 func (d Date) addYears(years int64) (Date, error) {
 	d2 := d
-	// dDays := daysSinceEpoch(d.year)
+	dDays := daysSinceEpoch(d.year)
 
 	d2.year += years
-	// d2Days := daysSinceEpoch(d2.year)
+	d2Days := daysSinceEpoch(d2.year)
 
+	fmt.Println(d2Days - dDays)
 	// var days int64
 	// if dDays > d2Days {
 	// 	days = int64(dDays) - int64(d2Days)

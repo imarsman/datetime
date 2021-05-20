@@ -247,6 +247,13 @@ func TestAddDate(t *testing.T) {
 	}
 }
 
+func TestSubtractDays(t *testing.T) {
+	d, _ := NewDate(2000, 2, 15)
+	t.Log(d.String())
+	d, _ = d.SubtractDays(32)
+	t.Log(d.String())
+}
+
 func TestString(t *testing.T) {
 	var partList = []dateParts{
 		{2018, 3, 1},
