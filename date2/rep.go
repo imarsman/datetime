@@ -10,6 +10,8 @@ import (
 	"errors"
 	"math"
 	"time"
+
+	"github.com/imarsman/datetime/gregorian"
 )
 
 // Month a month - int
@@ -95,13 +97,7 @@ func gregorianYear(inputYear int64) (year int64, isCE bool) {
 	if year < -1 {
 		year++
 	}
-	// } else if year >= (StartYear) {
-	// 	year = StartYear - 1 + year
-	// } else {
-	// 	fmt.Println("year", year)
-	// 	year = StartYear - -year
-	// 	fmt.Println("year", year)
-	// }
+
 	return year, year > StartYear
 }
 
@@ -111,38 +107,45 @@ func (d Date) daysInMonth() (int, error) {
 		return 0, err
 	}
 
+	daysInMonth := gregorian.DaysInMonth[d.month]
 	year := d.yearAbs()
-
-	days := 31
-	// Faster than if statement
-	switch d.month {
-	case 9:
-		// September
-		days = 30
-	case 4:
-		// April
-		days = 30
-	case 6:
-		// June
-		days = 30
-	case 11:
-		// November
-		days = 30
-	case 2:
-		// February
-		leapD, err := NewDate(year, 1, 1)
-		if err != nil {
-			return 0, err
-		}
-		isLeap := leapD.IsLeap()
-		if isLeap == false {
-			days = 28
-		} else {
-			days = 29
-		}
+	leapD, err := NewDate(year, 1, 1)
+	isLeap := leapD.IsLeap()
+	if isLeap && d.month == 2 {
+		return 29, nil
 	}
+	return daysInMonth, nil
 
-	return days, nil
+	// days := 31
+	// // Faster than if statement
+	// switch d.month {
+	// case 9:
+	// 	// September
+	// 	days = 30
+	// case 4:
+	// 	// April
+	// 	days = 30
+	// case 6:
+	// 	// June
+	// 	days = 30
+	// case 11:
+	// 	// November
+	// 	days = 30
+	// case 2:
+	// 	// February
+	// 	leapD, err := NewDate(year, 1, 1)
+	// 	if err != nil {
+	// 		return 0, err
+	// 	}
+	// 	isLeap := leapD.IsLeap()
+	// 	if isLeap == false {
+	// 		days = 28
+	// 	} else {
+	// 		days = 29
+	// 	}
+	// }
+
+	// return days, nil
 }
 
 // YearDay returns the day of the year specified by d, in the range [1,365] for

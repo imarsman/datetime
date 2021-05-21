@@ -50,10 +50,11 @@ import (
 // which can also be represented when needed.
 //
 type Date struct {
-	year  int64
-	month int
-	day   int
-	ce    bool
+	year               int64
+	month              int
+	day                int
+	ce                 bool
+	safelyInstantiated bool
 }
 
 func (d Date) yearAbs() int64 {
@@ -72,8 +73,8 @@ func (d Date) Validate() error {
 }
 
 func (d *Date) clean() error {
-	if d.year <= 0 {
-		d.year--
+	if d.IsZero() || d.safelyInstantiated == false {
+		return errors.New("date invalidly instantiated")
 	}
 	return nil
 }
@@ -86,7 +87,7 @@ func (d Date) mathematicalYear() int64 {
 	} else if year == -1 {
 		return -1
 	} else if year < -1 {
-		year++
+		year--
 	}
 
 	return year
@@ -108,6 +109,8 @@ func NewDate(year int64, month int, day int) (Date, error) {
 	d.month = month
 	d.day = day
 	d.ce = ce
+	// Allows dates instantiated with new(Date) or Date{} to be rejected
+	d.safelyInstantiated = true
 
 	err := d.clean()
 	if err != nil {

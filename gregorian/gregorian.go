@@ -22,9 +22,9 @@ package gregorian
 
 // DaysIn gives the number of days in a given month, according to the Gregorian calendar.
 
-// daaysInMonth number of days in each month indexed by month number using zero
+// DaysInMonth number of days in each month indexed by month number using zero
 // padding
-var daysInMonth = []int{
+var DaysInMonth = []int{
 	0,
 	31, // January
 	28,

@@ -88,14 +88,22 @@ func TestDayOfYear(t *testing.T) {
 
 func TestDaysInMonth(t *testing.T) {
 	is := is.New(t)
+	type datePartsWithVerify struct {
+		y int64
+		m int
+		d int
+		v int
+	}
 
-	var partList = []dateParts{
-		{2020, 2, 18},
-		{2021, 2, 18},
+	var partList = []datePartsWithVerify{
+		{2020, 1, 18, 31},
+		{2020, 2, 18, 29},
+		{2021, 2, 18, 28},
 	}
 	for _, p := range partList {
 		d, err := NewDate(p.y, p.m, p.d)
 		days, err := d.daysInMonth()
+		is.Equal(days, p.v)
 		is.NoErr(err)
 		t.Log("Days in year", d.year, "month", d.month, "days", days)
 	}
@@ -189,8 +197,8 @@ func TestIsLeap(t *testing.T) {
 	}
 
 	tests := []yearWithVerify{
-		{-4, false},
-		{-5, true},
+		{-4, true},
+		{-5, false},
 		// Consider what to do with year zero
 		{0, true},
 		{-1, false},
