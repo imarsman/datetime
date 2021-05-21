@@ -104,6 +104,7 @@ func NewDate(year int64, month int64, day int64) (Date, error) {
 	if d.year < 0 {
 		d.year--
 	}
+	fmt.Println(d.year)
 
 	return d, nil
 }

@@ -130,8 +130,9 @@ func TestDayOfWeek(t *testing.T) {
 	var partList = []dateParts{
 		{2018, 3, 1},
 		{2019, 3, 1},
-		{2020, 3, 1},
-		{2021, 3, 1},
+		{2020, 1, 1},
+		{2021, 1, 1},
+		{2021, 5, 20},
 	}
 
 	var err error
