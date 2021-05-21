@@ -90,13 +90,18 @@ func gregorianYear(inputYear int64) (year int64, isCE bool) {
 		return 1, true
 	}
 	if year < 0 {
-		year = -year
+		if year == -1 {
+			return -1, false
+		}
+		year++
 	}
-	if year >= (StartYear) {
-		year = StartYear - 1 + year
-	} else {
-		year = StartYear - -year
-	}
+	// } else if year >= (StartYear) {
+	// 	year = StartYear - 1 + year
+	// } else {
+	// 	fmt.Println("year", year)
+	// 	year = StartYear - -year
+	// 	fmt.Println("year", year)
+	// }
 	return year, year > StartYear
 }
 
@@ -125,7 +130,11 @@ func (d Date) daysInMonth() (int, error) {
 		days = 30
 	case 2:
 		// February
-		isLeap := IsLeap(year)
+		leapD, err := NewDate(year, 1, 1)
+		if err != nil {
+			return 0, err
+		}
+		isLeap := leapD.IsLeap()
 		if isLeap == false {
 			days = 28
 		} else {

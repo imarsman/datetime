@@ -189,8 +189,11 @@ func TestIsLeap(t *testing.T) {
 	}
 
 	tests := []yearWithVerify{
+		{-4, true},
+		{-5, false},
 		// Consider what to do with year zero
 		{0, false},
+		{-1, false},
 		{1000, false},
 		{2000, true},
 		{3000, false},
@@ -199,11 +202,14 @@ func TestIsLeap(t *testing.T) {
 	}
 
 	for _, item := range tests {
-		isLeap := IsLeap(item.y)
+		d, err := NewDate(item.y, 1, 1)
+		is.NoErr(err)
+		isLeap := d.IsLeap()
+		// t.Log(d.year, d.Year())
 		// Comment out to try more
 		is.Equal(isLeap, item.v)
 		is.Equal(true, true)
-		t.Log("year", item.y, "isLeap", isLeap, "verify", item.v)
+		t.Log("year", d.Year(), "isLeap", isLeap, "verify", item.v)
 	}
 }
 

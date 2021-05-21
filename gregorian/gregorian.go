@@ -12,6 +12,7 @@ func IsLeap(year int64) bool {
 	if year == 0 {
 		return false
 	}
+
 	return year%4 == 0 && (year%100 != 0 || year%400 == 0)
 }
 
@@ -20,6 +21,7 @@ func AdjustYear(year int64) int64 {
 	if year == 0 {
 		return 1
 	}
+
 	return year
 }
 

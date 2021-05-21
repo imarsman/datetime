@@ -101,9 +101,6 @@ func NewDate(year int64, month int, day int) (Date, error) {
 	if err != nil {
 		return Date{}, err
 	}
-	if d.year <= 0 {
-		d.year++
-	}
 
 	return d, nil
 }
@@ -120,7 +117,9 @@ func (d Date) IsCE() (bool, error) {
 // Year get year for date
 func (d Date) Year() int64 {
 	if d.year <= 0 {
-		return d.year - 1
+		d.year++
+		fmt.Println("year!", d.year)
+		return d.year
 	}
 	return d.year
 }
@@ -530,11 +529,12 @@ func (d Date) MaxDate(u Date) Date {
 // }
 
 // IsLeap simply tests whether a given year is a leap year, using the Gregorian calendar algorithm.
-func IsLeap(year int64) bool {
-	if year == 0 {
-		year = 1
+func (d Date) IsLeap() bool {
+	if d.year == 0 {
+		d.year = 1
 	}
-	return gregorian.IsLeap(year)
+
+	return gregorian.IsLeap(d.year)
 }
 
 // DaysIn gives the number of days in a given month, according to the Gregorian calendar.
