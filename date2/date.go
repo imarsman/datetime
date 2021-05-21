@@ -15,10 +15,10 @@ import (
 
 // PeriodOfDays describes a period of time measured in whole days. Negative values
 // indicate days earlier than some mark.
-type PeriodOfDays int64
+// type PeriodOfDays int64
 
-// ZeroDays is the named zero value for PeriodOfDays.
-const ZeroDays PeriodOfDays = 0
+// // ZeroDays is the named zero value for PeriodOfDays.
+// const ZeroDays PeriodOfDays = 0
 
 // A Date represents a date under the (proleptic) Gregorian calendar as
 // used by ISO 8601. This calendar uses astronomical year numbering,
