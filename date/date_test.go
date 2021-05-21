@@ -281,45 +281,45 @@ func max(a, b PeriodOfDays) PeriodOfDays {
 }
 
 // See main testin in period_test.go
-func TestIsLeap(t *testing.T) {
-	cases := []struct {
-		year     int
-		expected bool
-	}{
-		{2000, true},
-		{2001, false},
-	}
-	for _, c := range cases {
-		got := IsLeap(c.year)
-		if got != c.expected {
-			t.Errorf("TestIsLeap(%d) == %v, want %v", c.year, got, c.expected)
-		}
-	}
-}
+// func TestIsLeap(t *testing.T) {
+// 	cases := []struct {
+// 		year     int
+// 		expected bool
+// 	}{
+// 		{2000, true},
+// 		{2001, false},
+// 	}
+// 	for _, c := range cases {
+// 		got := IsLeap(c.year)
+// 		if got != c.expected {
+// 			t.Errorf("TestIsLeap(%d) == %v, want %v", c.year, got, c.expected)
+// 		}
+// 	}
+// }
 
-func TestDaysIn(t *testing.T) {
-	cases := []struct {
-		year     int
-		month    time.Month
-		expected int
-	}{
-		{2000, time.January, 31},
-		{2000, time.February, 29},
-		{2001, time.February, 28},
-		{2001, time.April, 30},
-	}
-	for _, c := range cases {
-		got1 := DaysIn(c.year, c.month)
-		if got1 != c.expected {
-			t.Errorf("DaysIn(%d, %d) == %v, want %v", c.year, c.month, got1, c.expected)
-		}
-		d := New(c.year, c.month, 1)
-		got2 := d.LastDayOfMonth()
-		if got2 != c.expected {
-			t.Errorf("DaysIn(%d) == %v, want %v", c.year, got2, c.expected)
-		}
-	}
-}
+// func TestDaysIn(t *testing.T) {
+// 	cases := []struct {
+// 		year     int
+// 		month    time.Month
+// 		expected int
+// 	}{
+// 		{2000, time.January, 31},
+// 		{2000, time.February, 29},
+// 		{2001, time.February, 28},
+// 		{2001, time.April, 30},
+// 	}
+// 	for _, c := range cases {
+// 		got1 := DaysIn(c.year, c.month)
+// 		if got1 != c.expected {
+// 			t.Errorf("DaysIn(%d, %d) == %v, want %v", c.year, c.month, got1, c.expected)
+// 		}
+// 		d := New(c.year, c.month, 1)
+// 		got2 := d.LastDayOfMonth()
+// 		if got2 != c.expected {
+// 			t.Errorf("DaysIn(%d) == %v, want %v", c.year, got2, c.expected)
+// 		}
+// 	}
+// }
 
 func TestDatesInRange(t *testing.T) {
 	is := is.New(t)

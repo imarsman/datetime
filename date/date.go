@@ -9,7 +9,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/imarsman/datetime/gregorian"
 	"github.com/imarsman/datetime/period"
 	"github.com/imarsman/datetime/timestamp"
 )
@@ -142,10 +141,10 @@ func (d Date) Date() (year int, month time.Month, day int) {
 
 // LastDayOfMonth returns the last day of the month specified by d.
 // The first day of the month is 1.
-func (d Date) LastDayOfMonth() int {
-	y, m, _ := d.Date()
-	return DaysIn(y, m)
-}
+// func (d Date) LastDayOfMonth() int {
+// 	y, m, _ := d.Date()
+// 	return DaysIn(y, m)
+// }
 
 // Day returns the day of the month specified by d.
 // The first day of the month is 1.
@@ -307,14 +306,14 @@ func (d Date) DaysSinceEpoch() (days PeriodOfDays) {
 }
 
 // IsLeap simply tests whether a given year is a leap year, using the Gregorian calendar algorithm.
-func IsLeap(year int) bool {
-	return gregorian.IsLeap(int64(year))
-}
+// func IsLeap(year int) bool {
+// 	return gregorian.IsLeap(int64(year))
+// }
 
-// DaysIn gives the number of days in a given month, according to the Gregorian calendar.
-func DaysIn(year int, month time.Month) int {
-	return gregorian.DaysIn(int64(year), month)
-}
+// // DaysIn gives the number of days in a given month, according to the Gregorian calendar.
+// func DaysIn(year int, month time.Month) int {
+// 	return gregorian.DaysIn(int64(year), month)
+// }
 
 // DatesInRange get dates in range.
 func DatesInRange(d1, d2 Date) ([]Date, error) {

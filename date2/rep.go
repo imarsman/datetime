@@ -89,10 +89,10 @@ func gregorianYear(inputYear int64) (year int64, isCE bool) {
 	if year == 0 {
 		return 1, true
 	}
-	if year < 0 {
-		if year == -1 {
-			return -1, false
-		}
+	if year == -1 {
+		return -1, false
+	}
+	if year < -1 {
 		year++
 	}
 	// } else if year >= (StartYear) {

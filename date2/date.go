@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"math"
 	"time"
-
-	"github.com/imarsman/datetime/gregorian"
 )
 
 // PeriodOfDays describes a period of time measured in whole days. Negative values
@@ -80,6 +78,20 @@ func (d *Date) clean() error {
 	return nil
 }
 
+func (d Date) mathematicalYear() int64 {
+	year := d.year
+
+	if year == 1 {
+		return 0
+	} else if year == -1 {
+		return -1
+	} else if year < -1 {
+		year++
+	}
+
+	return year
+}
+
 // NewDate returns the Date value corresponding to the given year, month, and day.
 //
 // The month and day may be outside their usual ranges and will be normalized
@@ -88,7 +100,11 @@ func NewDate(year int64, month int, day int) (Date, error) {
 	d := Date{}
 
 	var ce bool
+	// What will be stored is the gregorian year but that value will need to be
+	// modified for mathematical calculation.
+	// fmt.Println("incoming year", year)
 	d.year, ce = gregorianYear(year)
+	// fmt.Println("gregorian year", d.year)
 	d.month = month
 	d.day = day
 	d.ce = ce
@@ -116,11 +132,12 @@ func (d Date) IsCE() (bool, error) {
 
 // Year get year for date
 func (d Date) Year() int64 {
-	if d.year <= 0 {
-		d.year++
-		fmt.Println("year!", d.year)
-		return d.year
-	}
+	// // gy, _ := gregorianYear(d.year)
+	// fmt.Println("year", d.year, "mathematical year", d.mathematicalYear())
+	// if d.year <= 0 {
+	// 	d.year++
+	// 	return d.year
+	// }
 	return d.year
 }
 
@@ -354,7 +371,9 @@ func isoWeeksInYear(year int64) int {
 	if year < 0 {
 		year = -year
 	}
-	year = gregorian.AdjustYear(year)
+	d, _ := NewDate(year, 1, 1)
+	year = d.mathematicalYear()
+	// year = gregorian.AdjustYear(year)
 
 	p := math.Mod(float64(year+(year/4)-(year/100)+(year/400)), 7)
 	weeks := 52
@@ -528,19 +547,42 @@ func (d Date) MaxDate(u Date) Date {
 // 	return d.day
 // }
 
+// DaysIn days in a month
+// func (d Date) DaysIn() int {
+// 	if d.month == int(time.February) && d.IsLeap() {
+// 		return 29
+// 	}
+// 	switch d.month {
+// 	case 9:
+// 		return 30
+// 	case 4:
+// 		return 30
+// 	case 6:
+// 		return 30
+// 	case 11:
+// 		return 30
+// 	}
+
+// 	return 31
+// }
+
 // IsLeap simply tests whether a given year is a leap year, using the Gregorian calendar algorithm.
 func (d Date) IsLeap() bool {
-	if d.year == 0 {
-		d.year = 1
-	}
+	// fmt.Println("starting year", d.year)
+	d.year = d.mathematicalYear()
+	// fmt.Println("mathematical year", d.year)
 
-	return gregorian.IsLeap(d.year)
+	return d.year%4 == 0 && (d.year%100 != 0 || d.year%400 == 0)
 }
 
 // DaysIn gives the number of days in a given month, according to the Gregorian calendar.
-func DaysIn(year int64, month time.Month) int {
-	return gregorian.DaysIn(year, month)
-}
+// func DaysIn(year int64, month time.Month) int {
+// 	if month == time.February && IsLeap(year) {
+// 		return 29
+// 	}
+
+// 	return daysInMonth[month]
+// }
 
 // DatesInRange get dates in range.
 // func DatesInRange(d1, d2 Date) ([]Date, error) {
