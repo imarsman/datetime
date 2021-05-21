@@ -89,6 +89,9 @@ func gregorianYear(inputYear int64) (year int64, isCE bool) {
 	if year == 0 {
 		return 1, true
 	}
+	if year < 0 {
+		year = -year
+	}
 	if year >= (StartYear) {
 		year = StartYear - 1 + year
 	} else {
@@ -97,7 +100,7 @@ func gregorianYear(inputYear int64) (year int64, isCE bool) {
 	return year, year > StartYear
 }
 
-func (d Date) daysInMonth() (int64, error) {
+func (d Date) daysInMonth() (int, error) {
 	err := d.clean()
 	if err != nil {
 		return 0, err
@@ -130,30 +133,30 @@ func (d Date) daysInMonth() (int64, error) {
 		}
 	}
 
-	return int64(days), nil
+	return days, nil
 }
 
 // YearDay returns the day of the year specified by d, in the range [1,365] for
 // non-leap years, and [1,366] in leap years. The functionality should be the
 // same as for the Go time.YearDay func.
-func (d Date) YearDay() (int64, error) {
+func (d Date) YearDay() (int, error) {
 	err := d.clean()
 	if err != nil {
 		return 0, err
 	}
-	var days int64 = 0
+	var days int = 0
 	copy := d
 	for i := 1; i < 13; i++ {
-		copy.month = int64(i)
+		copy.month = i
 		if copy.month > d.month {
 			break
 		}
 		if copy.month == d.month {
-			days += d.day
+			days += int(d.day)
 			break
 		}
 		val, _ := copy.daysInMonth()
-		days += val
+		days += int(val)
 	}
 
 	return days, nil

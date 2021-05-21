@@ -53,8 +53,8 @@ import (
 //
 type Date struct {
 	year  int64
-	month int64
-	day   int64
+	month int
+	day   int
 	ce    bool
 }
 
@@ -84,7 +84,7 @@ func (d *Date) clean() error {
 //
 // The month and day may be outside their usual ranges and will be normalized
 // during the conversion.
-func NewDate(year int64, month int64, day int64) (Date, error) {
+func NewDate(year int64, month int, day int) (Date, error) {
 	d := Date{}
 
 	var ce bool
@@ -126,18 +126,18 @@ func (d Date) Year() int64 {
 }
 
 // Month get month for year
-func (d Date) Month() int64 {
+func (d Date) Month() int {
 	return d.month
 }
 
 // Day returns the day of the month specified by d.
 // The first day of the month is 1.
-func (d Date) Day() int64 {
+func (d Date) Day() int {
 	return d.day
 }
 
 // SubtractDays add days to a date
-func (d Date) SubtractDays(subtract int64) (date Date, err error) {
+func (d Date) SubtractDays(subtract int) (date Date, err error) {
 	d2 := d
 	fmt.Println("subtracing from", d.String(), subtract)
 	newYear := false
@@ -202,7 +202,7 @@ func (d Date) SubtractDays(subtract int64) (date Date, err error) {
 
 // addDays add days to a date
 // Reasonably efficient given that it adds as many days at a time as possible.
-func (d Date) addDays(add int64) (date Date, err error) {
+func (d Date) addDays(add int) (date Date, err error) {
 	d2 := d
 
 	// We will deal with leap days elsewhere
@@ -256,8 +256,8 @@ func (d Date) addDays(add int64) (date Date, err error) {
 
 				continue
 			}
-			var newAdd int64
-			var newDay int64
+			var newAdd int
+			var newDay int
 			if add < d2.day {
 				newAdd = d2.day - add
 				newDay = d2.day + add
@@ -279,13 +279,13 @@ func (d Date) addDays(add int64) (date Date, err error) {
 
 // addMonths add months to a date
 // TODO: decide if it would be good to add days
-func (d Date) addMonths(add int64) (d2 Date, err error) {
+func (d Date) addMonths(add int) (d2 Date, err error) {
 	d2 = d
 	dNeutral := d2
 	dNeutral.year = 2019
 	daysInMonth, _ := dNeutral.daysInMonth()
-	daysInMonth -= d2.day
-	for i := 0; int64(i) < add; i++ {
+	daysInMonth -= int(d2.day)
+	for i := 0; i < add; i++ {
 		d2, _ = d2.addDays(daysInMonth)
 	}
 
@@ -297,7 +297,7 @@ func (d Date) addMonths(add int64) (d2 Date, err error) {
 // time parts. The time package AddParts call does not mutate the reciever by
 // acting on a pointer so this one does the same.
 // This call can be expensive with large units to add.
-func (d Date) AddParts(years, months, days int64) (Date, int64, error) {
+func (d Date) AddParts(years int64, months, days int) (Date, int64, error) {
 	dFinal := d
 
 	var remainder int64
@@ -313,7 +313,7 @@ func (d Date) AddParts(years, months, days int64) (Date, int64, error) {
 		dFinal, _ = dFinal.addDays(days)
 	}
 
-	extraDays := (dFinal.year - d.year) * 365
+	extraDays := int((dFinal.year - d.year) * 365)
 
 	// Add in extra days due to leap years
 	var startDateDays int64 = int64(daysSinceEpoch(d.year))
@@ -329,7 +329,7 @@ func (d Date) AddParts(years, months, days int64) (Date, int64, error) {
 	// The difference between the number of days up to the 1 January of the
 	// date started with and the number of days to the 1 January of the date we
 	// ended with.
-	extraDays = (startDateDays - endDateDays) - int64(extraDays)
+	extraDays = int((startDateDays - endDateDays) - int64(extraDays))
 
 	// fmt.Println("extra days", extraDays)
 	dFinal, _ = dFinal.addDays(extraDays)
@@ -369,7 +369,7 @@ func isoWeeksInYear(year int64) int {
 // Today returns today's date according to the current local time.
 func Today() Date {
 	t := time.Now()
-	d, _ := NewDate(int64(t.Year()), int64(t.Month()), int64(t.Day()))
+	d, _ := NewDate(int64(t.Year()), int(t.Month()), t.Day())
 
 	return d
 }
@@ -392,13 +392,13 @@ func Max() Date {
 
 // Date returns the year, month, and day of d.
 // The first day of the month is 1.
-func (d Date) Date() (year int64, month int64, day int64) {
+func (d Date) Date() (year int64, month int, day int) {
 	return d.year, d.month, d.day
 }
 
 // LastDayOfMonth returns the last day of the month specified by d.
 // The first day of the month is 1.
-func (d Date) LastDayOfMonth() (int64, error) {
+func (d Date) LastDayOfMonth() (int, error) {
 	dim, err := d.daysInMonth()
 	if err != nil {
 		return 0, err
@@ -448,16 +448,16 @@ func (d Date) Equal(u Date) bool {
 
 // IsBefore reports whether the date d is before u.
 func (d Date) IsBefore(u Date) bool {
-	dSum := d.year*1000 + d.month*100 + d.day
-	uSum := u.year*1000 + u.month*100 + u.day
+	dSum := d.year*1000 + int64(d.month*100) + int64(d.day)
+	uSum := u.year*1000 + int64(u.month*100) + int64(u.day)
 
 	return dSum < uSum
 }
 
 // IsAfter reports whether the date d is after u.
 func (d Date) IsAfter(u Date) bool {
-	dSum := d.year*1000 + d.month*100 + d.day
-	uSum := u.year*1000 + u.month*100 + u.day
+	dSum := d.year*1000 + int64(d.month*100) + int64(d.day)
+	uSum := u.year*1000 + int64(u.month*100) + int64(u.day)
 
 	return dSum > uSum
 }

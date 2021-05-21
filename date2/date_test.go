@@ -43,8 +43,8 @@ const bechmarkBytesPerOp int64 = 10
 
 type dateParts struct {
 	y int64
-	m int64
-	d int64
+	m int
+	d int
 }
 
 func TestMaxMinDates(t *testing.T) {
@@ -55,19 +55,32 @@ func TestMaxMinDates(t *testing.T) {
 }
 func TestDayOfYear(t *testing.T) {
 	is := is.New(t)
-	// test := []Date
 
-	var partList = []dateParts{
-		{-1000, 5, 18},
-		{1000, 3, 1},
-		{2019, 5, 18},
-		{2020, 3, 18},
-		{2021, 3, 1},
+	type datePartsWithVerify struct {
+		y int64
+		m int
+		d int
+		v int
+	}
+
+	var partList = []datePartsWithVerify{
+		{-1000, 5, 18, 0},
+		// Last day of BCE
+		{-1, 12, 31, 365},
+		// First day of CE
+		{1, 1, 1, 1},
+		{1000, 3, 1, 0},
+		{2019, 5, 18, 0},
+		{2020, 3, 18, 0},
+		{2021, 3, 1, 0},
 	}
 
 	for _, p := range partList {
 		d, err := NewDate(p.y, p.m, p.d)
 		dayOfYear, err := d.YearDay()
+		if p.v != 0 {
+			is.Equal(p.v, dayOfYear)
+		}
 		is.NoErr(err)
 		t.Log("Days into year", dayOfYear, "for year", d.Year(), "month", d.Month(), "day", d.Day())
 	}
@@ -129,8 +142,8 @@ func TestDayOfWeek(t *testing.T) {
 
 	type datePartsWithVerify struct {
 		y int64
-		m int64
-		d int64
+		m int
+		d int
 		v int
 	}
 
@@ -249,11 +262,11 @@ func TestToGregorianYear(t *testing.T) {
 func TestAddDate(t *testing.T) {
 	type datePartsWithAdd struct {
 		y    int64
-		m    int64
-		d    int64
+		m    int
+		d    int
 		addY int64
-		addM int64
-		addD int64
+		addM int
+		addD int
 	}
 
 	var partList = []datePartsWithAdd{
@@ -726,7 +739,7 @@ func BenchmarkDaysInMonth(b *testing.B) {
 	d, err := NewDate(2020, 3, 1)
 	is.NoErr(err)
 
-	var dayOfYear int64
+	var dayOfYear int
 
 	b.ResetTimer()
 	b.SetBytes(bechmarkBytesPerOp)
@@ -751,7 +764,7 @@ func BenchmarkDayOfYear(b *testing.B) {
 	d, err := NewDate(2020, 3, 1)
 	is.NoErr(err)
 
-	var dayOfYear int64
+	var dayOfYear int
 
 	b.ResetTimer()
 	b.SetBytes(bechmarkBytesPerOp)
