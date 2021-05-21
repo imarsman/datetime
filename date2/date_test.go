@@ -230,6 +230,7 @@ func TestAddDate(t *testing.T) {
 		{2019, 1, 1, 1, 0, 0},
 		{2019, 1, 1, 0, 12, 0},
 		{2019, 1, 1, 14, 0, 0},
+		{2019, 1, 1, 1000, 0, 0},
 	}
 
 	for _, dt := range partList {
@@ -599,7 +600,7 @@ func TestString(t *testing.T) {
 // 	t.Logf("Took %v to check %s  %d times", time.Since(start), format, count)
 // }
 
-func BenchmarkAddParts(b *testing.B) {
+func BenchmarkAddPartsLong(b *testing.B) {
 	is := is.New(b)
 
 	var err error
@@ -612,7 +613,28 @@ func BenchmarkAddParts(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			d, _ = NewDate(2019, 3, 1)
-			d, _, err = d.AddParts(1000, 0, 0)
+			d, _, err = d.AddParts(100000000, 0, 0)
+		}
+	})
+
+	b.Log("caculated", d.String())
+	is.NoErr(err)
+}
+
+func BenchmarkAddPartsShort(b *testing.B) {
+	is := is.New(b)
+
+	var err error
+	var d Date
+
+	b.ResetTimer()
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			d, _ = NewDate(2019, 3, 1)
+			d, _, err = d.AddParts(1, 3, 12)
 		}
 	})
 

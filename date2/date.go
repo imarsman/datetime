@@ -115,21 +115,11 @@ func (d Date) IsCE() (bool, error) {
 
 // Year get year for date
 func (d Date) Year() int64 {
-	// err := d.clean()
-	// if err != nil {
-	// 	return 0, err
-	// }
-
 	return d.year
 }
 
 // Month get month for year
 func (d Date) Month() int64 {
-	// err := d.clean()
-	// if err != nil {
-	// 	return 0, err
-	// }
-
 	return d.month
 }
 
@@ -206,35 +196,77 @@ func (d Date) SubtractDays(subtract int64) (date Date, err error) {
 // AddDays add days to a date
 func (d Date) AddDays(add int64) (date Date, err error) {
 	d2 := d
-	// fmt.Println("add", add)
-	newYear := false
+	// newYear := false
+	dNeutral := d2
+	dNeutral.year = 2019
+	daysInMonth, _ := dNeutral.daysInMonth()
 	for add > 0 {
 		// We will deal with leap days elsewhere
-		dNeutral := d2
-		dNeutral.year = 2019
-		daysInMonth, _ := dNeutral.daysInMonth()
-
 		if err != nil {
 			return Date{}, err
 		}
-		if d2.month >= 12 {
-			newYear = true
-		}
-		if add >= daysInMonth {
-			if newYear {
+		// if d2.month >= 12 {
+		// 	newYear = true
+		// }
+		if add >= daysInMonth && d2.day <= daysInMonth {
+			if d2.month >= 12 {
 				d2.year++
 				d2.month = 1
 				d2.day = 1
-				newYear = false
+				// newYear = false
 				add = add - daysInMonth
+				dNeutral = d2
+				dNeutral.year = 2019
+				daysInMonth, _ = dNeutral.daysInMonth()
 			} else {
 				d2.month++
-				add = add - (daysInMonth - d2.day)
-				d2.day = 1
+
+				if d2.month > 12 {
+					fmt.Println("months exceeded")
+				}
+				daysTilEOM := daysInMonth - d2.day
+				add = add - daysTilEOM
+
+				dNeutral = d2
+				dNeutral.year = 2019
+				daysInMonth, _ = dNeutral.daysInMonth()
+
+				if daysTilEOM == 0 {
+					d2.day = 1
+					add--
+				} else {
+					add = add - daysTilEOM
+					d2.day = 1
+					add--
+				}
 			}
 		} else {
-			d2.day += add
-			add = 0
+			if add+d2.day >= daysInMonth {
+				add = add - d2.day
+				d2.day = 1
+				d2.month++
+				// New year
+				if d2.month > 12 {
+					d2.month = 1
+					d2.year++
+					// newYear = true
+				}
+
+				continue
+			}
+			var newAdd int64
+			var newDay int64
+			if add < d2.day {
+				newAdd = d2.day - add
+				newDay = d2.day + add
+				d2.day = newDay
+				add = newAdd
+			} else {
+				newAdd = add - d2.day
+				newDay = d2.day + add
+				d2.day = newDay
+				add = newAdd
+			}
 
 			break
 		}
@@ -247,17 +279,13 @@ func (d Date) AddDays(add int64) (date Date, err error) {
 // TODO: decide if it would be good to add days
 func (d Date) AddMonths(add int64) (d2 Date, err error) {
 	d2 = d
-	var daysCount int64 = 0
-	// We will deal with leap days elsewhere
 	dNeutral := d2
 	dNeutral.year = 2019
 	daysInMonth, _ := dNeutral.daysInMonth()
 	daysInMonth -= d2.day
 	for i := 0; int64(i) < add; i++ {
 		d2, _ = d2.AddDays(daysInMonth)
-		daysCount += daysInMonth
 	}
-	daysCount -= d.day
 
 	return d2, nil
 }
@@ -286,14 +314,22 @@ func (d Date) AddParts(years, months, days int64) (Date, int64, error) {
 	extraDays := (dFinal.year - d.year) * 365
 
 	// Add in extra days due to leap years
-	var startDateDays int64 = int64(-daysSinceEpoch(d.year))
-	var endDateDays int64 = int64(-daysSinceEpoch(dFinal.year))
+	var startDateDays int64 = int64(daysSinceEpoch(d.year))
+	if startDateDays < 0 {
+		startDateDays = -startDateDays
+	}
+	var endDateDays int64 = int64(daysSinceEpoch(dFinal.year))
+	if endDateDays < 0 {
+		endDateDays = -endDateDays
+	}
+	// fmt.Println("start days", startDateDays, "enddays", endDateDays)
 
 	// The difference between the number of days up to the 1 January of the
 	// date started with and the number of days to the 1 January of the date we
 	// ended with.
 	extraDays = (startDateDays - endDateDays) - int64(extraDays)
 
+	// fmt.Println("extra days", extraDays)
 	dFinal, _ = dFinal.AddDays(extraDays)
 
 	return dFinal, remainder, nil
@@ -301,10 +337,11 @@ func (d Date) AddParts(years, months, days int64) (Date, int64, error) {
 
 // TODO: Decide whether to account for leap days
 func (d Date) addYears(years int64) (Date, error) {
-	dFinal := d
-	// dDays := daysSinceEpoch(d.year)
+	d2 := d
+	// fmt.Println("add years", years)
+	d2.year += years
 
-	dFinal.year += years
+	// fmt.Println("years added", d2.String())
 
 	// var oldDays int64 = int64(-daysSinceEpoch(d.year))
 	// var newDays int64 = int64(-daysSinceEpoch(dFinal.year))
@@ -326,7 +363,7 @@ func (d Date) addYears(years int64) (Date, error) {
 	// 	}
 	// }
 
-	return dFinal, nil
+	return d2, nil
 }
 
 func (d Date) daysInMonth() (int64, error) {
