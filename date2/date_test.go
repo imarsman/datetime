@@ -226,13 +226,13 @@ func TestAddDate(t *testing.T) {
 	}
 
 	var partList = []datePartsWithAdd{
-		{1968, 05, 26, 52, 0, 0},
-		{2002, 4, 10, 52, 0, 0},
-		{2019, 3, 1, 3, 10, 1},
-		{2019, 1, 1, 1, 0, 0},
-		{2019, 1, 1, 0, 12, 0},
-		{2019, 1, 1, 14, 0, 0},
-		{2019, 1, 1, 1000, 0, 0},
+		{y: 1968, m: 05, d: 26, addY: 52, addM: 0, addD: 0},
+		{y: 2002, m: 4, d: 10, addY: 52, addM: 0, addD: 0},
+		{y: 2019, m: 3, d: 1, addY: 3, addM: 10, addD: 1},
+		{y: 2019, m: 1, d: 1, addY: 1, addM: 0, addD: 0},
+		{y: 2019, m: 1, d: 1, addY: 0, addM: 12, addD: 0},
+		{y: 2019, m: 1, d: 1, addY: 14, addM: 0, addD: 0},
+		{y: 2019, m: 1, d: 1, addY: 1000, addM: 0, addD: 0},
 	}
 
 	for _, dt := range partList {

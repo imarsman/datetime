@@ -23,8 +23,9 @@ const ZeroDays PeriodOfDays = 0
 // A Date represents a date under the (proleptic) Gregorian calendar as
 // used by ISO 8601. This calendar uses astronomical year numbering,
 // so it includes a year 0 and represents earlier years as negative numbers
-// (i.e. year 0 is 1 BC; year -1 is 2 BC, and so on).
+// (i.e. year 0 is 1 CE; year -1 is 1 BCE, and so on).
 //
+// TODO: update this to reflect altered design
 // A Date value requires 4 bytes of storage and can represent dates from
 // Tue, 23 Jun -5,877,641 (5,877,642 BC) to Fri, 11 Jul 5,881,580.
 // Dates outside that range will "wrap around".
@@ -99,6 +100,9 @@ func NewDate(year int64, month int64, day int64) (Date, error) {
 	err = d.Validate()
 	if err != nil {
 		return Date{}, err
+	}
+	if d.year < 0 {
+		d.year--
 	}
 
 	return d, nil
@@ -193,27 +197,24 @@ func (d Date) SubtractDays(subtract int64) (date Date, err error) {
 	return d2, nil
 }
 
-// AddDays add days to a date
-func (d Date) AddDays(add int64) (date Date, err error) {
+// addDays add days to a date
+// Reasonably efficient given that it adds as many days at a time as possible.
+func (d Date) addDays(add int64) (date Date, err error) {
 	d2 := d
-	// newYear := false
+
+	// We will deal with leap days elsewhere
 	dNeutral := d2
 	dNeutral.year = 2019
 	daysInMonth, _ := dNeutral.daysInMonth()
 	for add > 0 {
-		// We will deal with leap days elsewhere
 		if err != nil {
 			return Date{}, err
 		}
-		// if d2.month >= 12 {
-		// 	newYear = true
-		// }
 		if add >= daysInMonth && d2.day <= daysInMonth {
 			if d2.month >= 12 {
 				d2.year++
 				d2.month = 1
 				d2.day = 1
-				// newYear = false
 				add = add - daysInMonth
 				dNeutral = d2
 				dNeutral.year = 2019
@@ -245,11 +246,9 @@ func (d Date) AddDays(add int64) (date Date, err error) {
 				add = add - d2.day
 				d2.day = 1
 				d2.month++
-				// New year
 				if d2.month > 12 {
 					d2.month = 1
 					d2.year++
-					// newYear = true
 				}
 
 				continue
@@ -275,16 +274,16 @@ func (d Date) AddDays(add int64) (date Date, err error) {
 	return d2, nil
 }
 
-// AddMonths add months to a date
+// addMonths add months to a date
 // TODO: decide if it would be good to add days
-func (d Date) AddMonths(add int64) (d2 Date, err error) {
+func (d Date) addMonths(add int64) (d2 Date, err error) {
 	d2 = d
 	dNeutral := d2
 	dNeutral.year = 2019
 	daysInMonth, _ := dNeutral.daysInMonth()
 	daysInMonth -= d2.day
 	for i := 0; int64(i) < add; i++ {
-		d2, _ = d2.AddDays(daysInMonth)
+		d2, _ = d2.addDays(daysInMonth)
 	}
 
 	return d2, nil
@@ -304,11 +303,11 @@ func (d Date) AddParts(years, months, days int64) (Date, int64, error) {
 		dFinal, _ = dFinal.addYears(years)
 	}
 	if months > 0 {
-		dFinal, _ = dFinal.AddMonths(months)
+		dFinal, _ = dFinal.addMonths(months)
 	}
 
 	if days > 0 {
-		dFinal, _ = dFinal.AddDays(days)
+		dFinal, _ = dFinal.addDays(days)
 	}
 
 	extraDays := (dFinal.year - d.year) * 365
@@ -330,184 +329,18 @@ func (d Date) AddParts(years, months, days int64) (Date, int64, error) {
 	extraDays = (startDateDays - endDateDays) - int64(extraDays)
 
 	// fmt.Println("extra days", extraDays)
-	dFinal, _ = dFinal.AddDays(extraDays)
+	dFinal, _ = dFinal.addDays(extraDays)
 
 	return dFinal, remainder, nil
 }
 
-// TODO: Decide whether to account for leap days
+// addYars given that the AddTimeParts function will add the leap days between
+// start and end year this should be safe to do.
 func (d Date) addYears(years int64) (Date, error) {
 	d2 := d
-	// fmt.Println("add years", years)
 	d2.year += years
 
-	// fmt.Println("years added", d2.String())
-
-	// var oldDays int64 = int64(-daysSinceEpoch(d.year))
-	// var newDays int64 = int64(-daysSinceEpoch(dFinal.year))
-	// yearDays := (dFinal.year - d.year) * 365
-	// var diff int64 = (oldDays - newDays) - int64(yearDays)
-
-	// fmt.Println("old date", dFinal.String())
-	// // dFinal, _ = dFinal.AddDays(diff)
-	// fmt.Println("added date", dFinal.String())
-
-	// for {
-	// 	monthDays, _ := d3.daysInMonth()
-	// 	if days+monthDays < days {
-	// 		days = days + monthDays
-	// 	} else {
-	// 		diff := days - monthDays
-	// 		days += diff
-	// 		break
-	// 	}
-	// }
-
 	return d2, nil
-}
-
-func (d Date) daysInMonth() (int64, error) {
-	err := d.clean()
-	if err != nil {
-		return 0, err
-	}
-
-	year := d.yearAbs()
-
-	days := 31
-	// Faster than if statement
-	switch d.month {
-	case 9:
-		// September
-		days = 30
-	case 4:
-		// April
-		days = 30
-	case 6:
-		// June
-		days = 30
-	case 11:
-		// November
-		days = 30
-	case 2:
-		// February
-		isLeap := IsLeap(year)
-		if isLeap == false {
-			days = 28
-		} else {
-			days = 29
-		}
-	}
-
-	return int64(days), nil
-}
-
-// YearDay returns the day of the year specified by d, in the range [1,365] for
-// non-leap years, and [1,366] in leap years. The functionality should be the
-// same as for the Go time.YearDay func.
-func (d Date) YearDay() (int64, error) {
-	err := d.clean()
-	if err != nil {
-		return 0, err
-	}
-	var days int64 = 0
-	copy := d
-	for i := 1; i < 13; i++ {
-		copy.month = int64(i)
-		if copy.month > d.month {
-			break
-		}
-		if copy.month == d.month {
-			days += d.day
-			break
-		}
-		val, _ := copy.daysInMonth()
-		days += val
-	}
-
-	return days, nil
-}
-
-// WeekDay the day of the week for date as specified by time.Weekday
-// A Weekday specifies a day of the week (Sunday = 0, ...).
-// The English name for time.Weekday can be obtained with time.Weekday.String()
-func (d Date) WeekDay() (int, error) {
-	err := d.clean()
-	if err != nil {
-		return 0, err
-	}
-	dow1Jan, _ := d.dayOfWeek1Jan()
-	dow := dow1Jan
-
-	doy, _ := d.YearDay()
-
-	dow--
-	for i := 0; i < int(doy); i++ {
-		if dow == 7 {
-			dow = 1
-		} else {
-			dow++
-		}
-	}
-
-	return dow, nil
-}
-
-// daysSinceEpoch takes a year and returns the number of days from
-// the absolute epoch to the start of that year.
-// This is basically (year - zeroYear) * 365, but accounting for leap days.
-// From Go time package
-func daysSinceEpoch(year int64) uint64 {
-	y := uint64(int64(year) - absoluteZeroYear)
-
-	// Add in days from 400-year cycles.
-	n := y / 400
-	y -= 400 * n
-	d := daysPer400Years * n
-
-	// Add in 100-year cycles.
-	n = y / 100
-	y -= 100 * n
-	d += daysPer100Years * n
-
-	// Add in 4-year cycles.
-	n = y / 4
-	y -= 4 * n
-	d += daysPer4Years * n
-
-	// Add in non-leap years.
-	n = y
-	d += 365 * n
-
-	return d
-}
-
-func (d Date) dayOfWeek1Jan() (int, error) {
-	err := d.clean()
-	if err != nil {
-		return 0, err
-	}
-	// https://en.wikipedia.org/wiki/Determination_of_the_day_of_the_week
-	// Formula by Gauss
-
-	// Inputs
-	// Year number A, month number M, day number D.
-	// set C = A \ 100, Y = A % 100, and the value is
-	// (1+5((Y−1)%4)+3(Y−1)+5(C%4))%7
-	year := d.yearAbs()
-	if year < 0 {
-		year = -year
-	}
-	c := year / 100
-	y := year % 100
-	result := (1 + 5*((y-1)%4) + 3*(y-1) + 5*(c%4)) % 7
-
-	return int(result), nil
-}
-
-func isoWeekOfYearForDate(doy int, dow time.Weekday) int {
-	var woy int = (10 + doy - int(dow)) % 7
-	return woy
 }
 
 // ISOWeeksInYear get number of ISO weeks in year
@@ -582,11 +415,11 @@ func (d Date) LastDayOfMonth() (int64, error) {
 // }
 
 // Weekday returns the day of the week specified by d.
-func (d Date) Weekday() time.Weekday {
+func (d Date) Weekday() int {
 	// Date zero, January 1, 1970, fell on a Thursday
 	wdayZero := time.Thursday
 	// Taking into account potential for overflow and negative offset
-	return time.Weekday((int32(wdayZero) + int32(d.day)%7 + 7) % 7)
+	return int((int32(wdayZero) + int32(d.day)%7 + 7) % 7)
 }
 
 // ISOWeek returns the ISO 8601 year and week number in which d occurs.
@@ -600,27 +433,35 @@ func (d Date) Weekday() time.Weekday {
 
 // IsZero reports whether t represents the zero date.
 func (d Date) IsZero() bool {
-	return d.day == 0
+	return (d.year == 0 && d.month == 0 && d.day == 0)
 }
 
 // Equal reports whether d and u represent the same date.
 func (d Date) Equal(u Date) bool {
-	return d.day == u.day
+	return d.year == u.year &&
+		d.month == u.month &&
+		d.day == u.day
 }
 
 // IsBefore reports whether the date d is before u.
 func (d Date) IsBefore(u Date) bool {
-	return d.day < u.day
+	dSum := d.year*1000 + d.month*100 + d.day
+	uSum := u.year*1000 + u.month*100 + u.day
+
+	return dSum < uSum
 }
 
 // IsAfter reports whether the date d is after u.
 func (d Date) IsAfter(u Date) bool {
-	return d.day > u.day
+	dSum := d.year*1000 + d.month*100 + d.day
+	uSum := u.year*1000 + u.month*100 + u.day
+
+	return dSum > uSum
 }
 
 // MinDate returns the earlier of two dates.
 func (d Date) MinDate(u Date) Date {
-	if d.day > u.day {
+	if u.IsBefore(d) {
 		return u
 	}
 	return d
@@ -628,10 +469,9 @@ func (d Date) MinDate(u Date) Date {
 
 // MaxDate returns the later of two dates.
 func (d Date) MaxDate(u Date) Date {
-	if d.day < u.day {
+	if u.IsAfter(d) {
 		return u
 	}
-
 	return d
 }
 
