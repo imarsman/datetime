@@ -7,6 +7,7 @@ package date2
 // with dates.
 
 import (
+	"errors"
 	"math"
 	"time"
 )
@@ -166,6 +167,12 @@ func (d Date) WeekDay() (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	if d.year == 0 {
+		return 0, errors.New("no year zero")
+	}
+	// if d.year < 0 {
+	// 	d.year--
+	// }
 	dow1Jan, _ := d.dayOfWeek1Jan()
 	dow := dow1Jan
 

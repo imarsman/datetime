@@ -135,10 +135,16 @@ func TestDayOfWeek(t *testing.T) {
 	}
 
 	var partList = []datePartsWithVerify{
-		{-1000, 5, 18, 4},
+		{-1000, 5, 18, 0},
 		{1968, 5, 26, 7},
+		// This one is wrong
+		{-2, 1, 1, 0},
+		{-1, 1, 1, 0},
+		{1, 1, 1, 1},
 		// Unix epoch
 		{1970, 1, 1, 4},
+		{1998, 8, 14, 5},
+		{2002, 4, 10, 3},
 		{2018, 5, 18, 5},
 		{2019, 5, 18, 6},
 		{2020, 5, 18, 1},
@@ -157,24 +163,34 @@ func TestDayOfWeek(t *testing.T) {
 		if p.v != 0 {
 			is.Equal(dow, p.v)
 		}
-		t.Log("Day of week", d.year, d.month, d.day, dow)
+		t.Log("Day of week", d.Year(), d.month, d.day, dow)
 	}
 }
 
 func TestIsLeap(t *testing.T) {
-	tests := []int64{
-		0,
-		1000,
-		2000,
-		3000,
-		1984,
-		2000,
-		2004,
+	is := is.New(t)
+
+	type yearWithVerify struct {
+		y int64
+		v bool
 	}
 
-	for _, y := range tests {
-		isLeap := IsLeap(y)
-		t.Log("year", y, "isLeap", isLeap)
+	tests := []yearWithVerify{
+		// Consider what to do with year zero
+		{0, false},
+		{1000, false},
+		{2000, true},
+		{3000, false},
+		{1984, true},
+		{2004, true},
+	}
+
+	for _, item := range tests {
+		isLeap := IsLeap(item.y)
+		// Comment out to try more
+		is.Equal(isLeap, item.v)
+		is.Equal(true, true)
+		t.Log("year", item.y, "isLeap", isLeap, "verify", item.v)
 	}
 }
 
