@@ -127,12 +127,22 @@ func TestDayOfWeek1Jan(t *testing.T) {
 func TestDayOfWeek(t *testing.T) {
 	is := is.New(t)
 
-	var partList = []dateParts{
-		{2018, 3, 1},
-		{2019, 3, 1},
-		{2020, 1, 1},
-		{2021, 1, 1},
-		{2021, 5, 20},
+	type datePartsWithVerify struct {
+		y int64
+		m int64
+		d int64
+		v int
+	}
+
+	var partList = []datePartsWithVerify{
+		{-1000, 5, 18, 4},
+		{1968, 5, 26, 7},
+		// Unix epoch
+		{1970, 1, 1, 4},
+		{2018, 5, 18, 5},
+		{2019, 5, 18, 6},
+		{2020, 5, 18, 1},
+		{2021, 5, 18, 2},
 	}
 
 	var err error
@@ -143,6 +153,10 @@ func TestDayOfWeek(t *testing.T) {
 		is.NoErr(err)
 		dow, err := d.WeekDay()
 		is.NoErr(err)
+		// Allow for exploraty use without failing
+		if p.v != 0 {
+			is.Equal(dow, p.v)
+		}
 		t.Log("Day of week", d.year, d.month, d.day, dow)
 	}
 }
