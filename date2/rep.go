@@ -88,149 +88,6 @@ const StartYear = epochYearGregorian - epochYearGregorian + 1
 const absoluteMaxYear = math.MaxInt64
 const absoluteZeroYear = math.MinInt64 + 1
 
-func yearsAndCentury(y int64) (int64, int) {
-	negative := false
-	if y < 0 {
-		negative = true
-		y = -y
-	}
-	var err error
-	v := strconv.Itoa(int(y))
-	var years int64 = 0
-	var century int = 0
-	if len(v) > 2 {
-		century, err = strconv.Atoi(v[0:2])
-		if err != nil {
-			fmt.Println("Could not parse", v)
-		}
-		newVal, err := strconv.Atoi(v[len(v)-2:])
-		if err != nil {
-			fmt.Println("Could not parse", v)
-		}
-		if negative {
-			years = -int64(newVal)
-			century = -century
-		} else {
-			years = int64(newVal)
-		}
-	} else if len(v) == 2 {
-		century = 0
-		if err != nil {
-			fmt.Println("Could not parse", v)
-		}
-		newVal, err := strconv.Atoi(v[len(v)-2:])
-		if err != nil {
-			fmt.Println("Could not parse", v)
-		}
-		if negative {
-			years = -int64(newVal)
-			century = -century
-		} else {
-			years = int64(newVal)
-		}
-	} else {
-		century = 0
-		newVal, err := strconv.Atoi(v[0:])
-		if err != nil {
-			fmt.Println("Could not parse", v)
-		}
-		if negative {
-			years = -int64(newVal)
-			century = -century
-		} else {
-			years = int64(newVal)
-		}
-	}
-	return years, century
-}
-
-// https://en.wikipedia.org/wiki/Doomsday_rule
-func anchorDay(y int64) int {
-	// negative := false
-	// if y < 0 {
-	// 	negative = true
-	// 	y = -y
-	// }
-	// var err error
-	years, century := yearsAndCentury(y)
-
-	// v := strconv.Itoa(int(y))
-	// var years int64 = 0
-	// var century int = 0
-	// if len(v) > 2 {
-	// 	century, err = strconv.Atoi(v[0:2])
-	// 	if err != nil {
-	// 		fmt.Println("Could not parse", v)
-	// 	}
-	// 	newVal, err := strconv.Atoi(v[len(v)-2:])
-	// 	if err != nil {
-	// 		fmt.Println("Could not parse", v)
-	// 	}
-	// 	if negative {
-	// 		years = -int64(newVal)
-	// 		century = -century
-	// 	} else {
-	// 		years = int64(newVal)
-	// 	}
-	// } else if len(v) == 2 {
-	// 	century = 0
-	// 	if err != nil {
-	// 		fmt.Println("Could not parse", v)
-	// 	}
-	// 	newVal, err := strconv.Atoi(v[len(v)-2:])
-	// 	if err != nil {
-	// 		fmt.Println("Could not parse", v)
-	// 	}
-	// 	if negative {
-	// 		years = -int64(newVal)
-	// 		century = -century
-	// 	} else {
-	// 		years = int64(newVal)
-	// 	}
-	// } else {
-	// 	century = 0
-	// 	newVal, err := strconv.Atoi(v[0:])
-	// 	if err != nil {
-	// 		fmt.Println("Could not parse", v)
-	// 	}
-	// 	if negative {
-	// 		years = -int64(newVal)
-	// 		century = -century
-	// 	} else {
-	// 		years = int64(newVal)
-	// 	}
-	// }
-	anchorDay := 0
-	r := century % 4
-	anchorDay = r
-	switch r {
-	case 0:
-		anchorDay = 2
-	case 1:
-		anchorDay = 7
-	case 2:
-		anchorDay = 5
-	case 3:
-		anchorDay = 3
-	}
-
-	t := float64(years)
-	if int(t)%2 != 0 {
-		t += 11
-	}
-	t = t / 2
-	if int(t)%2 != 0 {
-		t += 11
-	}
-	t = 7 - float64((int(t) % 7))
-	t = t + float64(anchorDay)
-	if t > 7 {
-		t = t - 7
-	}
-
-	return int(t)
-}
-
 func gregorianYear(inputYear int64) (year int64) {
 	year = inputYear
 	if year == 0 {
@@ -316,6 +173,137 @@ func (d Date) YearDay() (int, error) {
 	return days, nil
 }
 
+func yearsAndCentury(y int64) (int64, int) {
+	negative := false
+	if y < 0 {
+		negative = true
+		y = -y
+	}
+	var err error
+	v := strconv.Itoa(int(y))
+	var years int64 = 0
+	var century int = 0
+	if len(v) > 2 {
+		century, err = strconv.Atoi(v[0:2])
+		if err != nil {
+			fmt.Println("Could not parse", v)
+		}
+		newVal, err := strconv.Atoi(v[len(v)-2:])
+		if err != nil {
+			fmt.Println("Could not parse", v)
+		}
+		if negative {
+			years = -int64(newVal)
+			century = -century
+		} else {
+			years = int64(newVal)
+		}
+	} else if len(v) == 2 {
+		century = 0
+		if err != nil {
+			fmt.Println("Could not parse", v)
+		}
+		newVal, err := strconv.Atoi(v[len(v)-2:])
+		if err != nil {
+			fmt.Println("Could not parse", v)
+		}
+		if negative {
+			years = -int64(newVal)
+			century = -century
+		} else {
+			years = int64(newVal)
+		}
+	} else {
+		century = 0
+		newVal, err := strconv.Atoi(v[0:])
+		if err != nil {
+			fmt.Println("Could not parse", v)
+		}
+		if negative {
+			years = -int64(newVal)
+			century = -century
+		} else {
+			years = int64(newVal)
+		}
+	}
+	return years, century
+}
+
+// https://en.wikipedia.org/wiki/Doomsday_rule
+func anchorDay(y int64) int {
+	years, century := yearsAndCentury(y)
+
+	anchorDay := 0
+	r := century % 4
+	anchorDay = r
+	switch r {
+	case 0:
+		anchorDay = 2
+	case 1:
+		anchorDay = 7
+	case 2:
+		anchorDay = 5
+	case 3:
+		anchorDay = 3
+	}
+
+	t := float64(years)
+	if int(t)%2 != 0 {
+		t += 11
+	}
+	t = t / 2
+	if int(t)%2 != 0 {
+		t += 11
+	}
+	t = 7 - float64((int(t) % 7))
+	t = t + float64(anchorDay)
+	if t > 7 {
+		t = t - 7
+	}
+
+	return int(t)
+}
+
+var doomsdays map[int][]int = map[int][]int{
+	1:  {3, 10, 17, 24, 21},
+	2:  {4, 11, 18, 25},
+	3:  {7, 14, 21, 28},
+	4:  {4, 11, 18, 25},
+	5:  {2, 9, 16, 23, 30},
+	6:  {6, 13, 20, 27},
+	7:  {4, 11, 18, 25},
+	8:  {1, 8, 15, 22, 29},
+	9:  {5, 12, 19, 26},
+	10: {3, 10, 17, 24, 31},
+	11: {7, 14, 21, 28},
+	12: {5, 12, 19, 26},
+}
+
+func (d Date) closestDoomsDayProximity() (int, error) {
+	isLeap := d.IsLeap()
+	row := doomsdays[d.month]
+	targetDiff := 0
+	for i := 0; i < len(row); i++ {
+		candidate := row[i]
+		// diff := d.day - candidate
+		diff := candidate - d.day
+		// fmt.Println("candidate", candidate, candidate-d.day)
+		if math.Abs(float64(diff)) <= 10 {
+			targetDiff = diff
+			break
+		}
+	}
+	if targetDiff == 0 {
+		return 0, errors.New("Didn't find candidate")
+	}
+	if isLeap {
+		targetDiff = targetDiff + 1
+	}
+	// fmt.Println("target day", targetDiff)
+
+	return targetDiff, nil
+}
+
 // WeekDay the day of the week for date as specified by time.Weekday
 // A Weekday specifies a day of the week (Sunday = 0, ...).
 // The English name for time.Weekday can be obtained with time.Weekday.String()
@@ -328,22 +316,78 @@ func (d Date) WeekDay() (int, error) {
 		return 0, errors.New("no year zero")
 	}
 
-	dow1Jan, _ := d.dayOfWeek1Jan()
-	fmt.Println("day of week 1 Jan", dow1Jan, "for", d.String())
-	dow := dow1Jan
+	// Get first two digit integer value of year or 0
+	twoDigitYear, _ := yearsAndCentury(d.year)
+	a := math.Floor(float64(twoDigitYear) / 12)
+	b := twoDigitYear % 12
+	c := math.Floor(float64(b) / 4)
 
-	doy, _ := d.YearDay()
+	sum := int(a) + int(b) + int(c)
+	// Get the anchor day for date year
+	anchorDay := anchorDay(d.year)
+	// remainder := sum % 7
 
-	dow--
-	for i := 0; i < int(doy); i++ {
-		if dow == 7 {
-			dow = 1
-		} else {
-			dow++
-		}
+	// Find anchor day
+	// if remainder > 7 {
+	// 	remainder = remainder - 7
+	// }
+
+	mod := sum % 7
+	final := anchorDay + mod
+	if final > 7 {
+		final = final - 7
 	}
 
-	return dow, nil
+	// d1Day, err := d.YearDay()
+	// if err != nil {
+	// 	return 0, err
+	// }
+
+	closest, err := d.closestDoomsDayProximity()
+	fmt.Println("closest", closest, "final", final, "anchor day", anchorDay)
+	// var new = anchorDay
+	if math.Abs(float64(closest)) > 7 {
+		closest = closest % 7
+		fmt.Println("closest!", closest)
+	}
+	new := final
+	if closest < 0 {
+		fmt.Println("new", new, "closest", closest)
+		new = new + closest
+		fmt.Println("new", new, "closest", closest)
+	} else {
+		new = new + closest
+	}
+	new = final - 3
+	fmt.Println("new new", new)
+	// new = new + final
+	// if new > 7 {
+	// 	fmt.Println("new new", new)
+	// 	new = new % 7
+	// 	fmt.Println("new new", new)
+	// }
+	// new := closest - d.day
+	// d2, err := NewDate(d.year, d.month, closest)
+	// if err != nil {
+	// 	return 0, err
+	// }
+	// closestDay, err := d2.YearDay()
+	// if err != nil {
+	// 	return 0, err
+	// }
+	// diff := d1Day - closestDay
+
+	// fmt.Println("final", final, "diff", diff, "d1Day", d1Day, "closest", closestDay)
+	// newDay := final + diff
+	// fmt.Println("final", final, "new day", newDay, "diff", diff)
+	// fmt.Println("diff", diff, "new day", newDay, "remainder", remainder, "anchor", anchor, "d1YearDay", d1YearDay, "d2YearDay", d2YearDay)
+	// if newDay > 7 {
+	// 	newDay = newDay - 7
+	// }
+
+	// fmt.Println("distance between closest and date", diff, "date", d.String())
+
+	return new, nil
 }
 
 // daysSinceEpoch takes a year and returns the number of days from

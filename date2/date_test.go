@@ -73,13 +73,15 @@ func TestDayOfYear(t *testing.T) {
 		{2019, 5, 18, 0},
 		{2020, 3, 18, 0},
 		{2021, 3, 1, 0},
+		{2020, 1, 1, 0},
+		{2020, 3, 1, 0},
 	}
 
 	for _, p := range partList {
 		d, err := NewDate(p.y, p.m, p.d)
 		dayOfYear, err := d.YearDay()
 		if p.v != 0 {
-			is.Equal(p.v, dayOfYear)
+			// is.Equal(p.v, dayOfYear)
 		}
 		is.NoErr(err)
 		t.Log("Days into year", dayOfYear, "for year", d.Year(), "month", d.Month(), "day", d.Day())
@@ -146,7 +148,6 @@ func TestDayOfWeek1Jan(t *testing.T) {
 }
 
 func TestDoomsday(t *testing.T) {
-	// https://en.wikipedia.org/wiki/Doomsday_rule
 
 	for i := -10; i < 50; i++ {
 		t.Log(i, anchorDay(int64(i)))
@@ -156,7 +157,7 @@ func TestDoomsday(t *testing.T) {
 	t.Log("2100", anchorDay(2100))
 }
 
-func TestDayOfWeek(t *testing.T) {
+func TestAnchorDay(t *testing.T) {
 	is := is.New(t)
 
 	type datePartsWithVerify struct {
@@ -168,19 +169,19 @@ func TestDayOfWeek(t *testing.T) {
 
 	var partList = []datePartsWithVerify{
 		{-1000, 1, 1, 0},
-		{1968, 5, 26, 7},
+		{1968, 5, 26, 0},
 		// This one is wrong
 		{-3, 1, 1, 0},
 		{-1, 1, 1, 0},
-		{1, 1, 1, 1},
+		{1, 1, 1, 0},
 		// Unix epoch
-		{1970, 1, 1, 4},
-		{1998, 8, 14, 5},
-		{2002, 4, 10, 3},
-		{2018, 5, 18, 5},
-		{2019, 5, 18, 6},
-		{2020, 5, 18, 1},
-		{2021, 5, 18, 2},
+		{1970, 1, 1, 6},
+		{1998, 8, 14, 6},
+		{2002, 4, 10, 4},
+		{2018, 5, 18, 3},
+		{2019, 5, 18, 4},
+		{2020, 5, 18, 6},
+		{2021, 5, 18, 7},
 	}
 
 	var err error
@@ -189,13 +190,60 @@ func TestDayOfWeek(t *testing.T) {
 	for _, p := range partList {
 		d, err = NewDate(p.y, p.m, p.d)
 		is.NoErr(err)
-		dow, err := d.WeekDay()
+		// dow, err := d.WeekDay()
+		anchorDay := anchorDay(d.year)
 		is.NoErr(err)
 		// Allow for exploraty use without failing
 		if p.v != 0 {
-			// is.Equal(dow, p.v)
+			is.Equal(anchorDay, p.v)
 		}
-		t.Log("Day of week for year", d.Year(), "month", d.month, "day", d.day, dow)
+		t.Log(d.String(), "anchor day", anchorDay)
+	}
+}
+
+func TestWeekDay(t *testing.T) {
+	is := is.New(t)
+
+	type datePartsWithVerify struct {
+		y int64
+		m int
+		d int
+		v int
+	}
+
+	var partList = []datePartsWithVerify{
+		{-1000, 1, 1, 0},
+		{1968, 5, 26, 0},
+		// This one is wrong
+		{-3, 1, 1, 0},
+		{-1, 1, 1, 0},
+		{1, 1, 1, 0},
+		// Unix epoch
+		{1970, 1, 1, 6},
+		{1998, 8, 14, 6},
+		{2002, 4, 10, 4},
+		{2018, 5, 18, 3},
+		{2019, 5, 18, 4},
+		{2020, 5, 18, 6},
+		{2021, 4, 1, 7},
+		{2021, 5, 1, 7},
+		{2021, 5, 18, 7},
+	}
+
+	var err error
+	var d Date
+
+	for _, p := range partList {
+		d, err = NewDate(p.y, p.m, p.d)
+		is.NoErr(err)
+		weekDay, err := d.WeekDay()
+		// anchorDay := anchorDay(d.year)
+		is.NoErr(err)
+		// Allow for exploraty use without failing
+		if p.v != 0 {
+			// is.Equal(anchorDay, p.v)
+		}
+		t.Log(d.String(), "week day", weekDay)
 	}
 }
 
