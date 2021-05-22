@@ -8,7 +8,9 @@ package date2
 
 import (
 	"errors"
+	"fmt"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/imarsman/datetime/gregorian"
@@ -86,23 +88,162 @@ const StartYear = epochYearGregorian - epochYearGregorian + 1
 const absoluteMaxYear = math.MaxInt64
 const absoluteZeroYear = math.MinInt64 + 1
 
-func gregorianYear(inputYear int64) (year int64, isCE bool) {
-	year = inputYear
-	if year == 0 {
-		return 1, true
+func yearsAndCentury(y int64) (int64, int) {
+	negative := false
+	if y < 0 {
+		negative = true
+		y = -y
 	}
-	if year == -1 {
-		return -1, false
+	var err error
+	v := strconv.Itoa(int(y))
+	var years int64 = 0
+	var century int = 0
+	if len(v) > 2 {
+		century, err = strconv.Atoi(v[0:2])
+		if err != nil {
+			fmt.Println("Could not parse", v)
+		}
+		newVal, err := strconv.Atoi(v[len(v)-2:])
+		if err != nil {
+			fmt.Println("Could not parse", v)
+		}
+		if negative {
+			years = -int64(newVal)
+			century = -century
+		} else {
+			years = int64(newVal)
+		}
+	} else if len(v) == 2 {
+		century = 0
+		if err != nil {
+			fmt.Println("Could not parse", v)
+		}
+		newVal, err := strconv.Atoi(v[len(v)-2:])
+		if err != nil {
+			fmt.Println("Could not parse", v)
+		}
+		if negative {
+			years = -int64(newVal)
+			century = -century
+		} else {
+			years = int64(newVal)
+		}
+	} else {
+		century = 0
+		newVal, err := strconv.Atoi(v[0:])
+		if err != nil {
+			fmt.Println("Could not parse", v)
+		}
+		if negative {
+			years = -int64(newVal)
+			century = -century
+		} else {
+			years = int64(newVal)
+		}
 	}
-	if year < -1 {
-		year++
+	return years, century
+}
+
+// https://en.wikipedia.org/wiki/Doomsday_rule
+func anchorDay(y int64) int {
+	// negative := false
+	// if y < 0 {
+	// 	negative = true
+	// 	y = -y
+	// }
+	// var err error
+	years, century := yearsAndCentury(y)
+
+	// v := strconv.Itoa(int(y))
+	// var years int64 = 0
+	// var century int = 0
+	// if len(v) > 2 {
+	// 	century, err = strconv.Atoi(v[0:2])
+	// 	if err != nil {
+	// 		fmt.Println("Could not parse", v)
+	// 	}
+	// 	newVal, err := strconv.Atoi(v[len(v)-2:])
+	// 	if err != nil {
+	// 		fmt.Println("Could not parse", v)
+	// 	}
+	// 	if negative {
+	// 		years = -int64(newVal)
+	// 		century = -century
+	// 	} else {
+	// 		years = int64(newVal)
+	// 	}
+	// } else if len(v) == 2 {
+	// 	century = 0
+	// 	if err != nil {
+	// 		fmt.Println("Could not parse", v)
+	// 	}
+	// 	newVal, err := strconv.Atoi(v[len(v)-2:])
+	// 	if err != nil {
+	// 		fmt.Println("Could not parse", v)
+	// 	}
+	// 	if negative {
+	// 		years = -int64(newVal)
+	// 		century = -century
+	// 	} else {
+	// 		years = int64(newVal)
+	// 	}
+	// } else {
+	// 	century = 0
+	// 	newVal, err := strconv.Atoi(v[0:])
+	// 	if err != nil {
+	// 		fmt.Println("Could not parse", v)
+	// 	}
+	// 	if negative {
+	// 		years = -int64(newVal)
+	// 		century = -century
+	// 	} else {
+	// 		years = int64(newVal)
+	// 	}
+	// }
+	anchorDay := 0
+	r := century % 4
+	anchorDay = r
+	switch r {
+	case 0:
+		anchorDay = 2
+	case 1:
+		anchorDay = 7
+	case 2:
+		anchorDay = 5
+	case 3:
+		anchorDay = 3
 	}
 
-	return year, year > StartYear
+	t := float64(years)
+	if int(t)%2 != 0 {
+		t += 11
+	}
+	t = t / 2
+	if int(t)%2 != 0 {
+		t += 11
+	}
+	t = 7 - float64((int(t) % 7))
+	t = t + float64(anchorDay)
+	if t > 7 {
+		t = t - 7
+	}
+
+	return int(t)
+}
+
+func gregorianYear(inputYear int64) (year int64) {
+	year = inputYear
+	if year == 0 {
+		year = 1
+	} else if year == -1 {
+		year = -1
+	}
+
+	return year
 }
 
 func (d Date) daysInMonth() (int, error) {
-	err := d.clean()
+	err := d.validate()
 	if err != nil {
 		return 0, err
 	}
@@ -152,12 +293,13 @@ func (d Date) daysInMonth() (int, error) {
 // non-leap years, and [1,366] in leap years. The functionality should be the
 // same as for the Go time.YearDay func.
 func (d Date) YearDay() (int, error) {
-	err := d.clean()
+	err := d.validate()
 	if err != nil {
 		return 0, err
 	}
 	var days int = 0
 	copy := d
+	copy.year = copy.astronomicalYear()
 	for i := 1; i < 13; i++ {
 		copy.month = i
 		if copy.month > d.month {
@@ -178,17 +320,16 @@ func (d Date) YearDay() (int, error) {
 // A Weekday specifies a day of the week (Sunday = 0, ...).
 // The English name for time.Weekday can be obtained with time.Weekday.String()
 func (d Date) WeekDay() (int, error) {
-	err := d.clean()
+	err := d.validate()
 	if err != nil {
 		return 0, err
 	}
 	if d.year == 0 {
 		return 0, errors.New("no year zero")
 	}
-	// if d.year < 0 {
-	// 	d.year--
-	// }
+
 	dow1Jan, _ := d.dayOfWeek1Jan()
+	fmt.Println("day of week 1 Jan", dow1Jan, "for", d.String())
 	dow := dow1Jan
 
 	doy, _ := d.YearDay()
@@ -235,7 +376,7 @@ func daysSinceEpoch(year int64) uint64 {
 }
 
 func (d Date) dayOfWeek1Jan() (int, error) {
-	err := d.clean()
+	err := d.validate()
 	if err != nil {
 		return 0, err
 	}
@@ -246,13 +387,36 @@ func (d Date) dayOfWeek1Jan() (int, error) {
 	// Year number A, month number M, day number D.
 	// set C = A \ 100, Y = A % 100, and the value is
 	// (1+5((Y−1)%4)+3(Y−1)+5(C%4))%7
-	year := d.yearAbs()
-	if year < 0 {
-		year = -year
+	year := d.astronomicalYear()
+	// year := d.year
+	if d.year < 0 {
+		// year--
+		// year = year + 1
+		// fmt.Println("year", year, "negative")
+		// // year = -year
+		// fmt.Println("year", year, "negative")
 	}
+	// if year < 0 {
+	// 	year = -year
+	// }
+	// year := d.yearAbs()
+	// if year < 0 {
+	// 	year = -year
+	// }
 	c := year / 100
+	// if c == 0 {
+	// 	c = 1
+	// }
 	y := year % 100
+	// if y == 0 {
+	// 	y = 1
+	// }
 	result := (1 + 5*((y-1)%4) + 3*(y-1) + 5*(c%4)) % 7
+
+	if result < 0 {
+		result = -result
+	}
+	// fmt.Println("year", year, "y", y, "result", result, "c", c)
 
 	return int(result), nil
 }

@@ -49,11 +49,23 @@ import (
 // distinguish between official Gregorian dates and earlier proleptic dates,
 // which can also be represented when needed.
 //
+
+// Date a date holds values for year, month, and day as well as a flag tied to
+// instantiation. The Gregorian calendar starts on year 1, not zero. The year
+// before year 1 is 1 BCE, or -1. This can cause issues for calculating things
+// like leap years for years before 1 CE. Years that are stored when creating a
+// date instance using NewDate are adjusted to their proper Gregorian value.
+// When calculations are required for things like leap year a version of the
+// year for mathematical calculations is obtained. Since the year must in some
+// circumstances be adjusted to be proper in a Gregorian sense a flag is set in
+// the NewDate function to set safelyInstantiated to true rather than its
+// default value of false. A check function can then determine if a date struct
+// instance was accidentally created with new(Date) or Date{}. Calls that
+// require this check will return an error.
 type Date struct {
 	year               int64
 	month              int
 	day                int
-	ce                 bool
 	safelyInstantiated bool
 }
 
@@ -64,30 +76,28 @@ func (d Date) yearAbs() int64 {
 	return d.year
 }
 
-// Validate validates that the date is basically OK
-func (d Date) Validate() error {
-	if d.IsZero() {
-		return errors.New("Zero month or day")
-	}
-	return nil
-}
+// // Validate validates that the date is basically OK
+// func (d Date) Validate() error {
+// 	if d.IsZero() {
+// 		return errors.New("Zero month or day")
+// 	}
+// 	return nil
+// }
 
-func (d *Date) clean() error {
+func (d *Date) validate() error {
 	if d.IsZero() || d.safelyInstantiated == false {
-		return errors.New("date invalidly instantiated")
+		return errors.New("date invalidly instantiated with new(Date) or Date{}")
 	}
 	return nil
 }
 
-func (d Date) mathematicalYear() int64 {
+func (d Date) astronomicalYear() int64 {
 	year := d.year
 
 	if year == 1 {
 		return 0
-	} else if year == -1 {
-		return -1
-	} else if year < -1 {
-		year--
+	} else if year <= -1 {
+		year++
 	}
 
 	return year
@@ -100,23 +110,12 @@ func (d Date) mathematicalYear() int64 {
 func NewDate(year int64, month int, day int) (Date, error) {
 	d := Date{}
 
-	var ce bool
-	// What will be stored is the gregorian year but that value will need to be
-	// modified for mathematical calculation.
-	// fmt.Println("incoming year", year)
-	d.year, ce = gregorianYear(year)
-	// fmt.Println("gregorian year", d.year)
+	d.year = gregorianYear(year)
 	d.month = month
 	d.day = day
-	d.ce = ce
-	// Allows dates instantiated with new(Date) or Date{} to be rejected
 	d.safelyInstantiated = true
 
-	err := d.clean()
-	if err != nil {
-		return Date{}, err
-	}
-	err = d.Validate()
+	err := d.validate()
 	if err != nil {
 		return Date{}, err
 	}
@@ -126,7 +125,7 @@ func NewDate(year int64, month int, day int) (Date, error) {
 
 // IsCE is the year CE
 func (d Date) IsCE() (bool, error) {
-	err := d.clean()
+	err := d.validate()
 	if err != nil {
 		return false, err
 	}
@@ -135,12 +134,6 @@ func (d Date) IsCE() (bool, error) {
 
 // Year get year for date
 func (d Date) Year() int64 {
-	// // gy, _ := gregorianYear(d.year)
-	// fmt.Println("year", d.year, "mathematical year", d.mathematicalYear())
-	// if d.year <= 0 {
-	// 	d.year++
-	// 	return d.year
-	// }
 	return d.year
 }
 
@@ -155,8 +148,9 @@ func (d Date) Day() int {
 	return d.day
 }
 
-// SubtractDays add days to a date
-func (d Date) SubtractDays(subtract int) (date Date, err error) {
+// subtractDays add days to a date
+// TODO: Fix this so that it works properly
+func (d Date) subtractDays(subtract int) (date Date, err error) {
 	d2 := d
 	fmt.Println("subtracing from", d.String(), subtract)
 	newYear := false
@@ -367,16 +361,13 @@ func (d Date) addYears(years int64) (Date, error) {
 
 // ISOWeeksInYear get number of ISO weeks in year
 func (d Date) ISOWeeksInYear() int {
-	return isoWeeksInYear(d.year)
-}
-
-func isoWeeksInYear(year int64) int {
+	year := d.year
 	if year < 0 {
 		year = -year
 	}
-	d, _ := NewDate(year, 1, 1)
-	year = d.mathematicalYear()
-	// year = gregorian.AdjustYear(year)
+
+	dMathematical, _ := NewDate(year, 1, 1)
+	year = dMathematical.astronomicalYear()
 
 	p := math.Mod(float64(year+(year/4)-(year/100)+(year/400)), 7)
 	weeks := 52
@@ -397,7 +388,7 @@ func Today() Date {
 
 // Min returns the smallest representable date.
 func Min() Date {
-	gy, _ := gregorianYear(math.MinInt64)
+	gy := gregorianYear(math.MinInt64)
 	d, _ := NewDate(gy, 1, 1)
 
 	return d
@@ -405,7 +396,7 @@ func Min() Date {
 
 // Max returns the largest representable date.
 func Max() Date {
-	gy, _ := gregorianYear(math.MaxInt64)
+	gy := gregorianYear(math.MaxInt64)
 	d, _ := NewDate(gy, 1, 1)
 
 	return d
@@ -572,7 +563,7 @@ func (d Date) MaxDate(u Date) Date {
 // IsLeap simply tests whether a given year is a leap year, using the Gregorian calendar algorithm.
 func (d Date) IsLeap() bool {
 	// fmt.Println("starting year", d.year)
-	d.year = d.mathematicalYear()
+	d.year = d.astronomicalYear()
 	// fmt.Println("mathematical year", d.year)
 
 	return d.year%4 == 0 && (d.year%100 != 0 || d.year%400 == 0)
