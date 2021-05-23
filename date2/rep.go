@@ -282,26 +282,30 @@ var doomsdays map[int][]int = map[int][]int{
 func (d Date) closestDoomsDayProximity() (int, error) {
 	isLeap := d.IsLeap()
 	row := doomsdays[d.month]
-	targetDiff := 0
+	// targetDiff := 0
+	var candidate int
 	for i := 0; i < len(row); i++ {
-		candidate := row[i]
+		candidate = row[i]
 		// diff := d.day - candidate
 		diff := candidate - d.day
 		// fmt.Println("candidate", candidate, candidate-d.day)
 		if math.Abs(float64(diff)) <= 10 {
-			targetDiff = diff
+			// targetDiff = diff
 			break
+			// return candidate, nil
 		}
 	}
-	if targetDiff == 0 {
-		return 0, errors.New("Didn't find candidate")
-	}
+	// if targetDiff == 0 {
+	// 	return 0, errors.New("Didn't find candidate")
+	// }
 	if isLeap {
-		targetDiff = targetDiff + 1
+		candidate = candidate + 1
+		// 	targetDiff = targetDiff + 1
 	}
 	// fmt.Println("target day", targetDiff)
 
-	return targetDiff, nil
+	// return targetDiff, nil
+	return candidate, nil
 }
 
 // WeekDay the day of the week for date as specified by time.Weekday
@@ -322,9 +326,9 @@ func (d Date) WeekDay() (int, error) {
 	b := twoDigitYear % 12
 	c := math.Floor(float64(b) / 4)
 
-	sum := int(a) + int(b) + int(c)
+	twoDigitYarSum := int(a) + int(b) + int(c)
 	// Get the anchor day for date year
-	anchorDay := anchorDay(d.year)
+	anchorDayForYear := anchorDay(d.year)
 	// remainder := sum % 7
 
 	// Find anchor day
@@ -332,62 +336,128 @@ func (d Date) WeekDay() (int, error) {
 	// 	remainder = remainder - 7
 	// }
 
-	mod := sum % 7
-	final := anchorDay + mod
-	if final > 7 {
-		final = final - 7
-	}
+	anchorDayAdjustment := twoDigitYarSum % 7
+	// fmt.Println("anchor date adjustment", anchorDayAdjustment)
+	dayForDateAdjustment := anchorDayForYear + anchorDayAdjustment
+	// if dayForDateAdjustment > 7 {
+	// 	dayForDateAdjustment = dayForDateAdjustment - 7
+	// }
 
 	// d1Day, err := d.YearDay()
 	// if err != nil {
 	// 	return 0, err
 	// }
 
-	closest, err := d.closestDoomsDayProximity()
-	fmt.Println("closest", closest, "final", final, "anchor day", anchorDay)
+	closestAnchorDayInMonth, err := d.closestDoomsDayProximity()
+	// fmt.Println("closestDayInMonth", closestDayInMonth, "dayForDate", dayForDateAdjustment, "anchor day for year", anchorDayForYear)
 	// var new = anchorDay
-	if math.Abs(float64(closest)) > 7 {
-		closest = closest % 7
-		fmt.Println("closest!", closest)
+
+	var dayDiff int = d.day - closestAnchorDayInMonth
+	if d.day > closestAnchorDayInMonth {
+		dayDiff = closestAnchorDayInMonth - d.day
 	}
-	new := final
-	if closest < 0 {
-		fmt.Println("new", new, "closest", closest)
-		new = new + closest
-		fmt.Println("new", new, "closest", closest)
+
+	// targetWeekDay := ((closestAnchorDayInMonth + dayDiff) % 7) + 1
+	// fmt.Println("target day", targetWeekDay)
+	// fmt.Println("anchor day", anchorDayForYear, "closest anchor day", closestAnchorDayInMonth, "day", d.day, "diff", dayDiff, "targetWeekDay", targetWeekDay)
+	var final int
+	if dayDiff < 0 {
+		fmt.Println("negative")
+		if d.day > closestAnchorDayInMonth {
+			fmt.Println("negative diff and day greater")
+			// If day number is larger than the closest anchor day
+			// Add to get to the day number
+			// Negate dayDiff
+			// e.g. 7 + -1 == 7 - 1
+			final = int(math.Mod(float64(anchorDayForYear)+float64(-dayDiff), 7))
+		} else {
+			fmt.Println("negative diff and day less")
+			// If day number is smaller than the closest anchor day
+			// Subtract to get to the day number
+			final = int(math.Mod(float64(anchorDayForYear)-float64(-dayDiff), 7))
+			fmt.Printf("anchor day %d + daydiff %d\n", anchorDayForYear, dayDiff)
+		}
 	} else {
-		new = new + closest
+		fmt.Println("positive")
+		// 7 -
+		if d.day > closestAnchorDayInMonth {
+			fmt.Println("postive diff and day greater")
+			// If day number is larger than the closest anchor day
+			// Add to get to the day number
+			final = int(math.Mod(float64(anchorDayForYear)+float64(-dayDiff), 7))
+		} else {
+			fmt.Println("postive diff and day less")
+			// If day number is smaller than the closest anchor day
+			// Subtract to get to the day number
+			final = int(math.Mod(float64(anchorDayForYear)-float64(-dayDiff), 7))
+		}
 	}
-	new = final - 3
-	fmt.Println("new new", new)
-	// new = new + final
-	// if new > 7 {
-	// 	fmt.Println("new new", new)
-	// 	new = new % 7
-	// 	fmt.Println("new new", new)
+	fmt.Println("closestAnchorDay", closestAnchorDayInMonth, "day", d.day, "anchor day", anchorDayForYear, "diff", dayDiff, "final", final)
+	// if math.Abs(float64(closestDayInMonth)) > 7 {
+	// 	closestDayInMonth = closestDayInMonth % 7
 	// }
-	// new := closest - d.day
-	// d2, err := NewDate(d.year, d.month, closest)
-	// if err != nil {
-	// 	return 0, err
+	// dayForDate := dayForDateAdjustment
+	// if dayForDate < 0 {
+	// 	dayForDate--
 	// }
-	// closestDay, err := d2.YearDay()
-	// if err != nil {
-	// 	return 0, err
+	// if closestAnchorDayInMonth < 0 {
+	// 	// fmt.Println("less than")
+	// 	// fmt.Println("closestDayInMonth", closestDayInMonth, "dayForDate", dayForDate, "anchor day for year", anchorDayForYear, "target day", d.day)
+	// 	closestAnchorDayInMonth = -closestAnchorDayInMonth
+	// 	normalized := anchorDayForYear + closestAnchorDayInMonth
+	// 	// fmt.Println("closestDayInMonth", closestDayInMonth, "dayForDate", dayForDate, "anchor day for year", anchorDayForYear, "target day", d.day)
+	// 	// normalized = -normalized
+	// 	// new = new + closest
+	// 	if normalized%7 > 0 {
+	// 		adjustment := normalized % 7
+	// 		dayForDate = adjustment
+	// 	}
+	// 	// fmt.Println("closestDayInMonth", closestDayInMonth, "dayForDate", dayForDate, "anchor day for year", anchorDayForYear, "target day", d.day)
+	// } else {
+	// 	// fmt.Println("greater than")
+	// 	// fmt.Println("closestDayInMonth", closestDayInMonth, "dayForDate", dayForDate, "anchor day for year", anchorDayForYear, "target day", d.day)
+	// 	// dayForDate = dayForDate + closestDayInMonth
+	// 	dayForDate = anchorDayForYear - closestAnchorDayInMonth
+	// 	// if dayForDate > 7 {
+	// 	// 	fmt.Println("dayfordate", dayForDate)
+	// 	// 	// excess := dayForDate % 7
+	// 	// 	// dayForDate = excess
+	// 	// }
+	// 	// if closestDayInMonth > d.day {
+	// 	// 	dayForDate = dayForDate + closestDayInMonth
+	// 	// } else {
+	// 	// 	dayForDate = dayForDate - closestDayInMonth
+	// 	// }
 	// }
-	// diff := d1Day - closestDay
+	// // fmt.Println("closestDayInMonth", closestDayInMonth, "dayForDate", dayForDate, "anchor day", anchorDayForYear)
+	// // new = new + final
+	// // if new > 7 {
+	// // 	fmt.Println("new new", new)
+	// // 	new = new % 7
+	// // 	fmt.Println("new new", new)
+	// // }
+	// // new := closest - d.day
+	// // d2, err := NewDate(d.year, d.month, closest)
+	// // if err != nil {
+	// // 	return 0, err
+	// // }
+	// // closestDay, err := d2.YearDay()
+	// // if err != nil {
+	// // 	return 0, err
+	// // }
+	// // diff := d1Day - closestDay
 
-	// fmt.Println("final", final, "diff", diff, "d1Day", d1Day, "closest", closestDay)
-	// newDay := final + diff
-	// fmt.Println("final", final, "new day", newDay, "diff", diff)
-	// fmt.Println("diff", diff, "new day", newDay, "remainder", remainder, "anchor", anchor, "d1YearDay", d1YearDay, "d2YearDay", d2YearDay)
-	// if newDay > 7 {
-	// 	newDay = newDay - 7
-	// }
+	// // fmt.Println("final", final, "diff", diff, "d1Day", d1Day, "closest", closestDay)
+	// // newDay := final + diff
+	// // fmt.Println("final", final, "new day", newDay, "diff", diff)
+	// // fmt.Println("diff", diff, "new day", newDay, "remainder", remainder, "anchor", anchor, "d1YearDay", d1YearDay, "d2YearDay", d2YearDay)
+	// // if newDay > 7 {
+	// // 	newDay = newDay - 7
+	// // }
 
-	// fmt.Println("distance between closest and date", diff, "date", d.String())
+	// // fmt.Println("distance between closest and date", diff, "date", d.String())
 
-	return new, nil
+	return final, nil
 }
 
 // daysSinceEpoch takes a year and returns the number of days from
