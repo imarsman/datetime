@@ -444,6 +444,23 @@ func (d Date) WeekDay() (int, error) {
 
 	answer := (yearAnchorDay + (d.day - doomsday) + 35) % 7
 
+	// fmt.Println("year", d.year, "answer", answer)
+	if d.year > -100 && d.year <= 0 {
+		if answer == 0 {
+			answer = 6
+		} else {
+			answer--
+		}
+	}
+	if d.year > 0 && d.year < 100 {
+		// fmt.Println("year", d.year, "answer", answer)
+		if answer == 0 {
+			answer = 6
+		} else {
+			answer--
+		}
+	}
+
 	// fmt.Println("anchor day for year", d.year, "is", yearAnchorDay)
 	// remainder := sum % 7
 
