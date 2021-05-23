@@ -150,11 +150,11 @@ func TestDayOfWeek1Jan(t *testing.T) {
 func TestDoomsday(t *testing.T) {
 
 	for i := -10; i < 50; i++ {
-		t.Log(i, anchorDay(int64(i)))
+		t.Log(i, anchorDayForYear(int64(i)))
 	}
-	t.Log("2005", anchorDay(2005))
-	t.Log("1968", anchorDay(1968))
-	t.Log("2100", anchorDay(2100))
+	t.Log("2005", anchorDayForYear(2005))
+	t.Log("1968", anchorDayForYear(1968))
+	t.Log("2100", anchorDayForYear(2100))
 }
 
 func TestAnchorDay(t *testing.T) {
@@ -191,7 +191,7 @@ func TestAnchorDay(t *testing.T) {
 		d, err = NewDate(p.y, p.m, p.d)
 		is.NoErr(err)
 		// dow, err := d.WeekDay()
-		anchorDay := anchorDay(d.year)
+		anchorDay := anchorDayForYear(d.year)
 		is.NoErr(err)
 		// Allow for exploraty use without failing
 		if p.v != 0 {
@@ -212,30 +212,44 @@ func TestWeekDay(t *testing.T) {
 	}
 
 	var partList = []datePartsWithVerify{
-		{-1000, 1, 1, 0},
-		{1968, 5, 26, 0},
+		// {-1000, 1, 1, 0},
+		// {1968, 5, 26, 0},
 		// This one is wrong
-		{-3, 1, 1, 0},
+		// {-3, 1, 1, 0},
 		{-1, 1, 1, 0},
 		{1, 1, 1, 0},
+		{10, 1, 1, 0},
+		{99, 1, 1, 0},
+		{100, 1, 1, 0},
+		{101, 1, 1, 0},
+		// {15, 1, 1, 0},
 		// Unix epoch
-		{1000, 1, 1, 6},
-		{1010, 1, 1, 6},
-		{1500, 1, 1, 6},
-		{1970, 1, 1, 6},
-		{1998, 8, 14, 6},
-		{2002, 4, 10, 4},
-		{2018, 5, 18, 3},
-		{2019, 5, 18, 4},
-		{2020, 5, 18, 6},
-		{2021, 4, 1, 7},
+		// {1000, 1, 1, 6},
+		// {1010, 1, 1, 6},
+		// {1861, 4, 12, 6},
+		{2000, 1, 1, 6},
+		// {2001, 1, 1, 6},
+		// {2002, 1, 1, 6},
+		// {2004, 1, 1, 6},
+		// {1010, 1, 1, 6},
+		// {1500, 1, 1, 6},
+		// {1970, 1, 1, 6},
+		// {1998, 8, 14, 6},
+		// {2005, 4, 10, 4},
+		// {2018, 5, 18, 3},
+		// {2019, 5, 18, 4},
+		// {2020, 5, 18, 6},
+		// {2040, 5, 18, 6},
+		// {2102, 1, 1, 6},
+		// {3000, 1, 1, 6},
+		// {2021, 4, 1, 7},
 		/*
 		   closest 1 final 5 anchor day 7
 		   new new 2
 		       date_test.go:246: 2021-05-01 week day 2
 		*/
-		{2021, 5, 1, 7},
-		{2021, 5, 18, 7},
+		// {2021, 5, 1, 7},
+		// {2021, 5, 18, 7},
 	}
 
 	var err error
@@ -253,6 +267,16 @@ func TestWeekDay(t *testing.T) {
 		}
 		t.Log(d.String(), "week day", weekDay)
 	}
+}
+
+func TestGetCenturyAnchorDay(t *testing.T) {
+	years := []int64{0, -1, -100, -200, -300, -1000, 112, 200, 1942, 2000, 1763}
+
+	for i := 0; i < len(years); i++ {
+		d := anchorDayForCentury(years[i])
+		t.Logf("Got %d for %d", d, years[i])
+	}
+
 }
 
 func TestIsLeap(t *testing.T) {

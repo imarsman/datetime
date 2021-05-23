@@ -94,11 +94,14 @@ func (d *Date) validate() error {
 func (d Date) astronomicalYear() int64 {
 	year := d.year
 
+	// fmt.Println("incoming year", year)
 	if year == 1 {
-		return 0
+		return 1
 	} else if year <= -1 {
 		year++
 	}
+
+	// fmt.Println("astronomical year", year)
 
 	return year
 }
@@ -563,10 +566,16 @@ func (d Date) MaxDate(u Date) Date {
 // IsLeap simply tests whether a given year is a leap year, using the Gregorian calendar algorithm.
 func (d Date) IsLeap() bool {
 	// fmt.Println("starting year", d.year)
-	d.year = d.astronomicalYear()
+	year := d.astronomicalYear()
 	// fmt.Println("mathematical year", d.year)
+	// if d.year%100 != 0 {
+	// 	return false
+	// }
 
-	return d.year%4 == 0 && (d.year%100 != 0 || d.year%400 == 0)
+	isLeap := year%4 == 0 && (year%100 != 0 && year%400 == 0)
+	fmt.Println("year", year, "is leap", isLeap)
+
+	return isLeap
 }
 
 // DaysIn gives the number of days in a given month, according to the Gregorian calendar.
