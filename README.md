@@ -42,19 +42,26 @@ to parse the incoming timestamp. If the incoming timestamp is in a Unix
 timestamp format an attempt is made to parse it as such.
 
 For an interesting task a date package is being worked on which has no time
-portion. This was also the case with the rickb777 package but I am interested in
-being able to represent and make calculations on dates with a very large range.
-Most time libraries are optimized for very fast and accurate handling of time
-and date oriented operations and representing time accurately. I am interested
-in exploring the representation of dates in such a way that there will be no
-practical minimum or maximum date that be represented. This is as much of a
-learning excercise as anything else and I will see where it leads me. The dates
-are for the Gregorian calendar, which when extended to represent dates prior to
-the adoption of the Gregorian calendar is called a proleptic Gregorian calendar.
-The goal of the date library is to accurately allow for calculations such as the
-addition of years, months, and days to a date with an accurate accounting for
-things like leap years. So far that is going pretty well but more testing will
-be required.
+portion. I am interested in being able to represent and make calculations on
+dates with a very large range. Most time libraries are optimized for very fast
+and accurate handling of time and date oriented operations and representing time
+accurately. I am interested in exploring the representation of dates in such a
+way that there will be no practical minimum or maximum date that be represented.
+This is as much of a learning excercise as anything else and I will see where it
+leads me. The dates are for the Gregorian calendar, which when extended to
+represent dates prior to the adoption of the Gregorian calendar is called a
+proleptic Gregorian calendar. The goal of the date library is to accurately
+allow for calculations such as the addition of years, months, and days to a date
+with an accurate accounting for things like leap years. So far that is going
+pretty well but more testing will be required.
+
+So far, although the underlying int64 type used to represent years can hold
+years in a very wide range, including well before 1 BCE, calculations of things
+like days including leap days and day of the week is written with positive year
+numbers in mind. More work will need to be done to deal with negative years,
+likely by using a year many years BCE as year zero so that all year calculations
+can use addition rather than subtraction. The main goal for now is to correctly
+handle CE year calculations.
 
 There may be some value in making a clock package that could be paired with the
 date package to allow for handling of dates and times outside of the normal

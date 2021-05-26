@@ -418,34 +418,6 @@ func (d Date) LastDayOfMonth() (int, error) {
 	return dim, nil
 }
 
-// // Month returns the month of the year specified by d.
-// func (d Date) Month() time.Month {
-// 	return d.month
-// }
-
-// Year returns the year specified by d.
-// func (d Date) Year() int {
-// 	t := decode(d.day)
-// 	return t.Year()
-// }
-
-// Weekday returns the day of the week specified by d.
-// func (d Date) Weekday() int {
-// 	// Date zero, January 1, 1970, fell on a Thursday
-// 	wdayZero := time.Thursday
-// 	// Taking into account potential for overflow and negative offset
-// 	return int((int32(wdayZero) + int32(d.day)%7 + 7) % 7)
-// }
-
-// ISOWeek returns the ISO 8601 year and week number in which d occurs.
-// Week ranges from 1 to 53. Jan 01 to Jan 03 of year n might belong to
-// week 52 or 53 of year n-1, and Dec 29 to Dec 31 might belong to week 1
-// of year n+1.
-// func (d Date) ISOWeek() (year, week int) {
-// 	t := decode(d.day)
-// 	return t.ISOWeek()
-// }
-
 // IsZero reports whether t represents the zero date.
 func (d Date) IsZero() bool {
 	return (d.year == 0 && d.month == 0 && d.day == 0)
