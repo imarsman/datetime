@@ -332,11 +332,11 @@ func (d Date) AddParts(years int64, months, days int) (Date, int64, error) {
 	extraDays := int((dFinal.year - d.year) * 365)
 
 	// Add in extra days due to leap years
-	var startDateDays int64 = int64(daysSinceEpoch(d.year))
+	var startDateDays int64 = int64(daysTo1JanSinceEpoch(d.year))
 	if startDateDays < 0 {
 		startDateDays = -startDateDays
 	}
-	var endDateDays int64 = int64(daysSinceEpoch(dFinal.year))
+	var endDateDays int64 = int64(daysTo1JanSinceEpoch(dFinal.year))
 	if endDateDays < 0 {
 		endDateDays = -endDateDays
 	}
@@ -565,15 +565,9 @@ func (d Date) MaxDate(u Date) Date {
 
 // IsLeap simply tests whether a given year is a leap year, using the Gregorian calendar algorithm.
 func (d Date) IsLeap() bool {
-	// fmt.Println("starting year", d.year)
 	year := d.astronomicalYear()
-	// fmt.Println("mathematical year", d.year)
-	// if d.year%100 != 0 {
-	// 	return false
-	// }
 
-	isLeap := year%4 == 0 && (year%100 != 0 && year%400 == 0)
-	fmt.Println("year", year, "is leap", isLeap)
+	isLeap := year%4 == 0 && (year%100 != 0 || year%400 == 0)
 
 	return isLeap
 }

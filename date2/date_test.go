@@ -69,7 +69,6 @@ func TestDayOfYear(t *testing.T) {
 		{-1, 12, 31, 365},
 		// First day of CE
 		{1, 1, 1, 1},
-		{1000, 3, 1, 0},
 		{2019, 5, 18, 0},
 		{2020, 3, 18, 0},
 		{2021, 3, 1, 0},
@@ -118,20 +117,81 @@ func TestDaysSinceEpoch(t *testing.T) {
 		-1, 1000, 2000, absoluteZeroYear + 10,
 	}
 	for _, y := range list {
-		days := daysSinceEpoch(y)
+		days := daysTo1JanSinceEpoch(y)
 		t.Logf("Days since epoch for year %d = %d", y, days)
 	}
 }
 
-func TestDayOfWeek1Jan(t *testing.T) {
+func TestWeekday2(t *testing.T) {
 	is := is.New(t)
 
+	year := int64(1970)
+	var leapYearCount int64
+	// if year < 100 {
+	leapYearCount = (year / 4) - (year / 100) + (year / 400)
+	t.Log(leapYearCount)
+	// dl, _ := NewDate(800, 1, 1)
+	// t.Log("1000 is leap", dl.IsLeap())
+
 	var partList = []dateParts{
-		{-1000, 5, 18},
-		{2018, 5, 18},
-		{2019, 5, 18},
-		{2020, 5, 18},
-		{2021, 5, 18},
+		// {-10, 1, 1},
+		// {-1, 1, 1},
+		// {1, 1, 1},
+		{1, 1, 2},
+		// {2, 1, 1},
+		// {3, 1, 1},
+		// {4, 1, 1},
+		// {5, 1, 1},
+		// {40, 1, 1},
+		// {60, 1, 1},
+		// {100, 1, 1},
+		// {1000, 1, 1},
+		// {1020, 1, 1},
+		// {1021, 1, 1},
+		// {1022, 1, 1},
+		// {1023, 1, 1},
+		// {1065, 1, 1},
+		// {1066, 1, 1},
+		// {1100, 1, 1},
+
+		// {1, 1, 1},
+		// {1, 1, 7},
+		// {1, 1, 21},
+		// {1, 1, 22},
+		// {10, 1, 1},
+		// {14, 1, 1},
+
+		// Problematic
+		// {1065, 1, 1},
+		// // Problematic
+		// {1066, 1, 1},
+		// // Problematic
+		// {1066, 10, 14},
+		// {1900, 1, 1},
+		// {1960, 1, 1},
+		// {1964, 1, 1},
+		// {1967, 1, 1},
+		// {1968, 1, 1},
+		// {1968, 3, 1},
+		// {1969, 1, 1},
+		// {1970, 1, 1},
+		// {1970, 1, 15},
+		// {1970, 2, 1},
+		// {1970, 1, 1},
+		// {1971, 1, 1},
+		// {2010, 1, 1},
+		{2018, 1, 1},
+		// {2018, 1, 2},
+		{2018, 1, 15},
+		// {2020, 1, 1},
+		// {2019, 5, 18},
+		// {2020, 5, 18},
+		// {2030, 1, 1},
+		{2040, 1, 1},
+		// {2060, 1, 1},
+		// {2061, 1, 1},
+		{3060, 1, 1},
+		// {2021, 5, 18},
 	}
 
 	var err error
@@ -139,9 +199,9 @@ func TestDayOfWeek1Jan(t *testing.T) {
 
 	for _, p := range partList {
 		d, err = NewDate(p.y, p.m, p.d)
-		dow, err := d.dayOfWeek1Jan()
+		dow, err := d.dayOfWeek()
 		is.NoErr(err)
-		t.Log("Day of week 1 Jan for", d.year, dow)
+		t.Log("Day of week for", d.String(), dow)
 	}
 
 	is.NoErr(err)
@@ -201,6 +261,65 @@ func TestAnchorDay(t *testing.T) {
 	}
 }
 
+func TestWeekDay2(t *testing.T) {
+	is := is.New(t)
+
+	type datePartsWithVerify struct {
+		y int64
+		m int
+		d int
+		v int
+	}
+
+	var partList = []datePartsWithVerify{
+		{1066, 10, 14, 0},
+		{100, 1, 1, 0},
+		{1000, 1, 1, 0},
+		// {1300, 1, 1, 0},
+		// {1400, 1, 1, 0},
+		{1500, 1, 1, 0},
+		{1500, 1, 2, 0},
+		// {1600, 1, 1, 0},
+		// {1969, 1, 1, 0},
+		// {1970, 1, 1, 0},
+		{2000, 1, 1, 0},
+		// {2021, 1, 1, 0},
+	}
+
+	var err error
+	var d Date
+
+	for _, p := range partList {
+		d, err = NewDate(p.y, p.m, p.d)
+		is.NoErr(err)
+		// weekDay, err := d.WeekDay()
+		// anchorDay := anchorDay(d.year)
+		is.NoErr(err)
+		// Allow for exploraty use without failing
+		if p.v != 0 {
+			// is.Equal(anchorDay, p.v)
+		}
+		dow, _ := d.dayOfWeek()
+		t.Log(d.String(), "week day", dow)
+	}
+
+	// d, _ := NewDate(1970, 1, 3)
+	// t.Logf("days since 1 jan for %s %d", d.String(), d.daysSince1Jan())
+	// t.Log("day of week", d.dayOfWeek2())
+	// d, _ = NewDate(1969, 1, 1)
+	// t.Logf("days since 1 jan for %s %d", d.String(), d.daysSince1Jan())
+	// t.Log("day of week", d.dayOfWeek2())
+	// d, _ = NewDate(1990, 1, 1)
+	// t.Logf("days since 1 jan for %s %d", d.String(), d.daysSince1Jan())
+	// t.Log("day of week", d.dayOfWeek2())
+	// d, _ = NewDate(2021, 1, 1)
+	// t.Logf("days since 1 jan for %s %d", d.String(), d.daysSince1Jan())
+	// t.Log("day of week", d.dayOfWeek2())
+	// d, _ = NewDate(1, 1, 1)
+	// t.Logf("days since 1 jan for %s %d", d.String(), d.daysSince1Jan())
+	// t.Log("day of week", d.dayOfWeek2())
+}
+
 func TestWeekDay(t *testing.T) {
 	is := is.New(t)
 
@@ -216,18 +335,27 @@ func TestWeekDay(t *testing.T) {
 		// {1968, 5, 26, 0},
 		// This one is wrong
 		// {-3, 1, 1, 0},
+		{-101, 1, 1, 0},
+		{-100, 1, 1, 0},
+		{-99, 1, 1, 0},
 		{-1, 1, 1, 0},
 		{1, 1, 1, 0},
-		{10, 1, 1, 0},
+		// {10, 1, 1, 0},
 		{99, 1, 1, 0},
 		{100, 1, 1, 0},
 		{101, 1, 1, 0},
+		// {900, 1, 1, 0},
+		// {1000, 1, 1, 0},
+		// {1000, 3, 1, 0},
+		// {1001, 1, 1, 0},
+		// {1099, 1, 1, 0},
+		// {1100, 1, 1, 0},
 		// {15, 1, 1, 0},
 		// Unix epoch
 		// {1000, 1, 1, 6},
 		// {1010, 1, 1, 6},
 		// {1861, 4, 12, 6},
-		{2000, 1, 1, 6},
+		// {2000, 1, 1, 6},
 		// {2001, 1, 1, 6},
 		// {2002, 1, 1, 6},
 		// {2004, 1, 1, 6},
@@ -243,6 +371,9 @@ func TestWeekDay(t *testing.T) {
 		// {2102, 1, 1, 6},
 		// {3000, 1, 1, 6},
 		// {2021, 4, 1, 7},
+		{4000, 1, 1, 0},
+		{5000, 1, 1, 0},
+		{5010, 1, 1, 0},
 		/*
 		   closest 1 final 5 anchor day 7
 		   new new 2
@@ -805,7 +936,7 @@ func BenchmarkDaysSinceEpoch(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			days = daysSinceEpoch(year)
+			days = daysTo1JanSinceEpoch(year)
 		}
 	})
 
@@ -827,7 +958,7 @@ func BenchmarkDayOfWeek1Jan(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			dow, err = d.dayOfWeek1Jan()
+			dow, err = d.dayOfWeek()
 		}
 	})
 
