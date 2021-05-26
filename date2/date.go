@@ -568,9 +568,10 @@ func isLeap(year int64) bool {
 
 // IsLeap simply tests whether a given year is a leap year, using the Gregorian calendar algorithm.
 func (d Date) IsLeap() bool {
-	// year := d.astronomicalYear()
-
-	// isLeap := year%4 == 0 && (year%100 != 0 || year%400 == 0)
+	// NOTES
+	// -1 BCE is a leap year
+	// -5 BCE is a leap year
+	// -401 BCE is a leap year
 
 	return isLeap(d.year)
 }
