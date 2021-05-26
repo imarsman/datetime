@@ -94,14 +94,11 @@ func (d *Date) validate() error {
 func (d Date) astronomicalYear() int64 {
 	year := d.year
 
-	// fmt.Println("incoming year", year)
 	if year == 1 {
 		return 1
 	} else if year <= -1 {
 		year++
 	}
-
-	// fmt.Println("astronomical year", year)
 
 	return year
 }
@@ -433,12 +430,12 @@ func (d Date) LastDayOfMonth() (int, error) {
 // }
 
 // Weekday returns the day of the week specified by d.
-func (d Date) Weekday() int {
-	// Date zero, January 1, 1970, fell on a Thursday
-	wdayZero := time.Thursday
-	// Taking into account potential for overflow and negative offset
-	return int((int32(wdayZero) + int32(d.day)%7 + 7) % 7)
-}
+// func (d Date) Weekday() int {
+// 	// Date zero, January 1, 1970, fell on a Thursday
+// 	wdayZero := time.Thursday
+// 	// Taking into account potential for overflow and negative offset
+// 	return int((int32(wdayZero) + int32(d.day)%7 + 7) % 7)
+// }
 
 // ISOWeek returns the ISO 8601 year and week number in which d occurs.
 // Week ranges from 1 to 53. Jan 01 to Jan 03 of year n might belong to
@@ -563,13 +560,19 @@ func (d Date) MaxDate(u Date) Date {
 // 	return 31
 // }
 
-// IsLeap simply tests whether a given year is a leap year, using the Gregorian calendar algorithm.
-func (d Date) IsLeap() bool {
-	year := d.astronomicalYear()
-
+func isLeap(year int64) bool {
 	isLeap := year%4 == 0 && (year%100 != 0 || year%400 == 0)
 
 	return isLeap
+}
+
+// IsLeap simply tests whether a given year is a leap year, using the Gregorian calendar algorithm.
+func (d Date) IsLeap() bool {
+	// year := d.astronomicalYear()
+
+	// isLeap := year%4 == 0 && (year%100 != 0 || year%400 == 0)
+
+	return isLeap(d.year)
 }
 
 // DaysIn gives the number of days in a given month, according to the Gregorian calendar.

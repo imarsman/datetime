@@ -114,37 +114,6 @@ func (d Date) daysInMonth() (int, error) {
 		return 29, nil
 	}
 	return daysInMonth, nil
-
-	// days := 31
-	// // Faster than if statement
-	// switch d.month {
-	// case 9:
-	// 	// September
-	// 	days = 30
-	// case 4:
-	// 	// April
-	// 	days = 30
-	// case 6:
-	// 	// June
-	// 	days = 30
-	// case 11:
-	// 	// November
-	// 	days = 30
-	// case 2:
-	// 	// February
-	// 	leapD, err := NewDate(year, 1, 1)
-	// 	if err != nil {
-	// 		return 0, err
-	// 	}
-	// 	isLeap := leapD.IsLeap()
-	// 	if isLeap == false {
-	// 		days = 28
-	// 	} else {
-	// 		days = 29
-	// 	}
-	// }
-
-	// return days, nil
 }
 
 // YearDay returns the day of the year specified by d, in the range [1,365] for
@@ -263,7 +232,6 @@ func (d Date) daysSince1Jan() int {
 	d2.month = 1
 	var startDateDays int64 = int64(daysTo1JanSinceEpoch(d2.year))
 	if startDateDays < 0 {
-		fmt.Println("days", startDateDays)
 		startDateDays = -startDateDays
 	}
 
@@ -273,12 +241,9 @@ func (d Date) daysSince1Jan() int {
 	for {
 		daysInMonth, _ := d3.daysInMonth()
 		if d3.month == d.month {
-			fmt.Println("total", total)
 			total = total + d.day - 1
-			fmt.Println("total", total)
 			return total
 		}
-		// fmt.Println(d3.month)
 		total = total + daysInMonth
 		if d3.month >= 12 {
 			break
@@ -286,57 +251,7 @@ func (d Date) daysSince1Jan() int {
 		d3.month++
 	}
 
-	// fmt.Println("days since", total)
-	// var endDateDays int64 = int64(daysTo1JanSinceEpoch(d.year))
-	// if endDateDays < 0 {
-	// 	endDateDays = -endDateDays
-	// }
-	// totalDays := endDateDays - startDateDays
-
-	// fmt.Println("total", total)
-
-	// return int(totalDays)
 	return total
-}
-
-func (d Date) dayOfWeek2() int {
-	d2, _ := NewDate(StartYear, 1, 1)
-
-	var startDate1JanDays int64 = int64(daysTo1JanSinceEpoch(d2.year))
-	if startDate1JanDays < 0 {
-		startDate1JanDays = -startDate1JanDays
-	}
-
-	var endDate1Jan int64 = int64(daysTo1JanSinceEpoch(d.year))
-	if endDate1Jan < 0 {
-		endDate1Jan = -endDate1Jan
-	}
-
-	totalDays := endDate1Jan - startDate1JanDays
-	if totalDays < 0 {
-		totalDays = -totalDays
-	}
-
-	daysSince1Jan := d.daysSince1Jan()
-	// fmt.Printf("days since 1 Jan for %s %d\n", d.String(), daysSince1Jan)
-	fmt.Println("days since", daysSince1Jan, "total days", totalDays)
-	daysSince := int64(daysSince1Jan) - totalDays
-
-	dayOfWeek1Jan, _ := d.dayOfWeek()
-	fmt.Printf("day of week 1 Jan for %s %d\n", d.String(), dayOfWeek1Jan)
-
-	var adjustedDOW = 0
-
-	adjustedDOW = (dayOfWeek1Jan + int(daysSince1Jan)) % 7
-	fmt.Println("days since", daysSince, "day of week 1 Jan", dayOfWeek1Jan, d.String())
-	// }
-
-	// fmt.Printf("%s 1970 days since %d, d days since %d, days since 1 Jan %d days since %d, day of week 1 Jan %d ajusted DOW %d\n",
-	// d.String(), startDateDays, endDateDays, daysSince1Jan, daysSince, dayOfWeek1Jan, adjustedDOW)
-	// fmt.Printf("%s 1970 days since %d, d days since %d, days since 1 Jan %d days since %d, day of week 1 Jan %d ajusted DOW %d\n",
-	// 	d.String(), startDateDays, endDateDays, daysSince1Jan, daysSince, dayOfWeek1Jan, adjustedDOW)
-
-	return adjustedDOW
 }
 
 // https://dev.to/thormeier/algorithm-explained-the-doomsday-rule-or-figuring-out-if-november-24th-1763-was-a-tuesday-4lai
@@ -517,190 +432,35 @@ func (d Date) closestDoomsdayProximity() (int, error) {
 	return candidate, nil
 }
 
-// WeekDay the day of the week for date as specified by time.Weekday
-// A Weekday specifies a day of the week (Sunday = 0, ...).
-// The English name for time.Weekday can be obtained with time.Weekday.String()
-func (d Date) WeekDay() (int, error) {
-	err := d.validate()
-	if err != nil {
-		return 0, err
-	}
-	if d.year == 0 {
-		return 0, errors.New("no year zero")
-	}
-
-	doomsday := d.nearestDoomsday()
-	if doomsday == 0 {
-		doomsday = 7
-	}
-	// doomsday, err := d.closestDoomsdayProximity()
-
-	// Get first two digit integer value of year or 0
-	// twoDigitYear, _ := yearsAndCentury(d.year)
-	// a := math.Floor(float64(twoDigitYear) / 12)
-	// b := twoDigitYear % 12
-	// c := math.Floor(float64(b) / 4)
-
-	// twoDigitYarSum := int(a) + int(b) + int(c)
-	// Get the anchor day for date year
-	yearAnchorDay := anchorDayForYear(d.year)
-	if d.year >= -100 && d.year <= 100 {
-		yearAnchorDay--
-	}
-
-	dow := (yearAnchorDay + (d.day - doomsday) + 35) % 7
-
-	if dow == 0 {
-		dow = 7
-	}
-
-	// These are anomalous. Need to look into adjustments at an earlier stage.
-	// fmt.Println("year", d.year, "answer", answer)
-	if d.year >= -100 && d.year <= 0 {
-		// fmt.Println("adjusting")
-		// if dow == 0 {
-		// 	dow = 6
-		// } else {
-		dow--
-		// }
-	}
-	// if d.year > 0 && d.year <= 100 {
-	// 	fmt.Println("adjusting")
-	// 	// fmt.Println("year", d.year, "answer", answer)
-	// 	if dow == 0 {
-	// 		dow = 6
-	// 	} else {
-	// 		dow--
-	// 	}
-	// }
-
-	// fmt.Println("anchor day for year", d.year, "is", yearAnchorDay)
-	// remainder := sum % 7
-
-	// Find anchor day
-	// if remainder > 7 {
-	// 	remainder = remainder - 7
-	// }
-
-	// anchorDayAdjustment := twoDigitYarSum % 7
-	// fmt.Println("anchor date adjustment", anchorDayAdjustment)
-	// dayForDateAdjustment := anchorDayForYear + anchorDayAdjustment
-	// if dayForDateAdjustment > 7 {
-	// 	dayForDateAdjustment = dayForDateAdjustment - 7
-	// }
-
-	// d1Day, err := d.YearDay()
-	// if err != nil {
-	// 	return 0, err
-	// }
-
-	// fmt.Println("closestDayInMonth", closestDayInMonth, "dayForDate", dayForDateAdjustment, "anchor day for year", anchorDayForYear)
-	// var new = anchorDay
-	// d.anchorDayForYear()
-
-	// var dayDiff int = d.day - closestAnchorDayInMonth
-	// if d.day > closestAnchorDayInMonth {
-	// 	dayDiff = d.day - closestAnchorDayInMonth
-	// }
-
-	// negative diff and day greater
-	// closestAnchorDay 9 day 18 anchor day 6 diff -9 final -3
-	// date_test.go:254: 2020-05-18 week day -3
-
-	// var final int
-	// if dayDiff < 0 {
-	// 	// fmt.Println("negative")
-	// 	if d.day > closestAnchorDayInMonth {
-	// 		// fmt.Println("negative diff and day greater")
-	// 		// If day number is larger than the closest anchor day
-	// 		// Add to get to the day number
-	// 		// Negate dayDiff
-	// 		// e.g. 7 + -1 == 7 - 1
-	// 		// final = int(math.Mod(float64(yearAnchorDay)+float64(-dayDiff), 7))
-	// 		final = (yearAnchorDay - -dayDiff) % 7
-
-	// 		fmt.Println("closestAnchorDay", closestAnchorDayInMonth, "day", d.day, "anchor day", yearAnchorDay, "diff", dayDiff, "final", final)
-	// 	} else {
-	// 		// fmt.Println("negative diff and day less")
-
-	// 		// negative diff and day less
-	// 		// closestAnchorDay 3 day 1 anchor day 5 diff -2 final 3
-	// 		// date_test.go:254: 1000-01-01 week day 3
-
-	// 		// If day number is smaller than the closest anchor day
-	// 		// Subtract to get to the day number
-	// 		// final = int(math.Mod(float64(yearAnchorDay)-float64(-dayDiff), 7))
-	// 		final = (yearAnchorDay - -dayDiff) % 7
-	// 		if final == 0 {
-	// 			final = 7
-	// 		}
-	// 		fmt.Println("closestAnchorDay", closestAnchorDayInMonth, "day", d.day, "anchor day", yearAnchorDay, "diff", dayDiff, "final", final)
-	// 	}
-	// } else {
-	// 	// fmt.Println("positive")
-	// 	// 7 -
-	// 	if d.day > closestAnchorDayInMonth {
-	// 		// fmt.Println("postive diff and day greater")
-	// 		// If day number is larger than the closest anchor day
-	// 		// Add to get to the day number
-	// 		// final = int(math.Mod(float64(anchorDayForYear)+float64(-dayDiff), 7))
-	// 		// fmt.Println("closestAnchorDay", closestAnchorDayInMonth, "day", d.day, "year anchor day", yearAnchorDay, "diff", dayDiff, "final", final)
-	// 		final = (yearAnchorDay + dayDiff) % 7
-	// 		// final = int(math.Mod(float64(yearAnchorDay)+float64(dayDiff), 7))
-	// 		fmt.Println("closestAnchorDay", closestAnchorDayInMonth, "day", d.day, "anchor day", yearAnchorDay, "diff", dayDiff, "final", final)
-	// 	} else {
-	// 		// fmt.Println("postive diff and day less")
-	// 		// If day number is smaller than the closest anchor day
-	// 		// Subtract to get to the day number
-	// 		final = (yearAnchorDay - dayDiff) % 7
-	// 		// final = int(math.Mod(float64(yearAnchorDay)-float64(dayDiff), 7))
-	// 		fmt.Println("closestAnchorDay", closestAnchorDayInMonth, "day", d.day, "anchor day", yearAnchorDay, "diff", dayDiff, "final", final)
-	// 	}
-	// }
-	// // fmt.Println("closestAnchorDay", closestAnchorDayInMonth, "day", d.day,
-	// // "anchor day", anchorDayForYear, "diff", dayDiff, "final", final)
-	// if final == 0 {
-	// 	final = 7
-	// }
-	// if d.year < 0 {
-	// 	final--
-	// }
-
-	return dow, nil
-}
-
 // daysTo1JanSinceEpoch takes a year and returns the number of days from
 // the absolute epoch to the start of that year.
-// This is basically (year - zeroYear) * 365, but accounting for leap days.
-// From Go time package
+// This will work for CE but not for BCE
 func daysTo1JanSinceEpoch(year int64) uint64 {
 	var leapYearCount int64
-	// if year < 100 {
+
+	// - add all years divisible by 4
+	// - subtract all years divisible by 100
+	// - add back all years divisible by 400
 	leapYearCount = (year / 4) - (year / 100) + (year / 400)
-	// fmt.Println("leap year count", leapYearCount)
 
 	total := year * 365
 	total -= 365
-	// fmt.Println("total", total)
 	total += leapYearCount
-	// total++
-	// total++
-	d, _ := NewDate(year, 1, 1)
-	if d.IsLeap() {
-		// fmt.Println("leap year pre adjusted total", total)
-		total--
-		// fmt.Println("leap year post ajusted total", total)
-	}
 
-	// fmt.Println("total", total)
-	if d.IsLeap() {
+	// d, _ := NewDate(year, 1, 1)
+	// if d.IsLeap() {
+	// 	total--
+	// }
+
+	if isLeap(year) {
 		total--
 	}
 
 	return uint64(total)
 }
 
-func (d Date) dayOfWeek() (int, error) {
+// Weekday get day of week for a date
+func (d Date) Weekday() (int, error) {
 	err := d.validate()
 	if err != nil {
 		return 0, err
@@ -708,56 +468,42 @@ func (d Date) dayOfWeek() (int, error) {
 	// https://en.wikipedia.org/wiki/Determination_of_the_day_of_the_week
 	// Formula by Gauss
 
-	// Inputs
-	// Year number A, month number M, day number D.
-	// set C = A \ 100, Y = A % 100, and the value is
-	// (1+5((Y−1)%4)+3(Y−1)+5(C%4))%7
 	year := d.astronomicalYear()
-	// year := d.year
 	if d.year < 0 {
-		// year--
-		// year = year + 1
-		// fmt.Println("year", year, "negative")
-		// // year = -year
-		// fmt.Println("year", year, "negative")
+		return 0, errors.New("Pre CE years not handled yet")
 	}
 
-	var anchorDay int64 = 6
+	// var anchorDay int64 = 6
 	// rollover := 7 - anchorDay
 	dAnchorDays := int64(daysTo1JanSinceEpoch(1))
 
-	// fmt.Println(dAnchor.String(), d.String())
 	dateDays := int64(daysTo1JanSinceEpoch(year))
 
-	daysSince1Jan := d.daysSince1Jan() + 1
+	daysSince1Jan := d.daysSince1Jan()
 	// fmt.Println("days since 1 Jan", daysSince1Jan)
-	// var final int64
+	// Likely to account for the fact that the first year of 1-1 CE acts like a
+	// Monday. This needs to be understood better.
+	daysSince1Jan++
 
-	// fmt.Println("anchorDay", dAnchorDay, "dateDays", dateDays, "anchorDays", dAnchorDays, "daysSince1Jan", daysSince1Jan)
+	// var diff int64
+	// fmt.Println("anchorDay", anchorDay, "dateDays", dateDays, "anchorDays", dAnchorDays, "daysSince1Jan",
+	// 	daysSince1Jan, "diff", diff)
 
-	var diff int64
-	// if dateDays > dAnchorDays {
-	// fmt.Println("greater", "isLeap", d.IsLeap())
-	fmt.Println("anchorDay", anchorDay, "dateDays", dateDays, "anchorDays", dAnchorDays, "daysSince1Jan",
-		daysSince1Jan, "diff", diff)
-
-	// anchor days will likely be irrelevant if we move to an anchor day
-	// that will be many years BCE and be zero in any case
-	// totalDays := dateDays + dAnchorDays
-	totalDays := dateDays
-	// interimDOW := totalDays % 7
-	fmt.Println("total days", totalDays, "days since 1 Jan", daysSince1Jan)
+	// Currently anchor days will be zero
+	totalDays := dateDays + dAnchorDays
+	// totalDays := dateDays
+	// fmt.Println("total days", totalDays, "days since 1 Jan", daysSince1Jan)
 
 	// Add in number of days into year
 	totalDays += int64(daysSince1Jan)
-	fmt.Println("total days", totalDays)
+	// fmt.Println("total days", totalDays)
 
 	// The 1 Jan value will be one too high as the leap day for that year will
 	// be factored in but we also factor in the leap day with daysSince1Jan
 	dow := totalDays
 	dow = dow % 7
 	if year <= 100 {
-		dow = dow + 5
+		dow = dow + 5 // Add from Monday to Friday (1-1-1 is a Friday)
 	}
 	if d.IsLeap() {
 		dow++
@@ -767,7 +513,7 @@ func (d Date) dayOfWeek() (int, error) {
 	// 	final = 7
 	// }
 
-	fmt.Println("final", dow)
+	// fmt.Println("final", dow)
 
 	return int(dow), nil
 }
