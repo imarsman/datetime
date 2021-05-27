@@ -91,6 +91,16 @@ func (d *Date) validate() error {
 	return nil
 }
 
+func astronomicalYear(year int64) int64 {
+	if year == 1 {
+		return 1
+	} else if year <= -1 {
+		year++
+	}
+
+	return year
+}
+
 func (d Date) astronomicalYear() int64 {
 	year := d.year
 
@@ -533,6 +543,11 @@ func (d Date) MaxDate(u Date) Date {
 // }
 
 func isLeap(year int64) bool {
+	year = astronomicalYear(year)
+	if year == 0 {
+		return false
+	}
+
 	isLeap := year%4 == 0 && (year%100 != 0 || year%400 == 0)
 
 	return isLeap

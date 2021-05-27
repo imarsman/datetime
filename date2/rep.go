@@ -85,8 +85,27 @@ const epochYearGregorian int64 = 1970
 // StartYear the beginning of the universe
 const StartYear = epochYearGregorian - epochYearGregorian
 
+// The largest possible year value
 const absoluteMaxYear = math.MaxInt64
-const absoluteZeroYear = math.MinInt64 + 1
+
+// The maximum year that will be dealt with
+const maxYear = zeroYear + 15*100*100*1000
+
+// The smallest possible year value
+const absoluteZeroYear = -(15 * 100 * 100 * 1000)
+
+const yearsToCE = -absoluteZeroYear
+
+// As far back as we will go - 15 billion years
+const zeroYear = absoluteZeroYear + 15*100*100*1000
+
+func bigYear(year int64) int64 {
+	var bigYear int64 = astronomicalYear(year)
+	if bigYear <= 0 {
+		return zeroYear - year
+	}
+	return zeroYear + year
+}
 
 func gregorianYear(inputYear int64) (year int64) {
 	year = inputYear
@@ -436,6 +455,40 @@ func (d Date) closestDoomsdayProximity() (int, error) {
 // the absolute epoch to the start of that year.
 // This will work for CE but not for BCE
 func daysTo1JanSinceEpoch(year int64) uint64 {
+	var leapYearCount int64
+
+	// - add all years divisible by 4
+	// - subtract all years divisible by 100
+	// - add back all years divisible by 400
+	leapYearCount = (year / 4) - (year / 100) + (year / 400)
+
+	total := year * 365
+	total -= 365
+	total += leapYearCount
+
+	// d, _ := NewDate(year, 1, 1)
+	// if d.IsLeap() {
+	// 	total--
+	// }
+
+	if isLeap(year) {
+		total--
+	}
+
+	return uint64(total)
+}
+
+func (d Date) getBigYear() int64 {
+	var total int64
+	if d.year < 0 {
+		total = yearsToCE + d.year
+	} else {
+		total = yearsToCE + d.year
+	}
+	return total
+}
+
+func daysTo1JanSinceEpoch2(year int64) uint64 {
 	var leapYearCount int64
 
 	// - add all years divisible by 4

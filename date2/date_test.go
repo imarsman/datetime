@@ -408,6 +408,22 @@ func TestGetCenturyAnchorDay(t *testing.T) {
 
 }
 
+func TestGetBigYear(t *testing.T) {
+	is := is.New(t)
+
+	years := []int64{0, -1, -5, -101, -201, -301, -401, -1001, -2001, 112, 200, 1942, 2000, 1763}
+	d, err := NewDate(1, 1, 1)
+	is.NoErr(err)
+	for i := 0; i < len(years); i++ {
+		d.year = years[i]
+		bigYear := d.getBigYear()
+		isLeap := d.IsLeap()
+		aYear := astronomicalYear(d.year)
+		t.Logf("Got big year %-5d for year %-5d astronomical year %-5d Is leap %-5v", bigYear, d.year, aYear, isLeap)
+	}
+
+}
+
 func TestIsLeap(t *testing.T) {
 	is := is.New(t)
 
