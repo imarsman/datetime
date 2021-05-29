@@ -7,7 +7,6 @@ package date2
 // with dates.
 
 import (
-	"fmt"
 	"math"
 	"time"
 
@@ -267,11 +266,12 @@ func daysToAnchorDaySinceEpoch(year int64) uint64 {
 	total := year * 365
 	total -= 365
 	total += leapDayCount
-	fmt.Println("year", year, "leap days", leapDayCount, "total", total)
 
 	if isLeap(astronomicalYear) {
 		total--
 	}
+
+	// fmt.Println("year", year, "leap days", leapDayCount, "total", total)
 
 	return uint64(total)
 }
@@ -291,9 +291,10 @@ func (d Date) Weekday() (int, error) {
 	// in both cases as a positive integer.
 	dateDays := int64(daysToAnchorDaySinceEpoch(year))
 
-	daysSince1Jan := d.daysToDateFromAnchorDay()
+	daysFromAnchorDay := d.daysToDateFromAnchorDay()
+	// fmt.Println("date days", dateDays, "days to date", d.String(), daysFromAnchorDay)
 
-	totalDays := dateDays + int64(daysSince1Jan)
+	totalDays := dateDays + int64(daysFromAnchorDay)
 	// fmt.Println("total days to", d.String(), totalDays)
 
 	var dow int

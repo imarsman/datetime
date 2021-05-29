@@ -478,28 +478,28 @@ func BenchmarkDaysSinceEpoch(b *testing.B) {
 	is.True(days != 0)
 }
 
-func BenchmarkDayOfWeek1Jan(b *testing.B) {
-	is := is.New(b)
+// func BenchmarkWeekday(b *testing.B) {
+// 	is := is.New(b)
 
-	d, err := NewDate(2020, 3, 1)
-	is.NoErr(err)
+// 	d, err := NewDate(2020, 3, 1)
+// 	is.NoErr(err)
 
-	var dow int
+// 	var dow int
 
-	b.ResetTimer()
-	b.SetBytes(bechmarkBytesPerOp)
-	b.ReportAllocs()
-	b.SetParallelism(30)
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			dow, err = d.Weekday()
-		}
-	})
+// 	b.ResetTimer()
+// 	b.SetBytes(bechmarkBytesPerOp)
+// 	b.ReportAllocs()
+// 	b.SetParallelism(30)
+// 	b.RunParallel(func(pb *testing.PB) {
+// 		for pb.Next() {
+// 			dow, err = d.Weekday()
+// 		}
+// 	})
 
-	is.NoErr(err)
-	b.Log("day of week for 1 January,", d.year, dow)
-	is.True(dow != 0)
-}
+// 	is.NoErr(err)
+// 	b.Log("day of week for 1 January,", d.year, dow)
+// 	is.True(dow != 0)
+// }
 
 //  2.220 ns/op	  0 B/op   0 allocs/op
 func BenchmarkDaysInMonth(b *testing.B) {
