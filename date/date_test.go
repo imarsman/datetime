@@ -85,7 +85,7 @@ func TestDayOfYear(t *testing.T) {
 
 	for _, p := range partList {
 		d, err := NewDate(p.y, p.m, p.d)
-		dayOfYear, err := d.YearDay()
+		dayOfYear := d.YearDay()
 		if p.v != 0 {
 			// is.Equal(p.v, dayOfYear)
 		}
@@ -110,9 +110,9 @@ func TestDaysInMonth(t *testing.T) {
 	}
 	for _, p := range partList {
 		d, err := NewDate(p.y, p.m, p.d)
-		days, err := d.daysInMonth()
-		is.Equal(days, p.v)
 		is.NoErr(err)
+		days := d.daysInMonth()
+		is.Equal(days, p.v)
 		t.Log("Days in year", d.year, "month", d.month, "days", days)
 	}
 }
@@ -192,7 +192,7 @@ func TestWeekday(t *testing.T) {
 
 	for _, p := range partList {
 		d, err = NewDate(p.y, p.m, p.d)
-		dow, err := d.Weekday()
+		dow := d.Weekday()
 		is.NoErr(err)
 		t.Log("Day of week for", d.String(), dow)
 	}
@@ -314,6 +314,8 @@ func TestToGregorianYear(t *testing.T) {
 }
 
 func TestAddDate(t *testing.T) {
+	is := is.New(t)
+
 	type datePartsWithAdd struct {
 		y    int64
 		m    int
@@ -324,7 +326,7 @@ func TestAddDate(t *testing.T) {
 	}
 
 	var partList = []datePartsWithAdd{
-		{y: 1968, m: 05, d: 26, addY: 52, addM: 0, addD: 0},
+		{y: 1968, m: 5, d: 26, addY: 52, addM: 0, addD: 0},
 		{y: 2002, m: 4, d: 10, addY: 52, addM: 0, addD: 0},
 		{y: 2019, m: 3, d: 1, addY: 3, addM: 10, addD: 1},
 		{y: 2019, m: 1, d: 1, addY: 1, addM: 0, addD: 0},
@@ -334,7 +336,8 @@ func TestAddDate(t *testing.T) {
 	}
 
 	for _, dt := range partList {
-		d, _ := NewDate(dt.y, dt.m, dt.d)
+		d, err := NewDate(dt.y, dt.m, dt.d)
+		is.NoErr(err)
 		t.Logf("Pre %s", d.String())
 		t.Logf("Add %d years,  %d months, %d days", dt.addY, dt.addM, dt.addD)
 		d, _, _ = d.AddParts(dt.addY, dt.addM, dt.addD)
@@ -510,11 +513,10 @@ func BenchmarkDaysInMonth(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			dayOfYear, err = d.daysInMonth()
+			dayOfYear = d.daysInMonth()
 		}
 	})
 
-	is.NoErr(err)
 	b.Log("days in month", dayOfYear)
 	is.True(dayOfYear != 0)
 }
@@ -535,7 +537,7 @@ func BenchmarkDayOfYear(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			dayOfYear, err = d.YearDay()
+			dayOfYear = d.YearDay()
 		}
 	})
 	is.NoErr(err)
@@ -579,7 +581,7 @@ func BenchmarkWeekday(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			val, _ = d.Weekday()
+			val = d.Weekday()
 		}
 	})
 	is.True(val > 0)

@@ -94,6 +94,7 @@ const absoluteMaxYear = math.MaxInt64
 
 // The maximum year that will be dealt with
 const maxYear = 15 * 100 * 100 * 1000
+const minYear = -maxYear
 
 func countDaysForward(start int, count int64) int {
 	total := int64(start) + count
