@@ -345,11 +345,11 @@ func (d Date) AddParts(years int64, months, days int) (Date, int64, error) {
 	extraDays := int((dFinal.year - d.year) * 365)
 
 	// Add in extra days due to leap years
-	var startDateDays int64 = int64(daysTo1JanSinceEpoch(d.year))
+	var startDateDays int64 = int64(daysToAnchorDaySinceEpoch(d.year))
 	if startDateDays < 0 {
 		startDateDays = -startDateDays
 	}
-	var endDateDays int64 = int64(daysTo1JanSinceEpoch(dFinal.year))
+	var endDateDays int64 = int64(daysToAnchorDaySinceEpoch(dFinal.year))
 	if endDateDays < 0 {
 		endDateDays = -endDateDays
 	}
