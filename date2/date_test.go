@@ -121,7 +121,7 @@ func TestDaysSinceEpoch(t *testing.T) {
 	// is := is.New(t)
 
 	var list = []int64{
-		-1, -2, -13, 1, 2,
+		-1, -2, -13, 1, 2, 4, 20, 40, 400,
 	}
 	for _, y := range list {
 		days := daysTo1JanSinceEpoch(y)
@@ -140,7 +140,7 @@ func TestWeekday(t *testing.T) {
 	t.Log(leapYearCount)
 
 	var partList = []dateParts{
-		{-15000000000, 1, 1},
+		// {-15000000000, 1, 1},
 		{-10, 1, 1},
 		{-1, 12, 1},
 		{-1, 12, 2},
@@ -163,7 +163,7 @@ func TestWeekday(t *testing.T) {
 		// {40, 1, 1},
 		// {60, 1, 1},
 		// {100, 1, 1},
-		// {1000, 1, 1},
+		{1000, 1, 1},
 		// {1020, 1, 1},
 		// {1021, 1, 1},
 		// {1022, 1, 1},
@@ -188,22 +188,24 @@ func TestWeekday(t *testing.T) {
 		// {1900, 1, 1},
 		// {1960, 1, 1},
 		// {1964, 1, 1},
-		// {1967, 1, 1},
+		{1867, 7, 1},
+		{1967, 7, 1},
 		// {1968, 1, 1},
-		// {1968, 5, 26},
+		{1968, 5, 26},
 		// {1969, 1, 1},
 		// {1970, 1, 1},
 		// {1970, 1, 15},
 		// {1970, 2, 1},
 		// {1970, 1, 1},
 		// {1971, 1, 1},
-		// {2002, 4, 10},
+		{1998, 8, 14},
+		{2002, 4, 10},
 		// {2018, 1, 1},
 		// {2018, 1, 2},
 		// {2018, 1, 15},
 		// {2020, 1, 1},
 		// {2019, 5, 18},
-		// {2020, 5, 18},
+		{2020, 5, 18},
 		// {2030, 1, 1},
 		// {2040, 1, 1},
 		// {2060, 1, 1},
@@ -418,15 +420,15 @@ func TestWeekday(t *testing.T) {
 // 	}
 // }
 
-func TestGetCenturyAnchorDay(t *testing.T) {
-	years := []int64{0, -1, -100, -200, -300, -1000, 112, 200, 1942, 2000, 1763}
+// func TestGetCenturyAnchorDay(t *testing.T) {
+// 	years := []int64{0, -1, -100, -200, -300, -1000, 112, 200, 1942, 2000, 1763}
 
-	for i := 0; i < len(years); i++ {
-		d := anchorDayForCentury(years[i])
-		t.Logf("Got %d for %d", d, years[i])
-	}
+// 	for i := 0; i < len(years); i++ {
+// 		d := anchorDayForCentury(years[i])
+// 		t.Logf("Got %d for %d", d, years[i])
+// 	}
 
-}
+// }
 
 func TestWeekdayCount(t *testing.T) {
 	// Jan 2021
@@ -440,21 +442,21 @@ func TestWeekdayCount(t *testing.T) {
 	t.Log("27 days Backward from 28 Feb with start day of 7", day)
 }
 
-func TestGetBigYear(t *testing.T) {
-	is := is.New(t)
+// func TestGetBigYear(t *testing.T) {
+// 	is := is.New(t)
 
-	years := []int64{0, -1, -4, -5, -101, -201, -301, -401, -1001, -2001, 1, 4, 112, 200, 400, 1942, 2000, 1763}
-	d, err := NewDate(1, 1, 1)
-	is.NoErr(err)
-	for i := 0; i < len(years); i++ {
-		d.year = years[i]
-		bigYear := d.getBigYear()
-		isLeap := d.IsLeap()
-		aYear := astronomicalYear(d.year)
-		t.Logf("Got big year %-5d for year %-5d astronomical year %-5d Is leap %-5v", bigYear, d.year, aYear, isLeap)
-	}
+// 	years := []int64{0, -1, -4, -5, -101, -201, -301, -401, -1001, -2001, 1, 4, 112, 200, 400, 1942, 2000, 1763}
+// 	d, err := NewDate(1, 1, 1)
+// 	is.NoErr(err)
+// 	for i := 0; i < len(years); i++ {
+// 		d.year = years[i]
+// 		bigYear := d.getBigYear()
+// 		isLeap := d.IsLeap()
+// 		aYear := astronomicalYear(d.year)
+// 		t.Logf("Got big year %-5d for year %-5d astronomical year %-5d Is leap %-5v", bigYear, d.year, aYear, isLeap)
+// 	}
 
-}
+// }
 
 func TestIsLeap(t *testing.T) {
 	is := is.New(t)
@@ -608,7 +610,7 @@ func TestDaysToYearEnd(t *testing.T) {
 
 	for _, p := range partList {
 		d, err := NewDate(p.y, p.m, p.d)
-		daysToEnd := d.daysToDate()
+		daysToEnd := d.daysToDateFromAnchorDay()
 		is.NoErr(err)
 		if p.v != 0 {
 			is.Equal(daysToEnd, p.v)
