@@ -264,129 +264,47 @@ func (d Date) subtractDays(subtract int) (date Date, err error) {
 	return d2, nil
 }
 
-// addDays add days to a date
-// Reasonably efficient given that it adds as many days at a time as possible.
-func (d Date) addDays(add int) (date Date, err error) {
-	d2 := d
-
-	// We will deal with leap days elsewhere
-	dNeutral := d2
-	dNeutral.year = 2019
-	daysInMonth := dNeutral.daysInMonth()
-	if err != nil {
-		return Date{}, err
-	}
-	for add > 0 {
-		if add >= daysInMonth && d2.day <= daysInMonth {
-			if d2.month >= 12 {
-				d2.year++
-				d2.month = 1
-				d2.day = 1
-				add = add - daysInMonth
-				dNeutral = d2
-				dNeutral.year = 2019
-				daysInMonth = dNeutral.daysInMonth()
-			} else {
-				d2.month++
-
-				// if d2.month > 12 {
-				// 	fmt.Println("months exceeded")
-				// }
-				daysTilEOM := daysInMonth - d2.day
-				add = add - daysTilEOM
-
-				dNeutral = d2
-				dNeutral.year = 2019
-				daysInMonth = dNeutral.daysInMonth()
-
-				if daysTilEOM == 0 {
-					d2.day = 1
-					add--
-				} else {
-					add = add - daysTilEOM
-					d2.day = 1
-					add--
-				}
-			}
-		} else {
-			if add+d2.day >= daysInMonth {
-				add = add - d2.day
-				d2.day = 1
-				d2.month++
-				if d2.month > 12 {
-					d2.month = 1
-					d2.year++
-				}
-
-				continue
-			}
-			var newAdd int
-			var newDay int
-			if add < d2.day {
-				newAdd = d2.day - add
-				newDay = d2.day + add
-				d2.day = newDay
-				add = newAdd
-			} else {
-				newAdd = add - d2.day
-				newDay = d2.day + add
-				d2.day = newDay
-				add = newAdd
-			}
-
-			break
-		}
-	}
-	_, err = NewDate(d2.year, d2.month, d2.day)
-	if err != nil {
-		return Date{}, err
-	}
-
-	return d2, nil
-}
-
-// addMonths add months to a date
-// TODO: decide if it would be good to add days
-func (d Date) addMonths(add int) (d2 Date, err error) {
-	d2 = d
-	dNeutral := d2
-	// Should probably use d.year
-	dNeutral.year = 2019
-	daysInMonth := dNeutral.daysInMonth()
-	daysInMonth -= int(d2.day)
-	for i := 0; i < add; i++ {
-		d2, _ = d2.addDays(daysInMonth)
-	}
-
-	// Do implicit validation of result
-	_, err = NewDate(d2.year, d2.month, d2.day)
-	if err != nil {
-		return Date{}, err
-	}
-
-	return d2, nil
-}
-
-// AddParts add the number of months to a starting month
-// function. The remainder can be used to extend calculations to
-// time parts. The time package AddParts call does not mutate the reciever by
-// acting on a pointer so this one does the same.
-// This call can be expensive with large units to add.
+// AddParts add in succession years, months, and days to a date
+// - add years and then increment the date using the remainder days
+// - add days for each month to date
+// - add starting days to date
 func (d Date) AddParts(years int64, months, days int) (newDate Date, remainder int64, err error) {
 	dFinal := d
+	// fmt.Println(dFinal.String())
 
 	// TODO: Instead of just adding years to the date figure out how many days
 	// between start and end date and then use any surplus (leap days) to
 	// increment the days value.
 	if years > 0 {
-		dFinal, err = dFinal.addYears(years)
-		if err != nil {
-			fmt.Println("error", err)
-			return Date{}, 0, err
+		var totalDays uint64
+		if d.year < 0 {
+			// Get total days BCE and CE
+			if d.year+years > 0 {
+				// TODO: This needs work and testing
+				startDays := daysToAnchorDaySinceEpoch(d.year)
+				// The year will cross the zero boundary
+				endDays := daysToAnchorDaySinceEpoch(d.year + years + 1)
+				totalDays = startDays + endDays
+				newYears := totalDays / 365
+				dFinal.year += int64(newYears) + 1
+				remainder := totalDays % 365
+				dFinal, err = dFinal.addDays(int(remainder))
+			}
+		} else {
+			startDays := daysToAnchorDaySinceEpoch(d.year)
+			endDays := daysToAnchorDaySinceEpoch(d.year + years)
+			totalDays = endDays - startDays
+			newYears := totalDays / 365
+			dFinal.year += int64(newYears)
+			remainder := totalDays % 365
+			dFinal, err = dFinal.addDays(int(remainder))
 		}
 	}
 	// Month handling adds surplus days to dFinal
 	if months > 0 {
+		// Add months, which works by getting days for each month then adding
+		// that many days to the date.
+		// fmt.Println(dFinal.String())
 		dFinal, err = dFinal.addMonths(months)
 		if err != nil {
 			fmt.Println("error", err)
@@ -394,6 +312,7 @@ func (d Date) AddParts(years int64, months, days int) (newDate Date, remainder i
 		}
 	}
 
+	// Add any days requested initially plus any days
 	if days > 0 {
 		dFinal, err = dFinal.addDays(days)
 		if err != nil {
@@ -430,14 +349,146 @@ func (d Date) AddParts(years int64, months, days int) (newDate Date, remainder i
 	return dFinal, remainder, nil
 }
 
-// addYars given that the AddTimeParts function will add the leap days between
-// start and end year this should be safe to do.
-func (d Date) addYears(years int64) (Date, error) {
-	d2 := d
-	d2.year += years
+// addMonths add months to a date
+// TODO: decide if it would be good to add days
+func (d Date) addMonths(add int) (d2 Date, err error) {
+	d2 = d
+
+	dNeutral := d2
+	// Should probably use d.year
+	dNeutral.year = 2019
+	daysInMonth := dNeutral.daysInMonth()
+	daysInMonth -= int(d2.day)
+	for i := 0; i < add; i++ {
+		d2, err = d2.addDays(daysInMonth)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+
+	// Do implicit validation of result
+	_, err = NewDate(d2.year, d2.month, d2.day)
+	if err != nil {
+		return Date{}, err
+	}
 
 	return d2, nil
 }
+
+// addDays add days to a date
+// Reasonably efficient given that it adds as many days at a time as possible.
+func (d Date) addDays(add int) (date Date, err error) {
+	d2 := d
+
+	daysInMonth := d2.daysInMonth()
+	if err != nil {
+		return Date{}, err
+	}
+	for add > 0 {
+		if add >= daysInMonth && d2.day <= daysInMonth {
+			if d2.month >= 12 {
+				d2.year++
+				if d2.year == 0 {
+					d2.year = 1
+				}
+				d2.month = 1
+				d2.day = 1
+				add = add - daysInMonth
+				daysInMonth = d2.daysInMonth()
+			} else {
+				d2.month++
+
+				daysInMonth = d2.daysInMonth()
+
+				daysTilEOM := daysInMonth - d2.day
+				add = add - daysTilEOM
+
+				daysInMonth = d2.daysInMonth()
+
+				if daysTilEOM == 0 {
+					d2.day = 1
+					add--
+				} else {
+					add = add - daysTilEOM
+					d2.day = 1
+					add--
+				}
+			}
+		} else {
+			if add+d2.day >= daysInMonth {
+				add = add - d2.day
+				d2.day = 1
+				d2.month++
+				if d2.month > 12 {
+					d2.month = 1
+					d2.year++
+					if d2.year == 0 {
+						d2.year = 1
+					}
+				}
+				// Get days in month once month has had a chance to be corrected
+				daysInMonth = d2.daysInMonth()
+
+				continue
+			}
+			var newAdd int
+			var newDay int
+			if add < d2.day {
+				newAdd = d2.day - add
+				newDay = d2.day + add
+				d2.day = newDay
+				add = newAdd
+			} else {
+				newAdd = add - d2.day
+				newDay = d2.day + add
+				d2.day = newDay
+				add = newAdd
+			}
+
+			break
+		}
+	}
+	_, err = NewDate(d2.year, d2.month, d2.day)
+	// Give a chance for flawed function logic to be found by invalid date
+	if err != nil {
+		return Date{}, err
+	}
+
+	return d2, nil
+}
+
+// addYars given that the AddTimeParts function will add the leap days between
+// start and end year this should be safe to do.
+// func (d Date) addYears(years int64) (Date, error) {
+// 	d2 := d
+// 	if d.year+years > 0 {
+// 				// TODO: This needs work and testing
+// 				startDays := daysToAnchorDaySinceEpoch(d.year)
+// 				// The year will cross the zero boundary
+// 				endDays := daysToAnchorDaySinceEpoch(d.year + years + 1)
+// 				totalDays = startDays + endDays
+// 				newYears := totalDays / 365
+// 				remainder := totalDays % 365
+// 				d2.year += int64(newYears) + 1
+// 				months += int(remainder)
+// 				remainder = totalDays % 12
+// 				days += int(remainder)
+// 			}
+// 		} else {
+// 			startDays := daysToAnchorDaySinceEpoch(d.year)
+// 			endDays := daysToAnchorDaySinceEpoch(d.year + years)
+// 			totalDays = endDays - startDays
+// 			fmt.Println("total days", totalDays)
+// 			newYears := totalDays / 365
+// 			remainder := totalDays % 365
+// 			d2.year += int64(newYears)
+// 			months += int(remainder)
+// 			remainder = totalDays % 12
+// 			days += int(remainder)
+// 		}
+
+// 	return d2, nil
+// }
 
 // For CE count forward from 1 Jan and for BCE count backward from 31 Dec
 func (d Date) daysToDateFromAnchorDay() int {
