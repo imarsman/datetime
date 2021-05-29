@@ -92,25 +92,26 @@ func (d *Date) validate() error {
 }
 
 func astronomicalYear(year int64) int64 {
-	if year == 1 {
+	if year == 0 {
 		return 1
 	} else if year <= -1 {
+		// fmt.Println("astronomical year", year)
 		year++
+		// fmt.Println("astronomical year", year)
 	}
 
 	return year
 }
 
 func (d Date) astronomicalYear() int64 {
-	year := d.year
+	// year := d.year
 
-	if year == 1 {
-		return 1
-	} else if year <= -1 {
-		year++
-	}
-
-	return year
+	// if year == 1 {
+	// 	return 1
+	// } else if year <= -1 {
+	// 	year++
+	// }
+	return astronomicalYear(d.year)
 }
 
 // NewDate returns the Date value corresponding to the given year, month, and day.
@@ -305,6 +306,7 @@ func (d Date) addDays(add int) (date Date, err error) {
 func (d Date) addMonths(add int) (d2 Date, err error) {
 	d2 = d
 	dNeutral := d2
+	// Should probably use d.year
 	dNeutral.year = 2019
 	daysInMonth, _ := dNeutral.daysInMonth()
 	daysInMonth -= int(d2.day)
@@ -325,9 +327,13 @@ func (d Date) AddParts(years int64, months, days int) (Date, int64, error) {
 
 	var remainder int64
 
+	// TODO: Instead of just adding years to the date figure out how many days
+	// between start and end date and then use any surplus (leap days) to
+	// increment the days value.
 	if years > 0 {
 		dFinal, _ = dFinal.addYears(years)
 	}
+	// Month handling adds surplus days to dFinal
 	if months > 0 {
 		dFinal, _ = dFinal.addMonths(months)
 	}
