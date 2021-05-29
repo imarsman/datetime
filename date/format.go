@@ -6,7 +6,9 @@ package date
 
 import (
 	"fmt"
-	"strings"
+
+	"github.com/imarsman/datetime/utility"
+	"github.com/imarsman/datetime/xfmt"
 )
 
 // These are predefined layouts for use in Date.Format and Date.Parse.
@@ -35,11 +37,20 @@ const (
 // with possibly extra year digits beyond the prescribed four-digit minimum
 // and with a + or - sign prefix (e.g. , "+12345-06-07", "-0987-06-05").
 func (d Date) String() string {
+
+	// Count digits in an integer
+
 	year, month, day := d.Date()
-	if 0 <= year && year < 10000 {
-		return fmt.Sprintf("%04d-%02d-%02d", year, month, day)
-	}
-	return fmt.Sprintf("%+05d-%02d-%02d", year, month, day)
+
+	digits := utility.DigitCount(year)
+	xfmt := new(xfmt.Buffer)
+	xfmt.S("%0").D(int(digits)).C('d').C('-').S("%02d").C('-').S("%02d")
+	format := utility.BytesToString(xfmt.Bytes()...)
+	return fmt.Sprintf(format, year, month, day)
+	// if 0 <= year && year < 10000 {
+	// 	return fmt.Sprintf("%04d-%02d-%02d", year, month, day)
+	// }
+	// return fmt.Sprintf("%+05d-%02d-%02d", year, month, day)
 }
 
 // FormatISO returns a textual representation of the date value formatted
@@ -81,42 +92,42 @@ func (d Date) FormatISO(yearDigits int) string {
 //
 // This function cannot currently format Date values according to the expanded
 // year variant of ISO 8601; you should use Date.FormatISO to that effect.
-func (d Date) Format(layout string) string {
-	return d.FormatWithSuffixes(layout, DaySuffixes)
-}
+// func (d Date) Format(layout string) string {
+// 	return d.FormatWithSuffixes(layout, DaySuffixes)
+// }
 
 // FormatWithSuffixes is the same as Format, except the suffix strings can be specified
 // explicitly, which allows multiple locales to be supported. The suffixes slice should
 // contain 31 strings covering the days 1 (index 0) to 31 (index 30).
-func (d Date) FormatWithSuffixes(layout string, suffixes []string) string {
-	t := decode(d.day)
-	parts := strings.Split(layout, "nd")
-	switch len(parts) {
-	case 1:
-		return t.Format(layout)
+// func (d Date) FormatWithSuffixes(layout string, suffixes []string) string {
+// 	t := decode(d.day)
+// 	parts := strings.Split(layout, "nd")
+// 	switch len(parts) {
+// 	case 1:
+// 		return t.Format(layout)
 
-	default:
-		// If the format contains "Monday", it has been split so repair it.
-		i := 1
-		for i < len(parts) {
-			if i > 0 && strings.HasSuffix(parts[i-1], "Mo") && strings.HasPrefix(parts[i], "ay") {
-				parts[i-1] = parts[i-1] + "nd" + parts[i]
-				copy(parts[i:], parts[i+1:])
-				parts = parts[:len(parts)-1]
-			} else {
-				i++
-			}
-		}
-		a := make([]string, 0, 2*len(parts)-1)
-		for i, p := range parts {
-			if i > 0 {
-				a = append(a, suffixes[d.Day()-1])
-			}
-			a = append(a, t.Format(p))
-		}
-		return strings.Join(a, "")
-	}
-}
+// 	default:
+// 		// If the format contains "Monday", it has been split so repair it.
+// 		i := 1
+// 		for i < len(parts) {
+// 			if i > 0 && strings.HasSuffix(parts[i-1], "Mo") && strings.HasPrefix(parts[i], "ay") {
+// 				parts[i-1] = parts[i-1] + "nd" + parts[i]
+// 				copy(parts[i:], parts[i+1:])
+// 				parts = parts[:len(parts)-1]
+// 			} else {
+// 				i++
+// 			}
+// 		}
+// 		a := make([]string, 0, 2*len(parts)-1)
+// 		for i, p := range parts {
+// 			if i > 0 {
+// 				a = append(a, suffixes[d.Day()-1])
+// 			}
+// 			a = append(a, t.Format(p))
+// 		}
+// 		return strings.Join(a, "")
+// 	}
+// }
 
 // DaySuffixes is the default array of strings used as suffixes when a format string
 // contains "nd" (as in "second"). This can be altered at startup in order to change

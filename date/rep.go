@@ -1,35 +1,183 @@
 package date
 
-// Copyright 2015 The Go Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+// This package represents date whose zero value is 1 CE. It stores years as
+// int64 values and as such the minimum and maximum possible years are very
+// large. The Golang time package is used both for representing dates and times
+// and for doing timing operations. This package is oriented toward doing things
+// with dates.
 
-import "time"
+import (
+	"math"
+	"time"
+)
 
-const secondsPerDay = 60 * 60 * 24
+const lastDOWBCE int = 7 // 31 December, 1 BCE is Friday
 
-// encode returns the number of days elapsed from date zero to the date
-// corresponding to the given Time value.
-func encode(t time.Time) PeriodOfDays {
-	// Compute the number of seconds elapsed since January 1, 1970 00:00:00
-	// in the location specified by t and not necessarily UTC.
-	// A Time value is represented internally as an offset from a UTC base
-	// time; because we want to extract a date in the time zone specified
-	// by t rather than in UTC, we need to compensate for the time zone
-	// difference.
-	_, offset := t.Zone()
-	secs := t.Unix() + int64(offset)
-	// Unfortunately operator / rounds towards 0, so negative values
-	// must be handled differently
-	if secs >= 0 {
-		return PeriodOfDays(secs / secondsPerDay)
+const firstDOWCE int = 1 // 1 January, 1 CE is Saturday
+
+// Month a month - int
+type Month int
+
+const (
+	// January the month of January
+	January Month = 1 + iota
+	// February the month of February
+	February
+	// March the month of March
+	March
+	// April the month of April
+	April
+	// May the month of May
+	May
+	// June the month of June
+	June
+	// July the month of July
+	July
+	// August the month of August
+	August
+	// September the month of September
+	September
+	// October the month of October
+	October
+	// November the month of November
+	November
+	// December the month of December
+	December
+)
+
+// Weekday a weekday (int)
+type Weekday int
+
+// From Golang time package
+const (
+	// Monday the day Monday
+	Monday Weekday = 1 + iota
+	// Tuesday the day Tuesday
+	Tuesday
+	// Wednesday the day Wednesday
+	Wednesday
+	// Thursday the day Thursday
+	Thursday
+	// Friday the day Friday
+	Friday
+	// Saturday the day Saturday
+	Saturday
+	// Sunday the day Sunday
+	Sunday
+)
+
+var daysForward = [...]int{1, 2, 3, 4, 5, 6, 7}
+
+// var daysBackward = [...]int{7, 6, 5, 4, 3, 2, 1}
+var daysBackward = [...]int{7, 6, 5, 4, 3, 2, 1}
+
+// From Golang time package
+const (
+	secondsPerMinute = 60
+	secondsPerHour   = 60 * secondsPerMinute
+	secondsPerDay    = 24 * secondsPerHour
+	secondsPerWeek   = 7 * secondsPerDay
+	daysPer400Years  = 365*400 + 97
+	daysPer100Years  = 365*100 + 24
+	daysPer4Years    = 365*4 + 1
+)
+
+const billion = 1000000000
+
+const epochYearGregorian int64 = 1970
+
+// StartYear the beginning of the universe
+const StartYear = epochYearGregorian - epochYearGregorian
+
+// The largest possible year value
+const absoluteMaxYear = math.MaxInt64
+
+// The maximum year that will be dealt with
+const maxYear = 15 * 100 * 100 * 1000
+
+func countDaysForward(start int, count int64) int {
+	total := int64(start) + count
+	dow := total % 7
+	if dow == 0 {
+		dow = 7
 	}
-	return -PeriodOfDays((secondsPerDay - 1 - secs) / secondsPerDay)
+
+	return int(dow)
 }
 
-// decode returns the Time value corresponding to 00:00:00 UTC of the date
-// represented by d, the number of days elapsed since date zero.
-func decode(d PeriodOfDays) time.Time {
-	secs := int64(d) * secondsPerDay
-	return time.Unix(secs, 0).UTC()
+// Not working properly yet - off by a day in tests
+func countDaysBackward(start int, count int64) int {
+	// When the count is less than or equal to the start day the result will be
+	// a simple counting back of days.
+	if count <= int64(start) {
+		dow := int64(start) - count
+		if dow == 0 {
+			dow = 7
+		}
+		// fmt.Println("less than start", start, "count", count, "dow", dow)
+		return int(dow)
+	}
+	// The count assumes a day of 1 but the actual starting day can be different
+	total := count - int64(start)
+
+	// Results will range from 0-6
+	dow := total % 7
+	// fmt.Println("greater than start", start, "count", count, "dow", dow)
+
+	return daysBackward[dow]
+}
+
+func gregorianYear(inputYear int64) (year int64) {
+	year = inputYear
+	if year == 0 {
+		year = 1
+	} else if year == -1 {
+		// Redundant
+		year = -1
+	}
+
+	return year
+}
+
+// daysToAnchorDaySinceEpoch takes a year and returns the number of days from
+// the absolute epoch to the start of that year.
+// This will work for CE but not for BCE
+func daysToAnchorDaySinceEpoch(year int64) uint64 {
+	var leapDayCount int64
+
+	if year < 0 {
+		year = -year
+	}
+
+	// Leap is calculated based on astronomical year
+	astronomicalYear := astronomicalYear(year)
+	if year < 0 {
+		year = -year
+	}
+
+	// - add all years divisible by 4
+	// - subtract all years divisible by 100
+	// - add back all years divisible by 400
+	leapDayCount = ((astronomicalYear / 4) - 1) - ((astronomicalYear / 100) - 1) + (astronomicalYear / 400)
+
+	// TODO: See if there is interplay between the subtractions of 1 here and
+	// the days to date count.
+	// See https://www.thecalculatorsite.com/time/days-between-dates.php
+
+	total := year * 365
+	total -= 365
+	total += leapDayCount
+
+	if isLeap(astronomicalYear) {
+		total--
+	}
+
+	// fmt.Println("year", year, "leap days", leapDayCount, "total", total)
+
+	return uint64(total)
+}
+
+func isoWeekOfYearForDate(doy int, dow time.Weekday) int {
+	var woy int = (10 + doy - int(dow)) % 7
+	return woy
 }

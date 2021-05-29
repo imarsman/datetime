@@ -1,15 +1,14 @@
+package date
+
 // Copyright 2015 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-
-package date
 
 import (
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 	"unicode"
 )
 
@@ -113,17 +112,17 @@ func ParseISO(value string) (Date, error) {
 	}
 
 	dash1 := strings.IndexByte(abs, '-')
-	fm1 := dash1 + 1
+	// fm1 := dash1 + 1
 	fm2 := dash1 + 3
-	fd1 := dash1 + 4
+	// fd1 := dash1 + 4
 	fd2 := dash1 + 6
 
 	if dash1 < 0 {
 		// switch to YYYYMMDD format
 		dash1 = 4
-		fm1 = 4
+		// fm1 = 4
 		fm2 = 6
-		fd1 = 6
+		// fd1 = 6
 		fd2 = 8
 	} else if abs[fm2] != '-' {
 		return Date{}, fmt.Errorf("Date.ParseISO: cannot parse %q: incorrect syntax", value)
@@ -134,28 +133,29 @@ func ParseISO(value string) (Date, error) {
 		return Date{}, fmt.Errorf("Date.ParseISO: cannot parse %q: incorrect length", value)
 	}
 
-	year, err := parseField(value, abs[:dash1], "year", 4, -1)
-	if err != nil {
-		return Date{}, err
-	}
+	// year, err := parseField(value, abs[:dash1], "year", 4, -1)
+	// if err != nil {
+	// 	return Date{}, err
+	// }
 
-	month, err := parseField(value, abs[fm1:fm2], "month", -1, 2)
-	if err != nil {
-		return Date{}, err
-	}
+	// month, err := parseField(value, abs[fm1:fm2], "month", -1, 2)
+	// if err != nil {
+	// 	return Date{}, err
+	// }
 
-	day, err := parseField(value, abs[fd1:], "day", -1, 2)
-	if err != nil {
-		return Date{}, err
-	}
+	// day, err := parseField(value, abs[fd1:], "day", -1, 2)
+	// if err != nil {
+	// 	return Date{}, err
+	// }
 
-	if value[0] == '-' {
-		year = -year
-	}
+	// if value[0] == '-' {
+	// 	year = -year
+	// }
 
-	t := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+	// t := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
 
-	return Date{encode(t)}, nil
+	return Date{}, nil
+	// return Date{encode(t)}, nil
 }
 
 func parseField(value, field, name string, minLength, requiredLength int) (int, error) {
@@ -193,9 +193,10 @@ func MustParse(layout, value string) Date {
 // This function cannot currently parse ISO 8601 strings that use the expanded
 // year format; you should use date.ParseISO to parse those strings correctly.
 func Parse(layout, value string) (Date, error) {
-	t, err := time.Parse(layout, value)
-	if err != nil {
-		return Date{}, err
-	}
-	return Date{encode(t)}, nil
+	// t, err := time.Parse(layout, value)
+	// if err != nil {
+	// 	return Date{}, err
+	// }
+	// return Date{encode(t)}, nil
+	return Date{}, nil
 }
