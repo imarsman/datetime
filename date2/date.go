@@ -163,7 +163,7 @@ func (d Date) Day() int {
 // TODO: Fix this so that it works properly
 func (d Date) subtractDays(subtract int) (date Date, err error) {
 	d2 := d
-	fmt.Println("subtracing from", d.String(), subtract)
+	// fmt.Println("subtracing from", d.String(), subtract)
 	newYear := false
 	for {
 		daysInMonth, err := d2.daysInMonth()
@@ -172,7 +172,7 @@ func (d Date) subtractDays(subtract int) (date Date, err error) {
 		}
 		// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
 		if d2.month == 1 && d2.day == 1 {
-			fmt.Println("equal")
+			// fmt.Println("equal")
 			d2.year--
 			newYear = true
 		}

@@ -129,6 +129,7 @@ func TestDaysSinceEpoch(t *testing.T) {
 	}
 }
 
+// https://www.thecalculatorsite.com/time/days-between-dates.php
 func TestWeekday(t *testing.T) {
 	is := is.New(t)
 
@@ -140,18 +141,29 @@ func TestWeekday(t *testing.T) {
 
 	var partList = []dateParts{
 		{-15000000000, 1, 1},
-		// {-10, 1, 1},
-		{-1, 1, 1},
+		{-10, 1, 1},
+		{-1, 12, 1},
+		{-1, 12, 2},
+		{-1, 12, 3},
+		{-1, 12, 4},
+		{-1, 12, 5},
+		{-1, 12, 6},
+		{-1, 12, 7},
+		{-1, 12, 8},
+		{-1, 12, 9},
+		{-1, 12, 10},
+		{-1, 12, 31},
 		{1, 1, 1},
+		// {1, 1, 15},
 		// {1, 1, 2},
 		// {2, 1, 1},
 		// {3, 1, 1},
-		{400, 1, 1},
+		// {400, 1, 1},
 		// {5, 1, 1},
 		// {40, 1, 1},
 		// {60, 1, 1},
 		// {100, 1, 1},
-		{1000, 1, 1},
+		// {1000, 1, 1},
 		// {1020, 1, 1},
 		// {1021, 1, 1},
 		// {1022, 1, 1},
@@ -178,21 +190,21 @@ func TestWeekday(t *testing.T) {
 		// {1964, 1, 1},
 		// {1967, 1, 1},
 		// {1968, 1, 1},
-		// {1968, 3, 1},
+		// {1968, 5, 26},
 		// {1969, 1, 1},
 		// {1970, 1, 1},
 		// {1970, 1, 15},
 		// {1970, 2, 1},
-		{1970, 1, 1},
+		// {1970, 1, 1},
 		// {1971, 1, 1},
-		// {2010, 1, 1},
+		// {2002, 4, 10},
 		// {2018, 1, 1},
 		// {2018, 1, 2},
-		{2018, 1, 15},
-		{2020, 1, 1},
+		// {2018, 1, 15},
+		// {2020, 1, 1},
 		// {2019, 5, 18},
 		// {2020, 5, 18},
-		{2030, 1, 1},
+		// {2030, 1, 1},
 		// {2040, 1, 1},
 		// {2060, 1, 1},
 		// {2061, 1, 1},
@@ -584,18 +596,19 @@ func TestSubtractDays(t *testing.T) {
 
 }
 
-func TestDaysSinceYearEnd(t *testing.T) {
+func TestDaysToYearEnd(t *testing.T) {
 	is := is.New(t)
 
 	var partList = []datePartsWithVerify{
 		{-1, 10, 1, 91},
 		{-1, 12, 1, 30},
+		{1, 12, 1, 0},
 		{2021, 1, 30, 29},
 	}
 
 	for _, p := range partList {
 		d, err := NewDate(p.y, p.m, p.d)
-		daysToEnd := d.daysToYearEnd()
+		daysToEnd := d.daysToDate()
 		is.NoErr(err)
 		if p.v != 0 {
 			is.Equal(daysToEnd, p.v)

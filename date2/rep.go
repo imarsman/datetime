@@ -15,9 +15,9 @@ import (
 	"github.com/imarsman/datetime/gregorian"
 )
 
-const lastDOWBCE int = 5 // 31 December, 1 BCE is Friday
+const lastDOWBCE int = 7 // 31 December, 1 BCE is Friday
 
-const firstDOWCE int = 6 // 1 January, 1 CE is Saturday
+const firstDOWCE int = 1 // 1 January, 1 CE is Saturday
 
 // Month a month - int
 type Month int
@@ -115,24 +115,32 @@ func bigYear(year int64) int64 {
 }
 
 func countDaysForward(start int, count int64) int {
+	// fmt.Println("start", start, "count", count)
 	total := int64(start) + count
-	mod := total % 7
-	if mod == 0 {
-		mod = 7
+	// total := count
+	dow := total % 7
+	// fmt.Println("dow", dow)
+	if dow == 0 {
+		dow = 7
 	}
-	return daysForward[mod-1]
+	// fmt.Println("days forward dow", dow)
+	// return daysForward[dow-1]
+	return int(dow)
 }
 
 func countDaysBackward(start int, count int64) int {
-	total := int64(start-1) - count
-	mod := total % 7
-	if mod < 0 {
-		mod = -mod
+	// fmt.Println("start", start, "count", count)
+	total := int64(start) + count
+	dow := total % 7
+	if dow < 0 {
+		dow = -dow
 	}
-	if mod == 0 {
-		mod = 7
+	if dow == 0 {
+		dow = 7
 	}
-	return daysBackward[mod-1]
+	// fmt.Println("days backward dow", dow)
+	// return int(dow)
+	return daysBackward[dow-1]
 }
 
 func gregorianYear(inputYear int64) (year int64) {
@@ -273,8 +281,8 @@ func anchorDayForCentury(y int64) int {
 	return result
 }
 
-// For CE count forward and for BCE count backward
-func (d Date) daysToYearEnd() int {
+// For CE count forward from 1 Jan and for BCE count backward from 31 Dec
+func (d Date) daysToDate() int {
 	d2 := d
 	d2.day = 1
 	d2.month = 1
@@ -284,8 +292,8 @@ func (d Date) daysToYearEnd() int {
 	}
 	total := 0
 
+	// Count forwards to date from 1 Jan
 	if d.year > 0 {
-		// Get days since 1 Jan
 		d3, _ := NewDate(d.year, 1, 1)
 		for {
 			daysInMonth, _ := d3.daysInMonth()
@@ -299,15 +307,15 @@ func (d Date) daysToYearEnd() int {
 			}
 			d3.month++
 		}
+		// Count backwards to date from 31 Dec
 	} else {
-		// Get days since 1 Jan
 		d3, _ := NewDate(d.year, 12, 31)
 		for {
 			daysInMonth, _ := d3.daysInMonth()
 			if d3.month == d.month {
-				fmt.Println("total", total)
+				// fmt.Println("total", total)
 				total = total + (daysInMonth - d.day)
-				fmt.Println("total", total)
+				// fmt.Println("total", total)
 				return total
 			}
 			total = total + daysInMonth
@@ -511,6 +519,7 @@ func daysTo1JanSinceEpoch(year int64) uint64 {
 	if originalYear < 0 {
 		originalYear = -originalYear
 	}
+	// Leap
 	year = astronomicalYear(year)
 	if year < 0 {
 		year = -year
@@ -519,15 +528,15 @@ func daysTo1JanSinceEpoch(year int64) uint64 {
 	// - add all years divisible by 4
 	// - subtract all years divisible by 100
 	// - add back all years divisible by 400
-	leapYearCount = (year / 4) - (year / 100) + (year / 400)
-	fmt.Println("year", year, "originalyear", originalYear)
+	leapYearCount = ((year / 4) - 1) - ((year / 100) - 1) + (year / 400)
+	// fmt.Println("year", year, "originalyear", originalYear)
 
 	total := originalYear * 365
 	total -= 365
+	// fmt.Println("leap years", leapYearCount, "total", total)
 	total += leapYearCount
-	fmt.Println("leap years", leapYearCount, "total", total)
 
-	fmt.Println("leap year count", leapYearCount)
+	// fmt.Println("leap year count", leapYearCount)
 	// Ignore the year between BCE and CE
 	// if isCE {
 	// 	total--
@@ -555,7 +564,9 @@ func (d Date) getBigYear() int64 {
 	return total
 }
 
-func daysTo1JanSinceEpoch2(year int64) uint64 {
+// For BCE anchor day is 31 December, the last day of BCE
+// For CE anchor day is 1 January, the first day of CE
+func daysToAnchroDaySinceEpoch2(year int64) uint64 {
 	var leapYearCount int64
 
 	// - add all years divisible by 4
@@ -566,11 +577,6 @@ func daysTo1JanSinceEpoch2(year int64) uint64 {
 	total := year * 365
 	total -= 365
 	total += leapYearCount
-
-	// d, _ := NewDate(year, 1, 1)
-	// if d.IsLeap() {
-	// 	total--
-	// }
 
 	if isLeap(year) {
 		total--
@@ -585,59 +591,24 @@ func (d Date) Weekday() (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	// https://en.wikipedia.org/wiki/Determination_of_the_day_of_the_week
-	// Formula by Gauss
 
-	// year := d.astronomicalYear()
 	year := d.year
-	// if d.year < 0 {
-	// 	return 0, errors.New("Pre CE years not handled yet")
-	// }
-
-	// var anchorDay int64 = 6
-	// rollover := 7 - anchorDay
-	// dAnchorDays := int64(daysTo1JanSinceEpoch(1))
 
 	dateDays := int64(daysTo1JanSinceEpoch(year))
-	fmt.Println("date days", dateDays)
+	// fmt.Println("date days", dateDays)
 
-	daysSince1Jan := d.daysToYearEnd()
-
-	// var diff int64
-	// fmt.Println("anchorDay", anchorDay, "dateDays", dateDays, "anchorDays", dAnchorDays, "daysSince1Jan",
-	// 	daysSince1Jan, "diff", diff)
+	daysSince1Jan := d.daysToDate()
 
 	// Currently anchor days will be zero
 	// totalDays := dateDays + dAnchorDays
-	totalDays := int64(math.Abs(float64(dateDays)))
-	// totalDays := dateDays
-	// fmt.Println("total days", totalDays, "days since 1 Jan", daysSince1Jan)
+	totalDays := int64(math.Abs(float64(dateDays))) + int64(daysSince1Jan)
 
-	// Add in number of days into year
-	totalDays += int64(daysSince1Jan)
-	// fmt.Println("total days", totalDays)
-
-	// The 1 Jan value will be one too high as the leap day for that year will
-	// be factored in but we also factor in the leap day with daysSince1Jan
-	dow := totalDays
-	// if year <= 100 {
-	// 	dow = dow + 5 // Add from Monday to Friday (1-1-1 is a Friday)
-	// }
-	if d.IsLeap() {
-		dow++
+	var dow int
+	if year > 0 {
+		dow = countDaysForward(firstDOWCE, totalDays)
+	} else {
+		dow = countDaysBackward(lastDOWBCE, totalDays)
 	}
-	dow = dow % 7
-	// dow++
-	if dow == 0 {
-		dow = 1
-	}
-	// dow += 2 // Offset from starting date
-	// if final == 0 {
-	// 	fmt.Println("adding")
-	// 	final = 7
-	// }
-
-	// fmt.Println("final", dow)
 
 	return int(dow), nil
 }
