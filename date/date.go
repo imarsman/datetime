@@ -379,16 +379,6 @@ func (d Date) addMonths(add int) (d2 Date, err error) {
 		}
 	}
 
-	// daysInMonth := d2.daysInMonth()
-	// daysInMonth -= int(d2.day)
-	// for i := 0; i < add; i++ {
-	// 	d2, err = d2.addDays(daysInMonth)
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 	}
-	// 	daysInMonth = d2.daysInMonth()
-	// }
-
 	// Do implicit validation of result
 	_, err = NewDate(d2.year, d2.month, d2.day)
 	if err != nil {
