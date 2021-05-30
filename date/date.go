@@ -272,10 +272,10 @@ func (d Date) daysToDateFromEpoch() uint64 {
 	return totalDays
 }
 
-// daysToOneYearFrom add a year and if the intervening days have a leap year days
+// daysToOneYearFromDate add a year and if the intervening days have a leap year days
 // return 366, else return 365.
 // This is much cheaper than calculating days since epoch to date.
-func (d Date) daysToOneYearFrom() int {
+func (d Date) daysToOneYearFromDate() int {
 	hasLeap := d.IsLeap()
 	if hasLeap {
 		if d.month > 2 {
@@ -311,71 +311,25 @@ func (d Date) daysToOneYearFrom() int {
 // - add years and then increment the date using the remainder days
 // - add sum of days for months to date
 // - add days days to date
-func (d Date) AddParts(years int64, months, days int) (newDate Date, remainder int64, err error) {
-	dFinal := d
+func (d Date) AddParts(years int64, months, days int) (dFinal Date, remainder int64, err error) {
+	dFinal = d
 
-	// Add years by finding out how many days need to be added then adding the
-	// number of years for the days and then the number of days remaining.
+	// Add years. Surplus days are added to result
 	if years > 0 {
-		var totalDays uint64
-		if d.year < 0 {
-			// Get total days BCE and CE
-			if d.year+years > 0 {
-				startDays := d.daysToDateFromEpoch()
-
-				dEnd := d
-				// The year will cross the zero boundary
-				dEnd.year = d.year + years + 1 // Crossing CE boundary
-				endDays := dEnd.daysToDateFromEpoch()
-
-				totalDays = endDays + startDays
-				newYears := totalDays / 365
-				dFinal.year += int64(newYears) + 1 // Crossing CE boundary
-				remainder := totalDays % 365
-				dFinal, err = dFinal.addDays(int(remainder))
-			} else {
-				// Get years with end in CE
-
-				startDays := d.daysToDateFromEpoch()
-
-				dEnd := d
-				// The year will cross the zero boundary
-				dEnd.year = d.year - years
-				endDays := dEnd.daysToDateFromEpoch()
-
-				totalDays = endDays - startDays
-				newYears := totalDays / 365
-				dFinal.year += int64(newYears)
-				remainder := totalDays % 365
-				dFinal, err = dFinal.addDays(int(remainder))
-			}
-		} else {
-			startDays := d.daysToDateFromEpoch()
-
-			dEnd := d
-			dEnd.year = d.year + years
-			endDays := dEnd.daysToDateFromEpoch()
-
-			totalDays = endDays - startDays
-			newYears := totalDays / 365
-			dFinal.year += int64(newYears)
-			remainder := totalDays % 365
-			dFinal, err = dFinal.addDays(int(remainder))
-		}
+		dFinal, err = dFinal.AddYears(years)
 	}
-	// Month handling adds surplus days to dFinal
+	// Month handling adding surplus days to result
 	if months > 0 {
-		// Add months, which works by getting days for each month then adding
-		// that many days to the date.
-		dFinal, err = dFinal.addMonths(months)
+		dFinal, err = dFinal.AddMonths(months)
 		if err != nil {
 			return Date{}, 0, err
 		}
 	}
 
-	// Add any days requested initially plus any days
+	// Add days
 	if days > 0 {
-		dFinal, err = dFinal.addDays(days)
+		// fmt.Println("adding days", days)
+		dFinal, err = dFinal.AddDays(days)
 		if err != nil {
 			return Date{}, 0, err
 		}
@@ -384,30 +338,87 @@ func (d Date) AddParts(years int64, months, days int) (newDate Date, remainder i
 	return dFinal, remainder, nil
 }
 
-// addMonths add months to a date
+// AddYears add years to date
+func (d Date) AddYears(years int64) (dFinal Date, err error) {
+	dFinal = d
+
+	var totalDays uint64
+	if d.year < 0 {
+		if d.year+years > 0 {
+			startDays := d.daysToDateFromEpoch()
+
+			dEnd := d
+			// The year will cross the zero boundary
+			dEnd.year = d.year + years + 1 // Crossing CE boundary
+			endDays := dEnd.daysToDateFromEpoch()
+
+			totalDays = endDays + startDays
+			newYears := totalDays / 365
+			dFinal.year += int64(newYears) + 1 // Crossing CE boundary
+			remainder := totalDays % 365
+			dFinal, err = dFinal.AddDays(int(remainder))
+		} else {
+			// Get years with end in CE
+
+			startDays := d.daysToDateFromEpoch()
+
+			dEnd := d
+			// The year will cross the zero boundary
+			dEnd.year = d.year - years
+			endDays := dEnd.daysToDateFromEpoch()
+
+			totalDays = endDays - startDays
+			newYears := totalDays / 365
+			dFinal.year += int64(newYears)
+			remainder := totalDays % 365
+			dFinal, err = dFinal.AddDays(int(remainder))
+		}
+	} else {
+		startDays := d.daysToDateFromEpoch()
+
+		dEnd := d
+		dEnd.year = d.year + years
+		endDays := dEnd.daysToDateFromEpoch()
+
+		totalDays = endDays - startDays
+		newYears := totalDays / 365
+		dFinal.year += int64(newYears)
+		remainder := totalDays % 365
+		dFinal, err = dFinal.AddDays(int(remainder))
+	}
+
+	return dFinal, nil
+}
+
+// AddMonths add months to a date
 // TODO: decide if it would be good to add days
-func (d Date) addMonths(add int) (d2 Date, err error) {
+func (d Date) AddMonths(add int) (d2 Date, err error) {
 	d2 = d
 
 	// Benchmark adding 1000 months to 2019-01-01
-	// With year jumps:    122.3 ns/op	  81.76 MB/s   0 B/op   0 allocs/op
-	// Without year jumps: 284.4 ns/op	  35.16 MB/s   0 B/op   0 allocs/op
+	// With adding years:    122.3 ns/op	  81.76 MB/s   0 B/op   0 allocs/op
+	// Without adding year:  284.4 ns/op	  35.16 MB/s   0 B/op   0 allocs/op
+	// With and without the years add produces same result
 	if add > 12 {
 		for {
 			// Asking for year days using IsLeap logic is much much faster than
 			// counting days from epoch to date.
-			daysBetween := d2.daysToOneYearFrom()
+			daysBetween := d2.daysToOneYearFromDate()
 			if daysBetween < 0 {
 				break
 			}
 			if add >= 12 {
-				if daysBetween == 366 {
-					d2, err = d2.addDays(1)
-					if err != nil {
-						return Date{}, err
-					}
+				// if daysBetween == 366 {
+				// 	d2, err = d2.AddDays(1)
+				// 	if err != nil {
+				// 		return Date{}, err
+				// 	}
+				// }
+				// d2.year++
+				d2, err = d2.AddYears(1)
+				if err != nil {
+					return Date{}, err
 				}
-				d2.year++
 				add -= 12
 				if add < 12 {
 					break
@@ -419,7 +430,7 @@ func (d Date) addMonths(add int) (d2 Date, err error) {
 	}
 
 	// TODO: add years if there are multiples of 12 months
-	daysToAdd := 0
+	// daysToAdd := 0
 	for i := 0; i < add; i++ {
 		if d2.month == 12 {
 			d2.year++
@@ -429,7 +440,7 @@ func (d Date) addMonths(add int) (d2 Date, err error) {
 			if d2.month == 2 {
 				daysInMonth := d2.daysInMonth()
 				if daysInMonth == 29 {
-					d2, err = d2.addDays(1)
+					d2, err = d2.AddDays(1)
 					if err != nil {
 						return Date{}, err
 					}
@@ -441,13 +452,13 @@ func (d Date) addMonths(add int) (d2 Date, err error) {
 		}
 	}
 	// Add in extra days due to leap years
-	if daysToAdd > 0 {
-		fmt.Println("adding days", daysToAdd)
-		d2, err = d2.addDays(daysToAdd)
-		if err != nil {
-			return Date{}, err
-		}
-	}
+	// if daysToAdd > 0 {
+	// 	// fmt.Println("adding days", daysToAdd)
+	// 	d2, err = d2.AddDays(daysToAdd, true)
+	// 	if err != nil {
+	// 		return Date{}, err
+	// 	}
+	// }
 
 	// Do implicit validation of result
 	_, err = NewDate(d2.year, d2.month, d2.day)
@@ -458,33 +469,47 @@ func (d Date) addMonths(add int) (d2 Date, err error) {
 	return d2, nil
 }
 
-// addDays add days to a date
+// AddDays add days to a date
 // Reasonably efficient given that it adds as many days at a time as possible.
-func (d Date) addDays(add int) (date Date, err error) {
+// TODO: Adding days will end up with more total days if leap days are added
+func (d Date) AddDays(add int) (date Date, err error) {
 	d2 := d
+	// fmt.Println("count leap days", countLeapDays)
 
+	// daysAdded := 0
+	// leapDays := 0
+	// Benchmark adding 1000000 days to 2019-03-01
 	// With adding years:     1832 ns/op   5.46 MB/s   0 B/op   0 allocs/op
 	// Without adding years: 27300 ns/op   0.37 MB/s   0 B/op   0 allocs/op
+	// With and without the years add produces same result
 	if add > 365 {
-		dForward := d2
-		dForward.year++
+		// dForward := d2
+		// dForward.year++
 		for {
 			// Asking for year days using IsLeap logic is much much faster than
 			// counting days from epoch to date.
-			daysBetween := d2.daysToOneYearFrom()
+			daysBetween := d2.daysToOneYearFromDate()
+			// fmt.Println("d2", d2.String(), "add", add, "days between", daysBetween)
 			if daysBetween < 0 {
 				break
 			}
 			if int(daysBetween) <= add {
 				d2.year++
-				add -= int(daysBetween)
-				if add < 365 {
-					break
+				if d2.IsLeap() {
+					fmt.Println(d2.String(), "is leap")
+					d2, err = d2.AddDays(1)
+					if err != nil {
+						return Date{}, err
+					}
+					add -= int(daysBetween)
+				} else if d2.IsLeap() {
+					add -= daysBetween
+				} else {
+					add -= int(daysBetween)
 				}
 			} else {
 				break
 			}
-			dForward.year++
 		}
 	}
 
@@ -502,14 +527,12 @@ func (d Date) addDays(add int) (date Date, err error) {
 				}
 				d2.month = 1
 				d2.day = 1
-				// We have gone to the end of the month plus one day
 				add = add - daysTilEOM - 1
 				daysInMonth = d2.daysInMonth()
 			} else {
 				daysTilEOM := daysInMonth - d2.day
 				d2.day = 1
 				d2.month++
-				// We have gone to the end of the month plus one day
 				add = add - daysTilEOM - 1
 
 				daysInMonth = d2.daysInMonth()
@@ -519,9 +542,7 @@ func (d Date) addDays(add int) (date Date, err error) {
 			if add+d2.day >= daysInMonth {
 				daysTilEOM := daysInMonth - d2.day
 
-				// We have gone to the end of the month plus one day
 				add = add - daysTilEOM - 1
-				// fmt.Println("add 3", add, d2.String())
 				d2.day = 1
 				d2.month++
 				if d2.month > 12 {

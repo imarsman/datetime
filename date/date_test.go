@@ -280,7 +280,7 @@ func TestAddParts(t *testing.T) {
 		{y: 2019, m: 1, d: 1, addY: 10, addM: 0, addD: 0},
 		{y: 2019, m: 1, d: 1, addY: 1000, addM: 0, addD: 0},
 		{y: 2019, m: 1, d: 1, addY: 0, addM: 1000, addD: 0},
-		{y: 2019, m: 6, d: 1, addY: 0, addM: 0, addD: 10000},
+		{y: 2019, m: 6, d: 1, addY: 0, addM: 0, addD: 1000000},
 		// Covers a leap year. End date shoold have same month and day as start.
 		{y: 2020, m: 2, d: 1, addY: 0, addM: 0, addD: 366},
 		{y: -4, m: 1, d: 1, addY: 10, addM: 0, addD: 0},
