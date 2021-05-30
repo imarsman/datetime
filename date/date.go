@@ -264,35 +264,48 @@ func (d Date) subtractDays(subtract int) (date Date, err error) {
 	return d2, nil
 }
 
+func (d Date) daysToDateFromEpoch() uint64 {
+	daysToAnchorDate := daysToAnchorDayFromEpoch(d.year)
+	daysToDate := d.daysToDateFromAnchorDay()
+	totalDays := daysToAnchorDate + uint64(daysToDate)
+
+	return totalDays
+}
+
 // AddParts add in succession years, months, and days to a date
 // - add years and then increment the date using the remainder days
 // - add days for each month to date
 // - add starting days to date
 func (d Date) AddParts(years int64, months, days int) (newDate Date, remainder int64, err error) {
 	dFinal := d
-	// fmt.Println(dFinal.String())
 
-	// TODO: Instead of just adding years to the date figure out how many days
-	// between start and end date and then use any surplus (leap days) to
-	// increment the days value.
+	// Add years by finding out how many days need to be added then adding the
+	// number of years for the days and then the number of days remaining.
 	if years > 0 {
 		var totalDays uint64
 		if d.year < 0 {
 			// Get total days BCE and CE
 			if d.year+years > 0 {
-				// TODO: This needs work and testing
-				startDays := daysToAnchorDaySinceEpoch(d.year)
+				startDays := d.daysToDateFromEpoch()
+
+				dEnd := d
 				// The year will cross the zero boundary
-				endDays := daysToAnchorDaySinceEpoch(d.year + years + 1)
-				totalDays = startDays + endDays
+				dEnd.year = d.year + years + 1
+				endDays := dEnd.daysToDateFromEpoch()
+
+				totalDays = endDays + startDays
 				newYears := totalDays / 365
 				dFinal.year += int64(newYears) + 1
 				remainder := totalDays % 365
 				dFinal, err = dFinal.addDays(int(remainder))
 			}
 		} else {
-			startDays := daysToAnchorDaySinceEpoch(d.year)
-			endDays := daysToAnchorDaySinceEpoch(d.year + years)
+			startDays := d.daysToDateFromEpoch()
+
+			dEnd := d
+			dEnd.year = d.year + years
+			endDays := dEnd.daysToDateFromEpoch()
+
 			totalDays = endDays - startDays
 			newYears := totalDays / 365
 			dFinal.year += int64(newYears)
@@ -416,23 +429,6 @@ func (d Date) addDays(add int) (date Date, err error) {
 				continue
 			}
 			// There are fewer days to add than are remaining in the month
-
-			// var newAdd int
-			// var newDay int
-			// if add < d2.day {
-			// 	fmt.Println("add less than day")
-			// 	newAdd = d2.day - add
-			// 	newDay = d2.day + add
-			// 	d2.day = newDay
-			// 	add = newAdd
-			// } else {
-			// 	// newAdd = add - d2.day
-			// 	newDay = d2.day + add
-			// 	fmt.Println("add", add, "d2.day", d2.day, "new day", d2.day, "newadd", newAdd)
-			// 	d2.day = newDay
-			// 	fmt.Println("add", add, "d2.day", d2.day, "new day", d2.day, "newadd", newAdd)
-			// 	add = 0
-			// }
 			d2.day += add
 			add = 0
 
@@ -448,45 +444,12 @@ func (d Date) addDays(add int) (date Date, err error) {
 	return d2, nil
 }
 
-// addYars given that the AddTimeParts function will add the leap days between
-// start and end year this should be safe to do.
-// func (d Date) addYears(years int64) (Date, error) {
-// 	d2 := d
-// 	if d.year+years > 0 {
-// 				// TODO: This needs work and testing
-// 				startDays := daysToAnchorDaySinceEpoch(d.year)
-// 				// The year will cross the zero boundary
-// 				endDays := daysToAnchorDaySinceEpoch(d.year + years + 1)
-// 				totalDays = startDays + endDays
-// 				newYears := totalDays / 365
-// 				remainder := totalDays % 365
-// 				d2.year += int64(newYears) + 1
-// 				months += int(remainder)
-// 				remainder = totalDays % 12
-// 				days += int(remainder)
-// 			}
-// 		} else {
-// 			startDays := daysToAnchorDaySinceEpoch(d.year)
-// 			endDays := daysToAnchorDaySinceEpoch(d.year + years)
-// 			totalDays = endDays - startDays
-// 			fmt.Println("total days", totalDays)
-// 			newYears := totalDays / 365
-// 			remainder := totalDays % 365
-// 			d2.year += int64(newYears)
-// 			months += int(remainder)
-// 			remainder = totalDays % 12
-// 			days += int(remainder)
-// 		}
-
-// 	return d2, nil
-// }
-
 // For CE count forward from 1 Jan and for BCE count backward from 31 Dec
 func (d Date) daysToDateFromAnchorDay() int {
 	d2 := d
 	d2.day = 1
 	d2.month = 1
-	var startDateDays int64 = int64(daysToAnchorDaySinceEpoch(d2.year))
+	var startDateDays int64 = int64(daysToAnchorDayFromEpoch(d2.year))
 	if startDateDays < 0 {
 		startDateDays = -startDateDays
 	}
@@ -539,7 +502,7 @@ func (d Date) Weekday() int {
 
 	// This will count forward for CE and backward for BCE but give the results
 	// in both cases as a positive integer.
-	dateDays := int64(daysToAnchorDaySinceEpoch(year))
+	dateDays := int64(daysToAnchorDayFromEpoch(year))
 
 	daysFromAnchorDay := d.daysToDateFromAnchorDay()
 

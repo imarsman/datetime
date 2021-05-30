@@ -124,7 +124,7 @@ func TestDaysSinceEpoch(t *testing.T) {
 		-1, -2, -13, 1, 2, 4, 20, 40, 400,
 	}
 	for _, y := range list {
-		days := daysToAnchorDaySinceEpoch(y)
+		days := daysToAnchorDayFromEpoch(y)
 		t.Logf("Days since epoch for year %d = %d", y, days)
 	}
 }
@@ -313,7 +313,7 @@ func TestToGregorianYear(t *testing.T) {
 	}
 }
 
-func TestAddDate(t *testing.T) {
+func TestAddParts(t *testing.T) {
 	is := is.New(t)
 
 	type datePartsWithAdd struct {
@@ -334,6 +334,7 @@ func TestAddDate(t *testing.T) {
 		{y: 2019, m: 1, d: 1, addY: 14, addM: 0, addD: 0},
 		{y: 2019, m: 1, d: 1, addY: 10, addM: 0, addD: 0},
 		{y: 2019, m: 1, d: 1, addY: 1000, addM: 0, addD: 0},
+		{y: -4, m: 1, d: 1, addY: 10, addM: 0, addD: 0},
 	}
 
 	for _, dt := range partList {
@@ -418,6 +419,9 @@ func BenchmarkAddPartsLong(b *testing.B) {
 
 	var err error
 	var d Date
+	d, _ = NewDate(2019, 3, 1)
+	b.Log("starting date", d.String())
+	b.Logf("Add %d years %d months %d days", 10, 20, 200)
 
 	b.ResetTimer()
 	b.SetBytes(bechmarkBytesPerOp)
@@ -425,8 +429,7 @@ func BenchmarkAddPartsLong(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			d, _ = NewDate(2019, 3, 1)
-			d, _, err = d.AddParts(100000000, 0, 0)
+			d, _, err = d.AddParts(10, 20, 200)
 		}
 	})
 
@@ -467,7 +470,7 @@ func BenchmarkDaysSinceEpoch(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			days = daysToAnchorDaySinceEpoch(year)
+			days = daysToAnchorDayFromEpoch(year)
 		}
 	})
 

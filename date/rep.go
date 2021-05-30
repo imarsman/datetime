@@ -140,10 +140,10 @@ func gregorianYear(inputYear int64) (year int64) {
 	return year
 }
 
-// daysToAnchorDaySinceEpoch takes a year and returns the number of days from
+// daysToAnchorDayFromEpoch takes a year and returns the number of days from
 // the absolute epoch to the start of that year.
 // This will work for CE but not for BCE
-func daysToAnchorDaySinceEpoch(year int64) uint64 {
+func daysToAnchorDayFromEpoch(year int64) uint64 {
 	var leapDayCount int64
 
 	if year < 0 {
