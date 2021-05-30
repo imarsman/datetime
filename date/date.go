@@ -290,12 +290,12 @@ func (d Date) AddParts(years int64, months, days int) (newDate Date, remainder i
 
 				dEnd := d
 				// The year will cross the zero boundary
-				dEnd.year = d.year + years + 1
+				dEnd.year = d.year + years + 1 // Crossing CE boundary
 				endDays := dEnd.daysToDateFromEpoch()
 
 				totalDays = endDays + startDays
 				newYears := totalDays / 365
-				dFinal.year += int64(newYears) + 1
+				dFinal.year += int64(newYears) + 1 // Crossing CE boundary
 				remainder := totalDays % 365
 				dFinal, err = dFinal.addDays(int(remainder))
 			} else {
