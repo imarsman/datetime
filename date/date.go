@@ -272,6 +272,41 @@ func (d Date) daysToDateFromEpoch() uint64 {
 	return totalDays
 }
 
+// daysToOneYearFrom add a year and if the intervening days have a leap year days
+// return 366, else return 365.
+// This is much cheaper than calculating days since epoch to date.
+func (d Date) daysToOneYearFrom() int {
+	hasLeap := d.IsLeap()
+	if hasLeap {
+		if d.month > 2 {
+			hasLeap = false
+		} else {
+			// It's a leap year and we are in February with the leap day
+			return 366
+		}
+	}
+	d2 := d
+	d2.year++
+	if !hasLeap {
+		hasLeap = d2.IsLeap()
+		if hasLeap {
+			// It's a leap year and we're past the leap day
+			if d2.month > 2 {
+				hasLeap = true
+				return 366
+			}
+			if d2.month == 2 {
+				// It's a leap year and we're on the leap day
+				if d2.day == 29 {
+					return 366
+				}
+			}
+		}
+	}
+
+	return 365
+}
+
 // AddParts add in succession years, months, and days to a date
 // - add years and then increment the date using the remainder days
 // - add sum of days for months to date
@@ -354,6 +389,36 @@ func (d Date) AddParts(years int64, months, days int) (newDate Date, remainder i
 func (d Date) addMonths(add int) (d2 Date, err error) {
 	d2 = d
 
+	// Benchmark adding 1000 months to 2019-01-01
+	// With year jumps:    122.3 ns/op	  81.76 MB/s   0 B/op   0 allocs/op
+	// Without year jumps: 284.4 ns/op	  35.16 MB/s   0 B/op   0 allocs/op
+	if add > 12 {
+		for {
+			// Asking for year days using IsLeap logic is much much faster than
+			// counting days from epoch to date.
+			daysBetween := d2.daysToOneYearFrom()
+			if daysBetween < 0 {
+				break
+			}
+			if add >= 12 {
+				if daysBetween == 366 {
+					d2, err = d2.addDays(1)
+					if err != nil {
+						return Date{}, err
+					}
+				}
+				d2.year++
+				add -= 12
+				if add < 12 {
+					break
+				}
+			} else {
+				break
+			}
+		}
+	}
+
+	// TODO: add years if there are multiples of 12 months
 	daysToAdd := 0
 	for i := 0; i < add; i++ {
 		if d2.month == 12 {
@@ -364,7 +429,11 @@ func (d Date) addMonths(add int) (d2 Date, err error) {
 			if d2.month == 2 {
 				daysInMonth := d2.daysInMonth()
 				if daysInMonth == 29 {
-					daysToAdd++
+					d2, err = d2.addDays(1)
+					if err != nil {
+						return Date{}, err
+					}
+					// daysToAdd++
 				}
 			}
 			d2.month++
@@ -373,6 +442,7 @@ func (d Date) addMonths(add int) (d2 Date, err error) {
 	}
 	// Add in extra days due to leap years
 	if daysToAdd > 0 {
+		fmt.Println("adding days", daysToAdd)
 		d2, err = d2.addDays(daysToAdd)
 		if err != nil {
 			return Date{}, err
@@ -388,41 +458,6 @@ func (d Date) addMonths(add int) (d2 Date, err error) {
 	return d2, nil
 }
 
-// addYearDays add a year and if the intervening days have a leap year days
-// return 366, else return 365.
-// This is much cheaper than calculating days since epoch to date.
-func (d Date) addYearDays() int {
-	hasLeap := d.IsLeap()
-	if hasLeap {
-		if d.month > 2 {
-			hasLeap = false
-		} else {
-			// It's a leap year and we are in February with the leap day
-			return 366
-		}
-	}
-	d2 := d
-	d2.year++
-	if !hasLeap {
-		hasLeap = d2.IsLeap()
-		if hasLeap {
-			// It's a leap year and we're past the leap day
-			if d2.month > 2 {
-				hasLeap = true
-				return 366
-			}
-			if d2.month == 2 {
-				// It's a leap year and we're on the leap day
-				if d2.day == 29 {
-					return 366
-				}
-			}
-		}
-	}
-
-	return 365
-}
-
 // addDays add days to a date
 // Reasonably efficient given that it adds as many days at a time as possible.
 func (d Date) addDays(add int) (date Date, err error) {
@@ -436,7 +471,7 @@ func (d Date) addDays(add int) (date Date, err error) {
 		for {
 			// Asking for year days using IsLeap logic is much much faster than
 			// counting days from epoch to date.
-			daysBetween := d2.addYearDays()
+			daysBetween := d2.daysToOneYearFrom()
 			if daysBetween < 0 {
 				break
 			}

@@ -279,7 +279,7 @@ func TestAddParts(t *testing.T) {
 		{y: 2019, m: 1, d: 1, addY: 14, addM: 0, addD: 0},
 		{y: 2019, m: 1, d: 1, addY: 10, addM: 0, addD: 0},
 		{y: 2019, m: 1, d: 1, addY: 1000, addM: 0, addD: 0},
-		{y: 2019, m: 1, d: 1, addY: 0, addM: 240, addD: 0},
+		{y: 2019, m: 1, d: 1, addY: 0, addM: 1000, addD: 0},
 		{y: 2019, m: 6, d: 1, addY: 0, addM: 0, addD: 10000},
 		// Covers a leap year. End date shoold have same month and day as start.
 		{y: 2020, m: 2, d: 1, addY: 0, addM: 0, addD: 366},
@@ -361,7 +361,31 @@ func TestString(t *testing.T) {
 	}
 }
 
-func BenchmarkAddPartsLong(b *testing.B) {
+func BenchmarkAddPartsLongMonths(b *testing.B) {
+	is := is.New(b)
+
+	var err error
+	var d Date
+	d, _ = NewDate(2019, 1, 1)
+	d2 := Date{}
+	b.Log("starting date", d.String())
+	b.Logf("Add %d years %d months %d days", 0, 1000, 0)
+
+	b.ResetTimer()
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			d2, _, err = d.AddParts(0, 1000, 0)
+		}
+	})
+
+	b.Log("caculated", d2.String())
+	is.NoErr(err)
+}
+
+func BenchmarkAddPartsLongDays(b *testing.B) {
 	is := is.New(b)
 
 	var err error
