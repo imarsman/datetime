@@ -388,63 +388,105 @@ func (d Date) addMonths(add int) (d2 Date, err error) {
 	return d2, nil
 }
 
+// addYearDays add a year and if the intervening days have a leap year days
+// return 366, else return 365.
+// This is much cheaper than calculating days since epoch to date.
+func (d Date) addYearDays() int {
+	hasLeap := d.IsLeap()
+	if hasLeap {
+		if d.month > 2 {
+			hasLeap = false
+		} else {
+			// It's a leap year and we are in February with the leap day
+			return 366
+		}
+	}
+	d2 := d
+	d2.year++
+	if !hasLeap {
+		hasLeap = d2.IsLeap()
+		if hasLeap {
+			// It's a leap year and we're past the leap day
+			if d2.month > 2 {
+				hasLeap = true
+				return 366
+			}
+			if d2.month == 2 {
+				// It's a leap year and we're on the leap day
+				if d2.day == 29 {
+					return 366
+				}
+			}
+		}
+	}
+
+	return 365
+}
+
 // addDays add days to a date
 // Reasonably efficient given that it adds as many days at a time as possible.
 func (d Date) addDays(add int) (date Date, err error) {
 	d2 := d
+
+	// With adding years:     1832 ns/op   5.46 MB/s   0 B/op   0 allocs/op
+	// Without adding years: 27300 ns/op   0.37 MB/s   0 B/op   0 allocs/op
+	if add > 365 {
+		dForward := d2
+		dForward.year++
+		for {
+			// Asking for year days using IsLeap logic is much much faster than
+			// counting days from epoch to date.
+			daysBetween := d2.addYearDays()
+			if daysBetween < 0 {
+				break
+			}
+			if int(daysBetween) <= add {
+				d2.year++
+				add -= int(daysBetween)
+				if add < 365 {
+					break
+				}
+			} else {
+				break
+			}
+			dForward.year++
+		}
+	}
 
 	daysInMonth := d2.daysInMonth()
 	if err != nil {
 		return Date{}, err
 	}
 	for add > 0 {
-		// fmt.Println("add", add, "days in month", daysInMonth, "day", d2.day)
 		if add >= daysInMonth && d2.day <= daysInMonth {
 			if d2.month >= 12 {
-				// fmt.Println("rolling year")
+				daysTilEOM := daysInMonth - d2.day
 				d2.year++
 				if d2.year == 0 {
 					d2.year = 1
 				}
 				d2.month = 1
 				d2.day = 1
-				add = add - daysInMonth
+				// We have gone to the end of the month plus one day
+				add = add - daysTilEOM - 1
 				daysInMonth = d2.daysInMonth()
 			} else {
-				// fmt.Println("date less than rolling", d2.String())
 				daysTilEOM := daysInMonth - d2.day
 				d2.day = 1
 				d2.month++
-				add = add - daysTilEOM
+				// We have gone to the end of the month plus one day
+				add = add - daysTilEOM - 1
 
-				// fmt.Println("days in month", d2.String(), "add", add, "days in month", daysInMonth, "daystilleom", daysTilEOM)
 				daysInMonth = d2.daysInMonth()
-
-				// if daysTilEOM == 0 {
-				// 	d2.day = 1
-				// 	d2.month++
-				// 	add--
-				// } else {
-				// 	add = add - daysTilEOM
-				// 	d2.month++
-				// 	d2.day = 1
-				// 	add--
-				// }
-				// if d2.month >= 12 {
-				// 	d2.year++
-				// 	if d2.year == 0 {
-				// 		d2.year = 1
-				// 	}
-				// 	d2.month = 1
-				// }
 			}
 			continue
 		} else {
 			if add+d2.day >= daysInMonth {
 				daysTilEOM := daysInMonth - d2.day
 
-				// fmt.Println("fallthrough", "add", add, "day", d2.day, "days till eom", daysTilEOM)
-				add = add - daysTilEOM
+				// We have gone to the end of the month plus one day
+				add = add - daysTilEOM - 1
+				// fmt.Println("add 3", add, d2.String())
 				d2.day = 1
 				d2.month++
 				if d2.month > 12 {
@@ -456,18 +498,16 @@ func (d Date) addDays(add int) (date Date, err error) {
 				}
 				// Get days in month once month has had a chance to be corrected
 				daysInMonth = d2.daysInMonth()
-				// fmt.Println("new date", d2.String())
 
 				continue
 			}
 			// There are fewer days to add than are remaining in the month
 			d2.day += add
-			// fmt.Println("adding", add, "to", d2.String())
-			add = 0
-			// fmt.Println("add", add)
-			// break
+
+			break
 		}
 	}
+
 	_, err = NewDate(d2.year, d2.month, d2.day)
 	// Give a chance for flawed function logic to be found by invalid date
 	if err != nil {
@@ -475,6 +515,13 @@ func (d Date) addDays(add int) (date Date, err error) {
 	}
 
 	return d2, nil
+}
+
+func (d Date) daysTo(d2 Date) int64 {
+	days1 := d.daysToDateFromEpoch()
+	days2 := d2.daysToDateFromEpoch()
+
+	return int64(days2 - days1)
 }
 
 // For CE count forward from 1 Jan and for BCE count backward from 31 Dec
@@ -527,7 +574,9 @@ func (d Date) daysToDateFromAnchorDay() int {
 	return total
 }
 
-// Weekday get day of week for a date
+// Weekday get day of week for a date for the proleptic Gregorian calendar. This
+// means that gregorian dates will be returned even for years outside of the use
+// of the Gregorian calendar.
 // See https://www.thecalculatorsite.com/time/days-between-dates.php
 // - seems to calculate according to proleptic Gregorian calendar
 func (d Date) Weekday() int {
