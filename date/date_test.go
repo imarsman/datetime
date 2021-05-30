@@ -334,6 +334,7 @@ func TestAddParts(t *testing.T) {
 		{y: 2019, m: 1, d: 1, addY: 14, addM: 0, addD: 0},
 		{y: 2019, m: 1, d: 1, addY: 10, addM: 0, addD: 0},
 		{y: 2019, m: 1, d: 1, addY: 1000, addM: 0, addD: 0},
+		{y: 2019, m: 1, d: 1, addY: 0, addM: 240, addD: 0},
 		{y: -4, m: 1, d: 1, addY: 10, addM: 0, addD: 0},
 		{y: -10, m: 1, d: 1, addY: 1, addM: 0, addD: 0},
 	}

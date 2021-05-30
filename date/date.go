@@ -274,8 +274,8 @@ func (d Date) daysToDateFromEpoch() uint64 {
 
 // AddParts add in succession years, months, and days to a date
 // - add years and then increment the date using the remainder days
-// - add days for each month to date
-// - add starting days to date
+// - add sum of days for months to date
+// - add days days to date
 func (d Date) AddParts(years int64, months, days int) (newDate Date, remainder int64, err error) {
 	dFinal := d
 
@@ -299,6 +299,8 @@ func (d Date) AddParts(years int64, months, days int) (newDate Date, remainder i
 				remainder := totalDays % 365
 				dFinal, err = dFinal.addDays(int(remainder))
 			} else {
+				// Get years with end in CE
+
 				startDays := d.daysToDateFromEpoch()
 
 				dEnd := d
@@ -332,7 +334,6 @@ func (d Date) AddParts(years int64, months, days int) (newDate Date, remainder i
 		// that many days to the date.
 		dFinal, err = dFinal.addMonths(months)
 		if err != nil {
-			fmt.Println("error", err)
 			return Date{}, 0, err
 		}
 	}
@@ -341,7 +342,6 @@ func (d Date) AddParts(years int64, months, days int) (newDate Date, remainder i
 	if days > 0 {
 		dFinal, err = dFinal.addDays(days)
 		if err != nil {
-			fmt.Println("error", err)
 			return Date{}, 0, err
 		}
 	}
@@ -354,17 +354,40 @@ func (d Date) AddParts(years int64, months, days int) (newDate Date, remainder i
 func (d Date) addMonths(add int) (d2 Date, err error) {
 	d2 = d
 
-	dNeutral := d2
-	// Should probably use d.year
-	dNeutral.year = 2019
-	daysInMonth := dNeutral.daysInMonth()
-	daysInMonth -= int(d2.day)
+	daysToAdd := 0
 	for i := 0; i < add; i++ {
-		d2, err = d2.addDays(daysInMonth)
-		if err != nil {
-			fmt.Println(err)
+		if d2.month == 12 {
+			d2.year++
+			d2.month = 1
+			d2.day = 1
+		} else {
+			if d2.month == 2 {
+				daysInMonth := d2.daysInMonth()
+				if daysInMonth == 29 {
+					daysToAdd++
+				}
+			}
+			d2.month++
+			d2.day = 1
 		}
 	}
+	// Add in extra days due to leap years
+	if daysToAdd > 0 {
+		d2, err = d2.addDays(daysToAdd)
+		if err != nil {
+			return Date{}, err
+		}
+	}
+
+	// daysInMonth := d2.daysInMonth()
+	// daysInMonth -= int(d2.day)
+	// for i := 0; i < add; i++ {
+	// 	d2, err = d2.addDays(daysInMonth)
+	// 	if err != nil {
+	// 		fmt.Println(err)
+	// 	}
+	// 	daysInMonth = d2.daysInMonth()
+	// }
 
 	// Do implicit validation of result
 	_, err = NewDate(d2.year, d2.month, d2.day)
@@ -385,8 +408,10 @@ func (d Date) addDays(add int) (date Date, err error) {
 		return Date{}, err
 	}
 	for add > 0 {
+		// fmt.Println("add", add, "days in month", daysInMonth, "day", d2.day)
 		if add >= daysInMonth && d2.day <= daysInMonth {
 			if d2.month >= 12 {
+				// fmt.Println("rolling year")
 				d2.year++
 				if d2.year == 0 {
 					d2.year = 1
@@ -396,36 +421,40 @@ func (d Date) addDays(add int) (date Date, err error) {
 				add = add - daysInMonth
 				daysInMonth = d2.daysInMonth()
 			} else {
-				d2.month++
-				d2.day = 1
-
-				daysInMonth = d2.daysInMonth()
-
+				// fmt.Println("date less than rolling", d2.String())
 				daysTilEOM := daysInMonth - d2.day
+				d2.day = 1
+				d2.month++
 				add = add - daysTilEOM
 
-				if daysTilEOM == 0 {
-					d2.day = 1
-					d2.month++
-					add--
-				} else {
-					add = add - daysTilEOM
-					d2.month++
-					d2.day = 1
-					add--
-				}
-				if d2.month >= 12 {
-					d2.year++
-					if d2.year == 0 {
-						d2.year = 1
-					}
-					d2.month = 1
-				}
+				// fmt.Println("days in month", d2.String(), "add", add, "days in month", daysInMonth, "daystilleom", daysTilEOM)
+				daysInMonth = d2.daysInMonth()
+
+				// if daysTilEOM == 0 {
+				// 	d2.day = 1
+				// 	d2.month++
+				// 	add--
+				// } else {
+				// 	add = add - daysTilEOM
+				// 	d2.month++
+				// 	d2.day = 1
+				// 	add--
+				// }
+				// if d2.month >= 12 {
+				// 	d2.year++
+				// 	if d2.year == 0 {
+				// 		d2.year = 1
+				// 	}
+				// 	d2.month = 1
+				// }
 			}
 			continue
 		} else {
 			if add+d2.day >= daysInMonth {
-				add = add - d2.day
+				daysTilEOM := daysInMonth - d2.day
+
+				// fmt.Println("fallthrough", "add", add, "day", d2.day, "days till eom", daysTilEOM)
+				add = add - daysTilEOM
 				d2.day = 1
 				d2.month++
 				if d2.month > 12 {
@@ -443,9 +472,10 @@ func (d Date) addDays(add int) (date Date, err error) {
 			}
 			// There are fewer days to add than are remaining in the month
 			d2.day += add
+			// fmt.Println("adding", add, "to", d2.String())
 			add = 0
-
-			break
+			// fmt.Println("add", add)
+			// break
 		}
 	}
 	_, err = NewDate(d2.year, d2.month, d2.day)
