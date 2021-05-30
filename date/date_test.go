@@ -335,6 +335,7 @@ func TestAddParts(t *testing.T) {
 		{y: 2019, m: 1, d: 1, addY: 10, addM: 0, addD: 0},
 		{y: 2019, m: 1, d: 1, addY: 1000, addM: 0, addD: 0},
 		{y: -4, m: 1, d: 1, addY: 10, addM: 0, addD: 0},
+		{y: -10, m: 1, d: 1, addY: 1, addM: 0, addD: 0},
 	}
 
 	for _, dt := range partList {
