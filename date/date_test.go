@@ -135,47 +135,15 @@ func TestWeekday(t *testing.T) {
 
 	year := int64(1970)
 	var leapYearCount int64
-	// if year < 100 {
 	leapYearCount = (year / 4) - (year / 100) + (year / 400)
 	t.Log(leapYearCount)
 
 	var partList = []dateParts{
-		// {-20, 1, 1},
-		// {-10, 1, 1},
-		// {-1, 12, 1},
-		// {-1, 12, 2},
-		// {-1, 12, 3},
-		// {-1, 12, 4},
-		// {-1, 12, 5},
-		// {-1, 12, 6},
-		// {-1, 12, 7},
-		// {-1, 12, 8},
-		// {-1, 12, 12},
-		// {-1, 12, 13},
-		// {-1, 12, 14},
-		// {-1, 12, 15},
-		// {-1, 12, 16},
-		// {-1, 12, 17},
-		// {-1, 12, 18},
-		// {-1, 12, 19},
-		// {-1, 12, 20},
-		// {-1, 12, 21},
-		// {-1, 12, 22},
-		// {-1, 12, 23},
-		// {-1, 12, 24},
-		// {-1, 12, 25},
-		// {-1, 12, 26},
-		// {-1, 12, 27},
-		// {-1, 12, 28},
-		// {-1, 12, 29},
-		// {-1, 12, 30},
-		// {-1, 12, 31},
+		{-1, 1, 1},
 		{1, 1, 1},
 		{20, 1, 1},
 		{40, 1, 1},
-
 		{1000, 1, 1},
-
 		{1867, 7, 1},
 		{1967, 7, 1},
 		{1968, 5, 26},
@@ -224,22 +192,6 @@ func TestDaysTo(t *testing.T) {
 	t.Log("days between", daysBetween)
 }
 
-// func TestGetBigYear(t *testing.T) {
-// 	is := is.New(t)
-
-// 	years := []int64{0, -1, -4, -5, -101, -201, -301, -401, -1001, -2001, 1, 4, 112, 200, 400, 1942, 2000, 1763}
-// 	d, err := NewDate(1, 1, 1)
-// 	is.NoErr(err)
-// 	for i := 0; i < len(years); i++ {
-// 		d.year = years[i]
-// 		bigYear := d.getBigYear()
-// 		isLeap := d.IsLeap()
-// 		aYear := astronomicalYear(d.year)
-// 		t.Logf("Got big year %-5d for year %-5d astronomical year %-5d Is leap %-5v", bigYear, d.year, aYear, isLeap)
-// 	}
-
-// }
-
 func TestIsLeap(t *testing.T) {
 	is := is.New(t)
 
@@ -249,11 +201,7 @@ func TestIsLeap(t *testing.T) {
 	}
 
 	tests := []yearWithVerify{
-		// {-4, true},
-		// {-5, false},
-		// // Consider what to do with year zero
-		// {0, true},
-		// {-1, false},
+		{-5, true},
 		{1000, false},
 		{2000, true},
 		{3000, false},
@@ -305,7 +253,6 @@ func TestToGregorianYear(t *testing.T) {
 	}
 
 	for i := 0; i < len(tests); i++ {
-		// year := fromGregorianYear(tests[i])
 		year := gregorianYear(tests[i])
 		t.Log(tests[i], "year", year, "isCE")
 	}
@@ -334,6 +281,7 @@ func TestAddParts(t *testing.T) {
 		{y: 2019, m: 1, d: 1, addY: 1000, addM: 0, addD: 0},
 		{y: 2019, m: 1, d: 1, addY: 0, addM: 240, addD: 0},
 		{y: 2019, m: 6, d: 1, addY: 0, addM: 0, addD: 10000},
+		// Covers a leap year. End date shoold have same month and day as start.
 		{y: 2020, m: 2, d: 1, addY: 0, addM: 0, addD: 366},
 		{y: -4, m: 1, d: 1, addY: 10, addM: 0, addD: 0},
 		{y: -10, m: 1, d: 1, addY: 1, addM: 0, addD: 0},
@@ -407,9 +355,6 @@ func TestString(t *testing.T) {
 		{-1000000, 3, 1},
 	}
 
-	// var err error
-	// var d Date
-
 	for _, p := range partList {
 		d, _ := NewDate(p.y, p.m, p.d)
 		t.Log(d.String())
@@ -479,29 +424,6 @@ func BenchmarkDaysSinceEpoch(b *testing.B) {
 	b.Logf("Days since epoch to %d", days)
 	is.True(days != 0)
 }
-
-// func BenchmarkWeekday(b *testing.B) {
-// 	is := is.New(b)
-
-// 	d, err := NewDate(2020, 3, 1)
-// 	is.NoErr(err)
-
-// 	var dow int
-
-// 	b.ResetTimer()
-// 	b.SetBytes(bechmarkBytesPerOp)
-// 	b.ReportAllocs()
-// 	b.SetParallelism(30)
-// 	b.RunParallel(func(pb *testing.PB) {
-// 		for pb.Next() {
-// 			dow, err = d.Weekday()
-// 		}
-// 	})
-
-// 	is.NoErr(err)
-// 	b.Log("day of week for 1 January,", d.year, dow)
-// 	is.True(dow != 0)
-// }
 
 //  2.220 ns/op	  0 B/op   0 allocs/op
 func BenchmarkDaysInMonth(b *testing.B) {
