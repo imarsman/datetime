@@ -176,6 +176,27 @@ func (d Date) daysInMonth() int {
 	return daysInMonth
 }
 
+// AtYearDay get date at day of year
+func (d Date) AtYearDay(day int) Date {
+	var days int = 0
+	copy := d
+	copy.year = copy.astronomicalYear()
+	for i := 1; i < 13; i++ {
+		copy.month = i
+		if copy.month > d.month {
+			break
+		}
+		if copy.month == d.month {
+			days += int(d.day)
+			break
+		}
+		val := copy.daysInMonth()
+		days += int(val)
+	}
+
+	return Date{}
+}
+
 // YearDay returns the day of the year specified by d, in the range [1,365] for
 // non-leap years, and [1,366] in leap years. The functionality should be the
 // same as for the Go time.YearDay func.
@@ -262,6 +283,40 @@ func (d Date) subtractDays(subtract int) (date Date, err error) {
 	}
 
 	return d2, nil
+}
+
+func dateFromDays(days int64, ce bool) (Date, error) {
+	var leapDayCount int64
+	daysAdjusted := days
+
+	years := int64(days) / 365
+
+	remainder := int64(days) % 365
+
+	// - add all years divisible by 4
+	// - subtract all years divisible by 100
+	// - add back all years divisible by 400
+	leapDayCount = ((years / 4) - 1) - ((years / 100) - 1) + (years / 400)
+	extraYears := leapDayCount / 365
+	daysRemaining := leapDayCount % 365
+
+	daysAdjusted = daysAdjusted - leapDayCount
+	years = daysAdjusted/365 + extraYears
+	if daysRemaining > 0 {
+		remainder = remainder - daysRemaining
+	}
+
+	if !ce {
+		years = -years
+	}
+
+	d, err := NewDate(years, 1, 1)
+	if err != nil {
+		return Date{}, err
+	}
+	fmt.Println("days", days, "leay day count", leapDayCount, "daysRemaining", daysRemaining, "starting years", years, "remainder", remainder, "date", d.String())
+
+	return Date{}, nil
 }
 
 func (d Date) daysToDateFromEpoch() uint64 {
