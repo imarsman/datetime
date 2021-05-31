@@ -285,6 +285,66 @@ func (d Date) subtractDays(subtract int) (date Date, err error) {
 	return d2, nil
 }
 
+func (d Date) fromDaysWithinYear(days int) (Date, error) {
+	if d.IsLeap() {
+		if days > 365 {
+			return Date{}, errors.New("Days exceeds year capacity")
+		}
+	} else {
+		if days > 364 {
+			return Date{}, errors.New("Days exceeds year capacity")
+		}
+	}
+	var d2 Date
+	var err error
+	if d.year > 0 {
+		d2, err = NewDate(d.year, 1, 1)
+		// fmt.Println("d2 CE", d2.String())
+		daysInMonth := d2.daysInMonth()
+		for {
+			if daysInMonth <= days {
+				days -= daysInMonth
+				d2.month++
+				daysInMonth = d2.daysInMonth()
+			} else {
+				// daysRemaining := daysInMonth - d2.day
+				// fmt.Println("days remaining", daysRemaining, "days", days)
+				d2.day += days
+				break
+			}
+			if d2.month > 12 {
+				return Date{}, errors.New("Day exceeds year")
+			}
+		}
+	} else {
+		d2, err = NewDate(d.year, 12, 31)
+		daysInMonth := d2.daysInMonth()
+		// fmt.Println("d2 BCE", d2.String())
+		for {
+			if daysInMonth <= days {
+				days -= daysInMonth
+				d2.month--
+				daysInMonth = d2.daysInMonth()
+				fmt.Println("Removed", daysInMonth, "new date", d2.String())
+			} else {
+				d2.day -= days
+				fmt.Println("Removing", days, "new date", d2.String())
+				break
+			}
+			if d2.month < 1 {
+				return Date{}, errors.New("Day exceeds year")
+			}
+		}
+	}
+	// fmt.Println("d2", d2)
+	_, err = NewDate(d2.year, d2.month, d2.day)
+	if err != nil {
+		return Date{}, err
+	}
+
+	return d2, nil
+}
+
 func dateFromDays(days int64, ce bool) (Date, error) {
 	var leapDayCount int64
 	daysAdjusted := days
@@ -307,16 +367,20 @@ func dateFromDays(days int64, ce bool) (Date, error) {
 	}
 
 	if !ce {
-		years = -years
+		years = -years - 1
 	}
 
 	d, err := NewDate(years, 1, 1)
 	if err != nil {
 		return Date{}, err
 	}
-	fmt.Println("days", days, "leay day count", leapDayCount, "daysRemaining", daysRemaining, "starting years", years, "remainder", remainder, "date", d.String())
+	fmt.Println("ce", ce, "days", days, "leay day count", leapDayCount, "daysRemaining", daysRemaining, "starting years", years, "remainder", remainder, "date", d.String())
+	d2, err := d.fromDaysWithinYear(int(remainder))
+	if err != nil {
+		return Date{}, err
+	}
 
-	return Date{}, nil
+	return d2, nil
 }
 
 func (d Date) daysToDateFromEpoch() uint64 {

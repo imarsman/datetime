@@ -323,6 +323,53 @@ func TestSubtractDays(t *testing.T) {
 
 }
 
+func TestDateFromDays(t *testing.T) {
+	is := is.New(t)
+
+	var partList = []datePartsWithVerify{
+		{-1, 10, 1, 91},
+		{-1, 12, 1, 30},
+		{1, 12, 1, 334},
+		{1000, 1, 15, 0},
+		{2020, 1, 30, 0},
+		{2021, 1, 30, 737819},
+	}
+
+	for _, p := range partList {
+		d, err := NewDate(p.y, p.m, p.d)
+		daysToEnd := d.daysToDateFromEpoch()
+		ce := d.year > 0
+		newDate, err := dateFromDays(int64(daysToEnd), ce)
+		is.NoErr(err)
+		is.NoErr(err)
+		if uint64(p.v) != 0 {
+			is.Equal(daysToEnd, uint64(p.v))
+		}
+		t.Log("Date", d.String(), "days to date", daysToEnd, "newDate", newDate.String())
+	}
+}
+
+func TestDaysToDate(t *testing.T) {
+	is := is.New(t)
+
+	var partList = []datePartsWithVerify{
+		{-1, 10, 1, 91},
+		{-1, 12, 1, 30},
+		{1, 12, 1, 334},
+		{2021, 1, 30, 737819},
+	}
+
+	for _, p := range partList {
+		d, err := NewDate(p.y, p.m, p.d)
+		daysToEnd := d.daysToDateFromEpoch()
+		is.NoErr(err)
+		if uint64(p.v) != 0 {
+			is.Equal(daysToEnd, uint64(p.v))
+		}
+		t.Log("Date", d.String(), "days to date", daysToEnd)
+	}
+}
+
 func TestDaysToYearEnd(t *testing.T) {
 	is := is.New(t)
 
