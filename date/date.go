@@ -325,10 +325,15 @@ func (d Date) fromDaysWithinYear(days int) (Date, error) {
 				days -= daysInMonth
 				d2.month--
 				daysInMonth = d2.daysInMonth()
-				fmt.Println("Removed", daysInMonth, "new date", d2.String())
+				// fmt.Println("LE Removed", daysInMonth, "new date", d2.String())
 			} else {
-				d2.day -= days
-				fmt.Println("Removing", days, "new date", d2.String())
+				if days > 0 {
+					d2.day -= days
+					// fmt.Println("EQ Removing", days, "new date", d2.String())
+				} else {
+					d2.day = 1
+					d2.month++
+				}
 				break
 			}
 			if d2.month < 1 {
@@ -347,46 +352,147 @@ func (d Date) fromDaysWithinYear(days int) (Date, error) {
 
 func dateFromDays(days int64, ce bool) (Date, error) {
 	var leapDayCount int64
-	daysAdjusted := days
 
-	years := int64(days) / 365
-
-	remainder := int64(days) % 365
+	years := days / 365
+	// fmt.Println("initial years", years)
+	fmt.Println("years", years, "days", days)
 
 	// - add all years divisible by 4
 	// - subtract all years divisible by 100
 	// - add back all years divisible by 400
-	leapDayCount = ((years / 4) - 1) - ((years / 100) - 1) + (years / 400)
-	extraYears := leapDayCount / 365
-	daysRemaining := leapDayCount % 365
-
-	daysAdjusted = daysAdjusted - leapDayCount
-	years = daysAdjusted/365 + extraYears
-	if daysRemaining > 0 {
-		remainder = remainder - daysRemaining
-	}
-
+	leapDayCount = (years / 4) - (years / 100) + (years / 400)
 	if !ce {
-		years = -years - 1
+		if isLeap(years - 1) {
+			leapDayCount--
+		}
+	} else {
+		if isLeap(years) {
+			leapDayCount--
+		}
 	}
+
+	extraYears := leapDayCount / 366
+	// if extraYears < 0 {
+	// 	fmt.Println("extra years pre adjustment", extraYears)
+	// 	extraYears = -extraYears
+	// }
+
+	leapDayRemainder := leapDayCount % 366
+	// daysRemaining := leapDayCount % 366
+
+	remainder := days % 365
+	fmt.Println("leap day count", leapDayCount, "remainder", remainder, "leap day remainder", leapDayRemainder)
+	// remainder += leapDayRemainder
+	// fmt.Println("remainder", remainder, "leap day remainder", leapDayRemainder)
+
+	// if remainder > leapDayRemainder {
+	// 	years++
+	// } else {
+	// 	years--
+	// }
+	// if remainder+leapDayRemainder > 365 {
+	// 	years++
+	// }
+
+	// fmt.Println("initial remainder", remainder)
+	// remainder = remainder - leapDayRemainder
+	// fmt.Println("leap day count", leapDayCount, "extra years", extraYears, "leap day remainder", leapDayRemainder, "remainder", remainder)
+
+	// daysAdjusted = daysAdjusted + leapDayCount
+	// years = daysAdjusted/365 + extraYears
+	// years = daysAdjusted / 365
+	// years = days / 365
+	// years = days / 365
+	// fmt.Println("years", years)
+	fmt.Println("years", years, "extra years", extraYears)
+	years = years - extraYears
+	fmt.Println("years", years)
+
+	// fmt.Println("years", years)
+	// years += extraYears
+	// years = years + extraYears
+
+	// fmt.Println("remainder", remainder, "days remaining", daysRemaining)
+	// if daysRemaining > 0 {
+	// 	if remainder > daysRemaining {
+	// 		if remainder+daysRemaining > 365 {
+	// 			// fmt.Println("adding year")
+	// 			// years++
+	// 		}
+	// 		// fmt.Println("gt")
+	// 		remainder = remainder - daysRemaining
+	// 	} else {
+	// 		if remainder+daysRemaining > 365 {
+	// 			// fmt.Println("adding year 2")
+	// 			// years++
+	// 			extra := 365 - daysRemaining
+	// 			remainder = remainder + extra
+	// 		} else {
+	// 			remainder = daysRemaining - remainder
+	// 		}
+	// 	}
+	// }
+
+	// if !ce {
+	// 	years = -years - 1
+	// }
 
 	d, err := NewDate(years, 1, 1)
 	if err != nil {
 		return Date{}, err
 	}
-	fmt.Println("ce", ce, "days", days, "leay day count", leapDayCount, "daysRemaining", daysRemaining, "starting years", years, "remainder", remainder, "date", d.String())
-	d2, err := d.fromDaysWithinYear(int(remainder))
-	if err != nil {
-		return Date{}, err
+	fmt.Println("ce", ce, "days", days, "leap day count", leapDayCount, "daysRemaining", remainder, "leapDayRemainder", leapDayRemainder, "date", d.String())
+
+	d2 := d
+	// Look at tests for 3999
+	if leapDayRemainder > remainder {
+		d2.year++
+	}
+	if remainder > leapDayRemainder && remainder+leapDayRemainder < 365 {
+		fmt.Println("greater than and over a year")
+		adjust := remainder - leapDayRemainder - extraYears
+		d2, err = d.fromDaysWithinYear(int(adjust))
+	} else if remainder > leapDayRemainder {
+		var adjust int64
+		fmt.Println("greater than and under a year")
+		if d2.IsLeap() {
+			fmt.Println("is leap")
+			extraYearAdj := extraYears - (extraYears / 4)
+			fmt.Println("adjust", adjust, "extraYearAdj", extraYearAdj)
+			adjust = remainder - leapDayRemainder - extraYearAdj
+			// adjust = remainder - leapDayRemainder - extraYears + 1
+		} else {
+			extraYearAdj := extraYears - (extraYears / 4)
+			adjust = remainder - leapDayRemainder - extraYearAdj
+			fmt.Println("adjust", adjust, "extraYearAdj", extraYearAdj)
+			// adjust = remainder - leapDayRemainder - extraYears
+		}
+		d2, err = d.fromDaysWithinYear(int(adjust))
+	}
+	// adjust := remainder
+	// if remainder > leapDayRemainder {
+	// 	adjust = remainder - leapDayRemainder
+	// }
+
+	// d2, err = d.fromDaysWithinYear(int(adjust))
+	// if err != nil {
+	// 	return Date{}, err
+	// }
+
+	if ce == false {
+		d2.year = -d2.year
 	}
 
 	return d2, nil
 }
 
-func (d Date) daysToDateFromEpoch() uint64 {
+func (d Date) daysToDateFromEpoch() int64 {
+	// To 1 Jan
 	daysToAnchorDate := daysToAnchorDayFromEpoch(d.year)
+
 	daysToDate := d.daysToDateFromAnchorDay()
-	totalDays := daysToAnchorDate + uint64(daysToDate)
+	totalDays := daysToAnchorDate + int64(daysToDate)
+	fmt.Println("date", d.String(), "days to anchor date", daysToAnchorDate, "days to date", daysToDate)
 
 	return totalDays
 }
@@ -461,7 +567,7 @@ func (d Date) AddParts(years int64, months, days int) (dFinal Date, remainder in
 func (d Date) AddYears(years int64) (dFinal Date, err error) {
 	dFinal = d
 
-	var totalDays uint64
+	var totalDays int64
 	if d.year < 0 {
 		if d.year+years > 0 {
 			startDays := d.daysToDateFromEpoch()
@@ -699,52 +805,82 @@ func (d Date) daysTo(d2 Date) int64 {
 	return int64(days2 - days1)
 }
 
+func (d Date) hasLeapDay() bool {
+	if d.IsLeap() {
+		if d.month == 1 {
+			return false
+		}
+		if d.month == 2 {
+			if d.day < 29 {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
+
 // For CE count forward from 1 Jan and for BCE count backward from 31 Dec
 func (d Date) daysToDateFromAnchorDay() int {
 	d2 := d
 	d2.day = 1
 	d2.month = 1
-	var startDateDays int64 = int64(daysToAnchorDayFromEpoch(d2.year))
-	if startDateDays < 0 {
-		startDateDays = -startDateDays
-	}
+	// var startDateDays int64 = int64(daysToAnchorDayFromEpoch(d2.year))
+	// if startDateDays < 0 {
+	// 	startDateDays = -startDateDays
+	// }
 	total := 0
 
+	days := 365
+
 	// Count forwards to date from 1 Jan
-	if d.year > 0 {
-		// Ignore error because whatever created attached date was validated already
-		d3, _ := NewDate(d.year, 1, 1)
-		for {
-			daysInMonth := d3.daysInMonth()
-			if d3.month == d.month {
-				total = total + d.day - 1
-				return total
-			}
-			total = total + daysInMonth
-			if d3.month >= 12 {
-				break
-			}
-			d3.month++
+	// if d.year > 0 {
+	// Ignore error because whatever created attached date was validated already
+	d3, _ := NewDate(d.year, 1, 1)
+	for {
+		daysInMonth := d3.daysInMonth()
+		if d3.month == d.month {
+			total = total + d.day - 1
+			break
 		}
-		// Count backwards to date from 31 Dec
-	} else {
-		d3, _ := NewDate(d.year, 12, 31)
-		for {
-			// Ignore error because whatever created attached date was validated already
-			daysInMonth := d3.daysInMonth()
-			if d3.month == d.month {
-				// fmt.Println("total", total)
-				total = total + (daysInMonth - d.day)
-				// fmt.Println("total", total)
-				return total
+		total = total + daysInMonth
+		if d3.month >= 12 {
+			break
+		}
+		d3.month++
+	}
+
+	if d.year < 0 {
+		// fmt.Println("days", days, "total", total, "isleap", d.IsLeap())
+		total = days - total - 1
+
+		// fmt.Println("days", days, "total", total, "isleap", d.IsLeap())
+		if d.IsLeap() {
+			if d.month <= 2 {
+				// fmt.Println("has leap day", "total", total)
+				total++
 			}
-			total = total + daysInMonth
-			if d3.month <= 1 {
-				break
-			}
-			d3.month--
 		}
 	}
+	// Count backwards to date from 31 Dec
+	// } else {
+	// 	d3, _ := NewDate(d.year, 12, 31)
+	// 	for {
+	// 		// Ignore error because whatever created attached date was validated already
+	// 		daysInMonth := d3.daysInMonth()
+	// 		if d3.month == d.month {
+	// 			// fmt.Println("total", total)
+	// 			total = total + (daysInMonth - d.day)
+	// 			// fmt.Println("total", total)
+	// 			return total
+	// 		}
+	// 		total = total + daysInMonth
+	// 		if d3.month <= 1 {
+	// 			break
+	// 		}
+	// 		d3.month--
+	// 	}
+	// }
 
 	return total
 }

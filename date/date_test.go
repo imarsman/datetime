@@ -94,6 +94,40 @@ func TestDayOfYear(t *testing.T) {
 	}
 }
 
+func TestDaysToDateFromAnchorDay(t *testing.T) {
+	is := is.New(t)
+	type datePartsWithVerify struct {
+		y int64
+		m int
+		d int
+		v int
+	}
+
+	var partList = []datePartsWithVerify{
+		{-10, 1, 1, 0},
+		{-10, 1, 2, 0},
+		{-1, 1, 18, 0},
+		{-1, 12, 1, 0},
+		{-2, 12, 31, 0},
+		{-4, 12, 1, 0},
+		{-5, 12, 30, 0},
+		{-5, 1, 1, 365},
+		{5, 1, 1, 0},
+		{1, 1, 5, 0},
+	}
+	for _, p := range partList {
+		d, err := NewDate(p.y, p.m, p.d)
+		is.NoErr(err)
+		daysToAnchor := daysToAnchorDayFromEpoch(d.year)
+		days := d.daysToDateFromAnchorDay()
+		if p.v != 0 {
+			is.Equal(days, p.v)
+		}
+		sum := daysToAnchor + int64(days)
+		t.Log("Days from anchor date to date", days, "days to anchor", daysToAnchor, "total from epoch", sum, "for", d.String())
+	}
+}
+
 func TestDaysInMonth(t *testing.T) {
 	is := is.New(t)
 	type datePartsWithVerify struct {
@@ -139,8 +173,14 @@ func TestWeekday(t *testing.T) {
 	t.Log(leapYearCount)
 
 	var partList = []dateParts{
+		{-2, 12, 31},
+		{-1, 12, 10},
+		{-1, 12, 17},
+		{-1, 12, 24},
+		{-1, 12, 31},
 		{-1, 1, 1},
 		{1, 1, 1},
+		{2, 12, 31},
 		{20, 1, 1},
 		{40, 1, 1},
 		{1000, 1, 1},
@@ -327,25 +367,54 @@ func TestDateFromDays(t *testing.T) {
 	is := is.New(t)
 
 	var partList = []datePartsWithVerify{
-		{-1, 10, 1, 91},
-		{-1, 12, 1, 30},
-		{1, 12, 1, 334},
-		{1000, 1, 15, 0},
-		{2020, 1, 30, 0},
-		{2021, 1, 30, 737819},
+		{-5000, 1, 30, 0},
+		{-4000, 1, 30, 0},
+		{-3000, 1, 30, 0},
+		{-1000, 1, 30, 0},
+		// {-30, 10, 1, 0},
+		// {-40, 10, 1, 0},
+		// {-1, 10, 1, 91},
+		// {-1, 12, 1, 30},
+		// {1, 12, 1, 334},
+		// {1000, 1, 15, 0},
+		// {1001, 1, 15, 0},
+		// {1500, 1, 15, 0},
+		// {2020, 1, 30, 0},
+		// {2000, 1, 30, 0},
+		// {2021, 1, 30, 737819},
+		// {3000, 1, 30, 0},
+		{100, 1, 30, 0},
+		{1000, 1, 30, 0},
+		{1001, 1, 30, 0},
+		{2000, 1, 30, 0},
+		{3000, 1, 30, 0},
+		{4000, 1, 30, 0},
+		{3999, 1, 30, 0},
+		{3999, 5, 30, 0},
+		{5000, 1, 30, 0},
+		{6000, 1, 30, 0},
+		{7000, 1, 30, 0},
+		{10000, 1, 30, 0},
+		{20000, 1, 30, 0},
+		{30000, 1, 30, 0},
+
+		{720, 1, 15, 0},
+		{50, 1, 15, 0},
+		{40, 1, 15, 0},
+		{30, 1, 15, 0},
 	}
 
 	for _, p := range partList {
 		d, err := NewDate(p.y, p.m, p.d)
-		daysToEnd := d.daysToDateFromEpoch()
+		daysToDate := d.daysToDateFromEpoch()
 		ce := d.year > 0
-		newDate, err := dateFromDays(int64(daysToEnd), ce)
+		newDate, err := dateFromDays(daysToDate, ce)
 		is.NoErr(err)
 		is.NoErr(err)
 		if uint64(p.v) != 0 {
-			is.Equal(daysToEnd, uint64(p.v))
+			is.Equal(daysToDate, int64(p.v))
 		}
-		t.Log("Date", d.String(), "days to date", daysToEnd, "newDate", newDate.String())
+		t.Log("Date", d.String(), "days to date", daysToDate, "newDate", newDate.String())
 	}
 }
 
@@ -479,7 +548,7 @@ func BenchmarkAddPartsShort(b *testing.B) {
 func BenchmarkDaysSinceEpoch(b *testing.B) {
 	is := is.New(b)
 
-	var days uint64
+	var days int64
 	var year int64
 
 	b.ResetTimer()

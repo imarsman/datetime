@@ -68,7 +68,6 @@ const (
 
 var daysForward = [...]int{1, 2, 3, 4, 5, 6, 7}
 
-// var daysBackward = [...]int{7, 6, 5, 4, 3, 2, 1}
 var daysBackward = [...]int{7, 6, 5, 4, 3, 2, 1}
 
 // From Golang time package
@@ -115,7 +114,6 @@ func countDaysBackward(start int, count int64) int {
 		if dow == 0 {
 			dow = 7
 		}
-		// fmt.Println("less than start", start, "count", count, "dow", dow)
 		return int(dow)
 	}
 	// The count assumes a day of 1 but the actual starting day can be different
@@ -123,7 +121,6 @@ func countDaysBackward(start int, count int64) int {
 
 	// Results will range from 0-6
 	dow := total % 7
-	// fmt.Println("greater than start", start, "count", count, "dow", dow)
 
 	return daysBackward[dow]
 }
@@ -143,7 +140,7 @@ func gregorianYear(inputYear int64) (year int64) {
 // daysToAnchorDayFromEpoch takes a year and returns the number of days from
 // the absolute epoch to the start of that year.
 // This will work for CE but not for BCE
-func daysToAnchorDayFromEpoch(year int64) uint64 {
+func daysToAnchorDayFromEpoch(year int64) int64 {
 	var leapDayCount int64
 
 	if year < 0 {
@@ -159,7 +156,7 @@ func daysToAnchorDayFromEpoch(year int64) uint64 {
 	// - add all years divisible by 4
 	// - subtract all years divisible by 100
 	// - add back all years divisible by 400
-	leapDayCount = ((astronomicalYear / 4) - 1) - ((astronomicalYear / 100) - 1) + (astronomicalYear / 400)
+	leapDayCount = (astronomicalYear / 4) - (astronomicalYear / 100) + (astronomicalYear / 400)
 
 	// TODO: See if there is interplay between the subtractions of 1 here and
 	// the days to date count.
@@ -167,6 +164,7 @@ func daysToAnchorDayFromEpoch(year int64) uint64 {
 
 	total := year * 365
 	total -= 365
+
 	total += leapDayCount
 
 	if isLeap(astronomicalYear) {
@@ -175,7 +173,7 @@ func daysToAnchorDayFromEpoch(year int64) uint64 {
 
 	// fmt.Println("year", year, "leap days", leapDayCount, "total", total)
 
-	return uint64(total)
+	return total
 }
 
 func isoWeekOfYearForDate(doy int, dow time.Weekday) int {
