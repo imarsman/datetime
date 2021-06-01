@@ -822,65 +822,37 @@ func (d Date) hasLeapDay() bool {
 
 // For CE count forward from 1 Jan and for BCE count backward from 31 Dec
 func (d Date) daysToDateFromAnchorDay() int {
-	d2 := d
-	d2.day = 1
-	d2.month = 1
-	// var startDateDays int64 = int64(daysToAnchorDayFromEpoch(d2.year))
-	// if startDateDays < 0 {
-	// 	startDateDays = -startDateDays
-	// }
 	total := 0
 
 	days := 365
 
 	// Count forwards to date from 1 Jan
-	// if d.year > 0 {
-	// Ignore error because whatever created attached date was validated already
-	d3, _ := NewDate(d.year, 1, 1)
+	d2, _ := NewDate(d.year, 1, 1)
 	for {
-		daysInMonth := d3.daysInMonth()
-		if d3.month == d.month {
+		daysInMonth := d2.daysInMonth()
+		if d2.month == d.month {
 			total = total + d.day - 1
 			break
 		}
 		total = total + daysInMonth
-		if d3.month >= 12 {
+		if d2.month >= 12 {
 			break
 		}
-		d3.month++
+		d2.month++
 	}
 
+	// Deal with reverse offset for BCE year.
 	if d.year < 0 {
-		// fmt.Println("days", days, "total", total, "isleap", d.IsLeap())
 		total = days - total - 1
 
-		// fmt.Println("days", days, "total", total, "isleap", d.IsLeap())
 		if d.IsLeap() {
+			// If a day is before end of February on a leap year there will be
+			// one more day back to 31 December.
 			if d.month <= 2 {
-				// fmt.Println("has leap day", "total", total)
 				total++
 			}
 		}
 	}
-	// Count backwards to date from 31 Dec
-	// } else {
-	// 	d3, _ := NewDate(d.year, 12, 31)
-	// 	for {
-	// 		// Ignore error because whatever created attached date was validated already
-	// 		daysInMonth := d3.daysInMonth()
-	// 		if d3.month == d.month {
-	// 			// fmt.Println("total", total)
-	// 			total = total + (daysInMonth - d.day)
-	// 			// fmt.Println("total", total)
-	// 			return total
-	// 		}
-	// 		total = total + daysInMonth
-	// 		if d3.month <= 1 {
-	// 			break
-	// 		}
-	// 		d3.month--
-	// 	}
-	// }
 
 	return total
 }
@@ -894,7 +866,11 @@ func (d Date) Weekday() int {
 	year := d.year
 
 	// This will count forward for CE and backward for BCE but give the results
-	// in both cases as a positive integer.
+	// in both cases as a positive integer. The anchor date for CE is 1-1-1. The
+	// anchor date for BCE is -1-12-31. Thus the days to anchor date will differ
+	// between CE and BCE as CE counts forward through the year and BCE
+	// effectively counts from 1 Jan as well but has to subtract from the number
+	// of days in the year.
 	dateDays := int64(daysToAnchorDayFromEpoch(year))
 
 	daysFromAnchorDay := d.daysToDateFromAnchorDay()

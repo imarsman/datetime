@@ -171,11 +171,10 @@ func daysToAnchorDayFromEpoch(year int64) int64 {
 		total--
 	}
 
-	// fmt.Println("year", year, "leap days", leapDayCount, "total", total)
-
 	return total
 }
 
+// This is orphaned and should not be
 func isoWeekOfYearForDate(doy int, dow time.Weekday) int {
 	var woy int = (10 + doy - int(dow)) % 7
 	return woy
