@@ -321,6 +321,8 @@ func TestAddParts(t *testing.T) {
 		{y: 2019, m: 1, d: 1, addY: 1000, addM: 0, addD: 0},
 		{y: 2019, m: 1, d: 1, addY: 0, addM: 1000, addD: 0},
 		{y: 2019, m: 6, d: 1, addY: 0, addM: 0, addD: 1000000},
+		{y: 2018, m: 6, d: 1, addY: 0, addM: 0, addD: 365},
+		{y: 2019, m: 6, d: 1, addY: 0, addM: 0, addD: 365},
 		// Covers a leap year. End date shoold have same month and day as start.
 		{y: 2020, m: 2, d: 1, addY: 0, addM: 0, addD: 366},
 		{y: -4, m: 1, d: 1, addY: 10, addM: 0, addD: 0},
@@ -423,6 +425,15 @@ func TestDateFromDays(t *testing.T) {
 		{30000, 1, 28, 0},
 		{30000, 1, 29, 0},
 		{30000, 1, 30, 0},
+		{40000, 1, 30, 0},
+		// Problems
+		{50000, 1, 30, 0},
+		{60000, 1, 30, 0},
+		{70000, 1, 30, 0},
+		{100000, 1, 30, 0},
+		{200000, 1, 30, 0},
+		{400000, 1, 30, 0},
+		{500000, 1, 30, 0},
 
 		{720, 1, 15, 0},
 		{50, 1, 15, 0},
@@ -575,6 +586,7 @@ func BenchmarkAddPartsLongDays(b *testing.B) {
 	var err error
 	var d Date
 	d, _ = NewDate(2019, 3, 1)
+	d2 := d
 	b.Log("starting date", d.String())
 	b.Logf("Add %d years %d months %d days", 0, 0, 1000000)
 
@@ -584,11 +596,11 @@ func BenchmarkAddPartsLongDays(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			d, _, err = d.AddParts(0, 0, 1000000)
+			d2, _, err = d.AddParts(0, 0, 1000000)
 		}
 	})
 
-	b.Log("caculated", d.String())
+	b.Log("caculated", d2.String())
 	is.NoErr(err)
 }
 
@@ -720,7 +732,7 @@ func BenchmarkFromDays(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			d2, err = d.fromDays(offset)
+			d2, err = d.AddDays(offset)
 			is.NoErr(err)
 		}
 	})

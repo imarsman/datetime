@@ -285,7 +285,29 @@ func (d Date) subtractDays(subtract int) (date Date, err error) {
 	return d2, nil
 }
 
-func (d Date) fromDays(days int) (Date, error) {
+// AddDays add days to a date
+func (d Date) AddDays(days int) (Date, error) {
+	// add := 0
+	// if days > 365 {
+	// 	for {
+	// 		daysFrom := d.daysToOneYearFromDate()
+	// 		if days < daysFrom {
+	// 			break
+	// 		}
+	// 		if daysFrom == 366 {
+	// 			add++
+	// 		}
+	// 		if d.year > 0 {
+	// 			d.year++
+	// 		} else {
+	// 			d.year--
+	// 		}
+	// 		days -= 365
+	// 	}
+	// }
+	// fmt.Println("add", add, d)
+	// days += add
+
 	var d2 Date
 	var err error
 	if d.year > 0 {
@@ -306,6 +328,7 @@ func (d Date) fromDays(days int) (Date, error) {
 				daysInMonth = d2.daysInMonth()
 			} else {
 				d2.day += days
+				// fmt.Println(d2)
 				break
 			}
 		}
@@ -403,58 +426,81 @@ func dateFromDays(days int64, ce bool) (Date, error) {
 		years++
 	}
 
-	// Compensate
-	if leapYearRemainder+commonDayRemainder > 365 {
-
-		// Need to understand why common day remainder is a high proportion of the
-		// leap year remainder
-		var ratio int64
-		if commonDayRemainder > 0 {
-			ratio = leapYearRemainder / commonDayRemainder
+	roundUp := func(val int, by int) int {
+		if val%by == 0 {
+			return val
 		}
-
-		if ce == true {
-			if isLeap(years) {
-				if dayAdd > 0 {
-					commonDayRemainder += dayAdd + 1
-				} else {
-					commonDayRemainder++
-				}
-			} else {
-				if ratio < 2 {
-					commonDayRemainder++
-				}
-				if dayAdd == 0 {
-					// fmt.Println("common day remainder 3", commonDayRemainder)
-				} else {
-					// fmt.Print("missing")
-				}
-			}
-			if yearAdd == 0 {
-				// commonDayRemainder++
-			} else {
-				// commonDayRemainder += yearAdd
-			}
-		} else {
-			commonDayRemainder += yearAdd - 1
-			if yearAdd == 0 {
-				commonDayRemainder++
-			}
-		}
-	} else {
-		fmt.Println("day add less", dayAdd)
-		yearsRef := years
-		if ce == false {
-			yearsRef = -yearsRef
-		}
-		if dayAdd > 0 {
-			if isLeap(years) {
-				commonDayRemainder = commonDayRemainder + dayAdd
-			} else {
-				commonDayRemainder = commonDayRemainder + dayAdd - 1
-			}
-		}
+		return (by - val%by) + val
 	}
+
+	fmt.Println("leapdaycount", leapDayCount, "yearAdd", yearAdd, "leapYears", leapYears, "dayadd", dayAdd, "commondayremainder", commonDayRemainder, "leapdayremainder", leapYearRemainder)
+
+	round := roundUp(int(dayAdd), 4)
+	if dayAdd == 1 {
+		round = 1
+	}
+	if leapYearRemainder > 300 {
+		round = int(dayAdd) + 1
+	}
+	if dayAdd == 0 {
+		round = 1
+	}
+	fmt.Println("round", round)
+	// Round dayAdd up to the nearest 4
+	// commonDayRemainder += dayAdd
+	commonDayRemainder += int64(round)
+	// Compensate
+	// if leapYearRemainder+commonDayRemainder > 365 {
+
+	// 	// Need to understand why common day remainder is a high proportion of the
+	// 	// leap year remainder
+	// 	// var ratio int64
+	// 	// if commonDayRemainder > 0 {
+	// 	// 	ratio = leapYearRemainder / commonDayRemainder
+	// 	// }
+
+	// 	commonDayRemainder += dayAdd
+	// 	// if ce == true {
+	// 	// 	if isLeap(years) {
+	// 	// 		if dayAdd > 0 {
+	// 	// 			commonDayRemainder += dayAdd + 1
+	// 	// 		} else {
+	// 	// 			commonDayRemainder++
+	// 	// 		}
+	// 	// 	} else {
+	// 	// 		if ratio < 2 {
+	// 	// 			// commonDayRemainder++
+	// 	// 		}
+	// 	// 		if dayAdd == 0 {
+	// 	// 			// fmt.Println("common day remainder 3", commonDayRemainder)
+	// 	// 		} else {
+	// 	// 			// fmt.Print("missing")
+	// 	// 		}
+	// 	// 	}
+	// 	// 	if yearAdd == 0 {
+	// 	// 		// commonDayRemainder++
+	// 	// 	} else {
+	// 	// 		// commonDayRemainder += yearAdd
+	// 	// 	}
+	// 	// } else {
+	// 	// 	commonDayRemainder += yearAdd - 1
+	// 	// 	if yearAdd == 0 {
+	// 	// 		commonDayRemainder++
+	// 	// 	}
+	// 	// }
+	// } else {
+	// 	// yearsRef := years
+	// 	// if ce == false {
+	// 	// 	yearsRef = -yearsRef
+	// 	// }
+	// 	// if dayAdd > 0 {
+	// 	// 	if isLeap(years) {
+	// 	// 		commonDayRemainder = commonDayRemainder + dayAdd
+	// 	// 	} else {
+	// 	// 		commonDayRemainder = commonDayRemainder + dayAdd - 1
+	// 	// 	}
+	// 	// }
+	// }
 
 	d, err := NewDate(years, 1, 1)
 	if err != nil {
@@ -466,18 +512,17 @@ func dateFromDays(days int64, ce bool) (Date, error) {
 		d.year = -d.year
 	}
 
-	d2, err = d.fromDays(int(commonDayRemainder))
+	d2, err = d.AddDays(int(commonDayRemainder))
 
 	return d2, nil
 }
 
 func (d Date) daysToDateFromEpoch() int64 {
-	// To 1 Jan
+	// To 1 Jan for CE or 31 Dec for BCE
 	daysToAnchorDate := daysToAnchorDayFromEpoch(d.year)
 
 	daysToDate := d.daysToDateFromAnchorDay()
 	totalDays := daysToAnchorDate + int64(daysToDate)
-	fmt.Println("date", d.String(), "days to anchor date", daysToAnchorDate, "days to date", daysToDate)
 
 	return totalDays
 }
@@ -558,11 +603,7 @@ func (d Date) AddParts(years int64, months, days int) (dFinal Date, remainder in
 
 	// Add days
 	if days > 0 {
-		// fmt.Println("adding days", days)
 		dFinal, err = dFinal.AddDays(days)
-		if err != nil {
-			return Date{}, 0, err
-		}
 	}
 
 	return dFinal, remainder, nil
@@ -699,10 +740,10 @@ func (d Date) AddMonths(add int) (d2 Date, err error) {
 	return d2, nil
 }
 
-// AddDays add days to a date
+// AddDaysOld add days to a date
 // Reasonably efficient given that it adds as many days at a time as possible.
 // TODO: Adding days will end up with more total days if leap days are added
-func (d Date) AddDays(add int) (date Date, err error) {
+func (d Date) AddDaysOld(add int) (date Date, err error) {
 	d2 := d
 	// fmt.Println("count leap days", countLeapDays)
 
@@ -727,7 +768,7 @@ func (d Date) AddDays(add int) (date Date, err error) {
 				d2.year++
 				if d2.IsLeap() {
 					fmt.Println(d2.String(), "is leap")
-					d2, err = d2.AddDays(1)
+					d2, err = d2.AddDaysOld(1)
 					if err != nil {
 						return Date{}, err
 					}
