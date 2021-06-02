@@ -227,7 +227,7 @@ func TestDaysTo(t *testing.T) {
 	d1, err := NewDate(2019, 6, 1)
 	is.NoErr(err)
 	d2, err := NewDate(2020, 6, 1)
-	daysBetween := d1.daysTo(d2)
+	daysBetween := d1.DaysTo(d2)
 
 	t.Log("days between", daysBetween)
 }
@@ -258,6 +258,15 @@ func TestIsLeap(t *testing.T) {
 		is.Equal(true, true)
 		t.Logf("mathematical year %-5d gregorian year %-5d isLeap %-5v verify %-5v", d.astronomicalYear(), d.year, isLeap, item.v)
 	}
+}
+
+func TestWeekOfYear(t *testing.T) {
+	is := is.New(t)
+	d, err := NewDate(2022, 7, 30)
+	is.NoErr(err)
+
+	woy := d.ISOWeekOfYear()
+	t.Log("week of year for", d, woy)
 }
 
 // TODO: verify this works with BCE years
@@ -420,16 +429,19 @@ func TestDateFromDays(t *testing.T) {
 		{10000, 1, 30, 0},
 
 		{20000, 1, 30, 0},
-		{20000, 7, 30, 0},
+		// {20000, 7, 30, 0},
 
-		{30000, 1, 28, 0},
-		{30000, 1, 29, 0},
+		// {30000, 1, 28, 0},
+		// {30000, 1, 29, 0},
 		{30000, 1, 30, 0},
 		{40000, 1, 30, 0},
 		// Problems
 		{50000, 1, 30, 0},
 		{60000, 1, 30, 0},
+		{60005, 1, 30, 0},
 		{70000, 1, 30, 0},
+		{80000, 1, 30, 0},
+		{90000, 1, 30, 0},
 		{100000, 1, 30, 0},
 		{200000, 1, 30, 0},
 		{400000, 1, 30, 0},
@@ -511,7 +523,7 @@ func TestDaysToOneYear(t *testing.T) {
 
 	for _, p := range partList {
 		d, _ := NewDate(p.y, p.m, p.d)
-		daysToOneYear := d.daysToOneYearFromDate()
+		daysToOneYear := d.daysOneYearFromDate()
 		t.Log(d.String(), "days to one year from", daysToOneYear)
 	}
 }
@@ -660,7 +672,7 @@ func BenchmarkDaysToOneYearFromDate(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			days = d.daysToOneYearFromDate()
+			days = d.daysOneYearFromDate()
 		}
 	})
 
@@ -766,7 +778,7 @@ func BenchmarkNewDate(b *testing.B) {
 func BenchmarkWeekday(b *testing.B) {
 	is := is.New(b)
 	var err error
-	d, err := NewDate(2020, 3, 1)
+	d, err := NewDate(200000, 3, 1)
 	is.NoErr(err)
 	var val int
 

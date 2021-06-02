@@ -176,6 +176,10 @@ func daysToAnchorDayFromEpoch(year int64) int64 {
 
 // This is orphaned and should not be
 func isoWeekOfYearForDate(doy int, dow time.Weekday) int {
-	var woy int = (10 + doy - int(dow)) % 7
+	// var woy int = (10 + doy - int(dow)) % 7
+	var woy int = (10 + doy - int(dow)) / 7
+
+	// fmt.Println((10 + doy - int(dow)))
+	// fmt.Println("doy", doy, "wd", dow, "woy", woy)
 	return woy
 }

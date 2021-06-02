@@ -210,11 +210,11 @@ func (d Date) YearDay() int {
 			break
 		}
 		if copy.month == d.month {
-			days += int(d.day)
+			days += d.day
 			break
 		}
 		val := copy.daysInMonth()
-		days += int(val)
+		days += val
 	}
 
 	return days
@@ -292,7 +292,7 @@ func (d Date) AddDays(days int) (Date, error) {
 	// Much faster than subtracting just days
 	if days > 365 {
 		for {
-			daysFrom := d.daysToOneYearFromDate()
+			daysFrom := d.daysOneYearFromDate()
 			if days < daysFrom {
 				break
 			}
@@ -325,7 +325,6 @@ func (d Date) AddDays(days int) (Date, error) {
 				daysInMonth = d2.daysInMonth()
 			} else {
 				d2.day += days
-				// fmt.Println(d2)
 				break
 			}
 		}
@@ -361,6 +360,9 @@ func (d Date) AddDays(days int) (Date, error) {
 	return d2, nil
 }
 
+// dateFromDays ascertain a date from days from the epoch.
+// This currently is not reliable. It is correct about 80% of the time but other
+// times is off by a day or two. This is mostly an experiment.
 func dateFromDays(days int64, ce bool) (Date, error) {
 	var leapDayCount int64
 
@@ -380,124 +382,70 @@ func dateFromDays(days int64, ce bool) (Date, error) {
 		}
 	}
 
-	// every 1550 years there is an extra year of leap days.
-	const extraYearMultiple = 1550
+	leapRatio := float64(leapDayCount) / float64(days)
 
-	commonDays := days - leapDayCount
+	// ctx := apd.BaseContext.WithPrecision(10)
+	// leapDayCountAPD := apd.New(leapDayCount, 0)
+	// leapYearsAPD := apd.New(days, 0)
+	// _, err := ctx.Quo(leapYearsAPD, leapDayCountAPD, apd.New(365, 0))
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+
+	// daysAPD := apd.New(days, 0)
+	// extraDaysAPD := apd.New(0, 0)
+	// dayCountAPD := apd.New(days, 0)
+
+	// leapRatioAPD := apd.New(0, 0)
+
+	// _, err = ctx.Quo(leapRatioAPD, leapDayCountAPD, dayCountAPD)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+	// _, err = ctx.Mul(extraDaysAPD, daysAPD, leapRatioAPD)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+
+	// // extraDaysInt64, _ := extraDaysAPD.Int64()
+
+	// commondDaysAPD := apd.New(0, 0)
+	// _, err = ctx.Sub(commondDaysAPD, dayCountAPD, extraDaysAPD)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+	// commondDaysRemainderAPD := apd.New(0, 0)
+	// _, err = ctx.Rem(commondDaysRemainderAPD, commondDaysAPD, apd.New(365, 0))
+
+	// fmt.Println("extra days", extraDaysAPD, "days", daysAPD, "leap days", leapDayCountAPD, "days", dayCountAPD, "leap ratio", leapRatioAPD, "extra days", extraDaysInt64, "common days", commondDaysAPD, "remainder", commondDaysRemainderAPD, "leap years", leapYearsAPD)
+
+	// every 1550 years there is an extra year of leap days.
+	// const extraYearMultiple = 1550
+
+	extraDays := float64(days) * leapRatio
+	// extraDays := float64(days) * leapRatio
+
+	commonDays := days - int64(extraDays)
+	commonYears := commonDays / 365
+
+	years = commonYears + 1
+
+	dayAdjust := years / 10000
+	dayAdjust += years / 20000
+
+	if dayAdjust > 0 {
+		dayAdjust++
+	}
+
 	commonDayRemainder := commonDays % 365
 
-	commonYears := commonDays / 365
-	years = commonYears
-
-	leapYears := leapDayCount / 365
-	leapYearRemainder := leapDayCount % 365
-
-	var yearAdd int64 = 0
-	var dayAdd int64 = 0
-
-	if years > int64(extraYearMultiple) {
-		yearAdd = leapDayCount / int64(extraYearMultiple)
-		dayAdd = yearAdd
-
-		yearAdd = leapYears - yearAdd + 1
-
-		if yearAdd != 0 {
-			years = years - leapYears + 1
-		} else {
-			years = years + yearAdd
-		}
-		if leapYearRemainder+commonDayRemainder > 365 {
-			years--
-			days += yearAdd
-			if yearAdd == 0 {
-				days++
-			}
-		}
-	} else {
-		if leapYears == 0 {
-			years++
-		}
-	}
-	years += leapYears
-	if leapYearRemainder+commonDayRemainder > 365 {
-		years++
-	}
-
-	roundUp := func(val int, by int) int {
-		if val%by == 0 {
-			return val
-		}
-		return (by - val%by) + val
-	}
-
-	fmt.Println("leapdaycount", leapDayCount, "yearAdd", yearAdd, "leapYears", leapYears, "dayadd", dayAdd, "commondayremainder", commonDayRemainder, "leapdayremainder", leapYearRemainder)
-
-	round := roundUp(int(dayAdd), 4)
-	if dayAdd == 1 {
-		round = 1
-	}
-	if leapYearRemainder > 300 {
-		round = int(dayAdd) + 1
-	}
-	if dayAdd == 0 {
-		round = 1
-	}
-	fmt.Println("round", round)
-	// Round dayAdd up to the nearest 4
-	// commonDayRemainder += dayAdd
-	commonDayRemainder += int64(round)
-	// Compensate
-	// if leapYearRemainder+commonDayRemainder > 365 {
-
-	// 	// Need to understand why common day remainder is a high proportion of the
-	// 	// leap year remainder
-	// 	// var ratio int64
-	// 	// if commonDayRemainder > 0 {
-	// 	// 	ratio = leapYearRemainder / commonDayRemainder
-	// 	// }
-
-	// 	commonDayRemainder += dayAdd
-	// 	// if ce == true {
-	// 	// 	if isLeap(years) {
-	// 	// 		if dayAdd > 0 {
-	// 	// 			commonDayRemainder += dayAdd + 1
-	// 	// 		} else {
-	// 	// 			commonDayRemainder++
-	// 	// 		}
-	// 	// 	} else {
-	// 	// 		if ratio < 2 {
-	// 	// 			// commonDayRemainder++
-	// 	// 		}
-	// 	// 		if dayAdd == 0 {
-	// 	// 			// fmt.Println("common day remainder 3", commonDayRemainder)
-	// 	// 		} else {
-	// 	// 			// fmt.Print("missing")
-	// 	// 		}
-	// 	// 	}
-	// 	// 	if yearAdd == 0 {
-	// 	// 		// commonDayRemainder++
-	// 	// 	} else {
-	// 	// 		// commonDayRemainder += yearAdd
-	// 	// 	}
-	// 	// } else {
-	// 	// 	commonDayRemainder += yearAdd - 1
-	// 	// 	if yearAdd == 0 {
-	// 	// 		commonDayRemainder++
-	// 	// 	}
-	// 	// }
-	// } else {
-	// 	// yearsRef := years
-	// 	// if ce == false {
-	// 	// 	yearsRef = -yearsRef
-	// 	// }
-	// 	// if dayAdd > 0 {
-	// 	// 	if isLeap(years) {
-	// 	// 		commonDayRemainder = commonDayRemainder + dayAdd
-	// 	// 	} else {
-	// 	// 		commonDayRemainder = commonDayRemainder + dayAdd - 1
-	// 	// 	}
-	// 	// }
+	// if isLeap(years) {
+	// 	commonDayRemainder++
 	// }
+	// fmt.Println("day adjust", dayAdjust)
+	commonDayRemainder += dayAdjust
+
+	fmt.Println("days", commonDays, "leap ratio", leapRatio, "leap days", leapDayCount, "extra days", extraDays, "years", years, "days remainder", commonDayRemainder, "leap day remainder")
 
 	d, err := NewDate(years, 1, 1)
 	if err != nil {
@@ -506,10 +454,15 @@ func dateFromDays(days int64, ce bool) (Date, error) {
 
 	d2 := d
 	if ce == false {
-		d.year = -d.year
+		d2.year = -d2.year
 	}
 
-	d2, err = d.AddDays(int(commonDayRemainder))
+	// dAdjust := d
+	// if ce == false {
+	// 	dAdjust.year = -dayAdjust.year
+	// }
+
+	d2, err = d2.AddDays(int(commonDayRemainder))
 
 	return d2, nil
 }
@@ -524,10 +477,10 @@ func (d Date) daysToDateFromEpoch() int64 {
 	return totalDays
 }
 
-// daysToOneYearFromDate add a year and if the intervening days have a leap year days
+// daysOneYearFromDate add a year and if the intervening days have a leap year days
 // return 366, else return 365.
 // This is much cheaper than calculating days since epoch to date.
-func (d Date) daysToOneYearFromDate() int {
+func (d Date) daysOneYearFromDate() int {
 	hasLeap := d.IsLeap()
 	if hasLeap {
 		if d.month > 2 {
@@ -612,6 +565,7 @@ func (d Date) AddYears(years int64) (dFinal Date, err error) {
 
 	var totalDays int64
 	if d.year < 0 {
+		// TODO: test this
 		if d.year+years > 0 {
 			startDays := d.daysToDateFromEpoch()
 
@@ -622,7 +576,7 @@ func (d Date) AddYears(years int64) (dFinal Date, err error) {
 
 			totalDays = endDays + startDays
 			newYears := totalDays / 365
-			dFinal.year += int64(newYears) + 1 // Crossing CE boundary
+			dFinal.year += newYears + 1 // Crossing CE boundary
 			remainder := totalDays % 365
 			dFinal, err = dFinal.AddDays(int(remainder))
 		} else {
@@ -637,7 +591,7 @@ func (d Date) AddYears(years int64) (dFinal Date, err error) {
 
 			totalDays = endDays - startDays
 			newYears := totalDays / 365
-			dFinal.year += int64(newYears)
+			dFinal.year += newYears
 			remainder := totalDays % 365
 			dFinal, err = dFinal.AddDays(int(remainder))
 		}
@@ -650,7 +604,7 @@ func (d Date) AddYears(years int64) (dFinal Date, err error) {
 
 		totalDays = endDays - startDays
 		newYears := totalDays / 365
-		dFinal.year += int64(newYears)
+		dFinal.year += newYears
 		remainder := totalDays % 365
 		dFinal, err = dFinal.AddDays(int(remainder))
 	}
@@ -671,22 +625,16 @@ func (d Date) AddMonths(add int) (d2 Date, err error) {
 		for {
 			// Asking for year days using IsLeap logic is much much faster than
 			// counting days from epoch to date.
-			daysBetween := d2.daysToOneYearFromDate()
+			daysBetween := d2.daysOneYearFromDate()
 			if daysBetween < 0 {
 				break
 			}
 			if add >= 12 {
-				// if daysBetween == 366 {
-				// 	d2, err = d2.AddDays(1)
-				// 	if err != nil {
-				// 		return Date{}, err
-				// 	}
-				// }
-				// d2.year++
 				d2, err = d2.AddYears(1)
 				if err != nil {
 					return Date{}, err
 				}
+				// Subtract 12 months from the number of months to add
 				add -= 12
 				if add < 12 {
 					break
@@ -712,21 +660,12 @@ func (d Date) AddMonths(add int) (d2 Date, err error) {
 					if err != nil {
 						return Date{}, err
 					}
-					// daysToAdd++
 				}
 			}
 			d2.month++
 			d2.day = 1
 		}
 	}
-	// Add in extra days due to leap years
-	// if daysToAdd > 0 {
-	// 	// fmt.Println("adding days", daysToAdd)
-	// 	d2, err = d2.AddDays(daysToAdd, true)
-	// 	if err != nil {
-	// 		return Date{}, err
-	// 	}
-	// }
 
 	// Do implicit validation of result
 	_, err = NewDate(d2.year, d2.month, d2.day)
@@ -751,12 +690,10 @@ func (d Date) AddDaysOld(add int) (date Date, err error) {
 	// Without adding years: 27300 ns/op   0.37 MB/s   0 B/op   0 allocs/op
 	// With and without the years add produces same result
 	if add > 365 {
-		// dForward := d2
-		// dForward.year++
 		for {
 			// Asking for year days using IsLeap logic is much much faster than
 			// counting days from epoch to date.
-			daysBetween := d2.daysToOneYearFromDate()
+			daysBetween := d2.daysOneYearFromDate()
 			// fmt.Println("d2", d2.String(), "add", add, "days between", daysBetween)
 			if daysBetween < 0 {
 				break
@@ -841,14 +778,16 @@ func (d Date) AddDaysOld(add int) (date Date, err error) {
 	return d2, nil
 }
 
-func (d Date) daysTo(d2 Date) int64 {
+// DaysTo get the number of days to a date
+func (d Date) DaysTo(d2 Date) int64 {
 	days1 := d.daysToDateFromEpoch()
 	days2 := d2.daysToDateFromEpoch()
 
 	return int64(days2 - days1)
 }
 
-func (d Date) hasLeapDay() bool {
+// AtOrPastLeapDay is the date at or past leap day
+func (d Date) AtOrPastLeapDay() bool {
 	if d.IsLeap() {
 		if d.month == 1 {
 			return false
@@ -906,23 +845,18 @@ func (d Date) daysToDateFromAnchorDay() int {
 // See https://www.thecalculatorsite.com/time/days-between-dates.php
 // - seems to calculate according to proleptic Gregorian calendar
 func (d Date) Weekday() int {
-	year := d.year
-
 	// This will count forward for CE and backward for BCE but give the results
 	// in both cases as a positive integer. The anchor date for CE is 1-1-1. The
 	// anchor date for BCE is -1-12-31. Thus the days to anchor date will differ
 	// between CE and BCE as CE counts forward through the year and BCE
 	// effectively counts from 1 Jan as well but has to subtract from the number
 	// of days in the year.
-	dateDays := int64(daysToAnchorDayFromEpoch(year))
 
-	daysFromAnchorDay := d.daysToDateFromAnchorDay()
-
-	totalDays := dateDays + int64(daysFromAnchorDay)
-	// fmt.Println("total days to", d.String(), totalDays)
+	// Use function that adds up the days to the date
+	totalDays := d.daysToDateFromEpoch()
 
 	var dow int
-	if year > 0 {
+	if d.year > 0 {
 		// Count days forward, taking into account the starting day for
 		// CE or BCE.
 		dow = countDaysForward(firstDOWCE, totalDays)
@@ -933,6 +867,18 @@ func (d Date) Weekday() int {
 	}
 
 	return dow
+}
+
+// ISOWeekOfYear get ISO week of year. Not working properly currently.
+func (d Date) ISOWeekOfYear() int {
+	doy := d.daysToDateFromAnchorDay()
+	d2 := d
+	d2.month = 1
+	d2.day = 1
+	wd := d.Weekday()
+	fmt.Println("doy", doy, "wd", wd)
+
+	return isoWeekOfYearForDate(doy, time.Weekday(wd))
 }
 
 // ISOWeeksInYear get number of ISO weeks in year
