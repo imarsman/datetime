@@ -286,27 +286,24 @@ func (d Date) subtractDays(subtract int) (date Date, err error) {
 }
 
 // AddDays add days to a date
+// With year subtractions    -  1818 ns/op   5.50 MB/s   0 B/op   0 allocs/op
+// Without year subtractions - 23472 ns/op   0.43 MB/s   1 B/op   0 allocs/op
 func (d Date) AddDays(days int) (Date, error) {
-	// add := 0
-	// if days > 365 {
-	// 	for {
-	// 		daysFrom := d.daysToOneYearFromDate()
-	// 		if days < daysFrom {
-	// 			break
-	// 		}
-	// 		if daysFrom == 366 {
-	// 			add++
-	// 		}
-	// 		if d.year > 0 {
-	// 			d.year++
-	// 		} else {
-	// 			d.year--
-	// 		}
-	// 		days -= 365
-	// 	}
-	// }
-	// fmt.Println("add", add, d)
-	// days += add
+	// Much faster than subtracting just days
+	if days > 365 {
+		for {
+			daysFrom := d.daysToOneYearFromDate()
+			if days < daysFrom {
+				break
+			}
+			if d.year > 0 {
+				d.year++
+			} else {
+				d.year--
+			}
+			days -= daysFrom
+		}
+	}
 
 	var d2 Date
 	var err error
