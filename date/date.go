@@ -285,63 +285,54 @@ func (d Date) subtractDays(subtract int) (date Date, err error) {
 	return d2, nil
 }
 
-func (d Date) fromDaysWithinYear(days int) (Date, error) {
-	if d.IsLeap() {
-		if days > 365 {
-			return Date{}, errors.New("Days exceeds year capacity")
-		}
-	} else {
-		if days > 364 {
-			return Date{}, errors.New("Days exceeds year capacity")
-		}
-	}
+func (d Date) fromDays(days int) (Date, error) {
 	var d2 Date
 	var err error
 	if d.year > 0 {
-		d2, err = NewDate(d.year, 1, 1)
-		// fmt.Println("d2 CE", d2.String())
+		d2 = d
+		if err != nil {
+			return Date{}, err
+		}
 		daysInMonth := d2.daysInMonth()
 		for {
 			if daysInMonth <= days {
 				days -= daysInMonth
 				d2.month++
+				if d2.month > 12 {
+					d2.month = 1
+					d2.day = 1
+					d2.year++
+				}
 				daysInMonth = d2.daysInMonth()
 			} else {
-				// daysRemaining := daysInMonth - d2.day
-				// fmt.Println("days remaining", daysRemaining, "days", days)
 				d2.day += days
 				break
 			}
-			if d2.month > 12 {
-				return Date{}, errors.New("Day exceeds year")
-			}
 		}
 	} else {
-		d2, err = NewDate(d.year, 12, 31)
+		d2 = d
+		if err != nil {
+			return Date{}, err
+		}
 		daysInMonth := d2.daysInMonth()
-		// fmt.Println("d2 BCE", d2.String())
 		for {
 			if daysInMonth <= days {
 				days -= daysInMonth
 				d2.month--
+				d2.day = daysInMonth
 				daysInMonth = d2.daysInMonth()
-				// fmt.Println("LE Removed", daysInMonth, "new date", d2.String())
-			} else {
-				if days > 0 {
-					d2.day -= days
-					// fmt.Println("EQ Removing", days, "new date", d2.String())
-				} else {
-					d2.day = 1
-					d2.month++
+				if d2.month < 1 {
+					d2.month = 12
+					d2.day = 31
+					d2.year--
+					daysInMonth = d2.daysInMonth()
 				}
+			} else {
+				d2.day -= days
 				break
-			}
-			if d2.month < 1 {
-				return Date{}, errors.New("Day exceeds year")
 			}
 		}
 	}
-	// fmt.Println("d2", d2)
 	_, err = NewDate(d2.year, d2.month, d2.day)
 	if err != nil {
 		return Date{}, err
@@ -354,8 +345,6 @@ func dateFromDays(days int64, ce bool) (Date, error) {
 	var leapDayCount int64
 
 	years := days / 365
-	// fmt.Println("initial years", years)
-	fmt.Println("years", years, "days", days)
 
 	// - add all years divisible by 4
 	// - subtract all years divisible by 100
@@ -371,117 +360,113 @@ func dateFromDays(days int64, ce bool) (Date, error) {
 		}
 	}
 
-	extraYears := leapDayCount / 366
-	// if extraYears < 0 {
-	// 	fmt.Println("extra years pre adjustment", extraYears)
-	// 	extraYears = -extraYears
-	// }
+	// every 1550 years there is an extra year of leap days.
+	const extraYearMultiple = 1550
 
-	leapDayRemainder := leapDayCount % 366
-	// daysRemaining := leapDayCount % 366
+	commonDays := days - leapDayCount
+	commonDayRemainder := commonDays % 365
 
-	remainder := days % 365
-	fmt.Println("leap day count", leapDayCount, "remainder", remainder, "leap day remainder", leapDayRemainder)
-	// remainder += leapDayRemainder
-	// fmt.Println("remainder", remainder, "leap day remainder", leapDayRemainder)
+	commonYears := commonDays / 365
+	years = commonYears
 
-	// if remainder > leapDayRemainder {
-	// 	years++
-	// } else {
-	// 	years--
-	// }
-	// if remainder+leapDayRemainder > 365 {
-	// 	years++
-	// }
+	leapYears := leapDayCount / 365
+	leapYearRemainder := leapDayCount % 365
 
-	// fmt.Println("initial remainder", remainder)
-	// remainder = remainder - leapDayRemainder
-	// fmt.Println("leap day count", leapDayCount, "extra years", extraYears, "leap day remainder", leapDayRemainder, "remainder", remainder)
+	var yearAdd int64 = 0
+	var dayAdd int64 = 0
 
-	// daysAdjusted = daysAdjusted + leapDayCount
-	// years = daysAdjusted/365 + extraYears
-	// years = daysAdjusted / 365
-	// years = days / 365
-	// years = days / 365
-	// fmt.Println("years", years)
-	fmt.Println("years", years, "extra years", extraYears)
-	years = years - extraYears
-	fmt.Println("years", years)
+	if years > int64(extraYearMultiple) {
+		yearAdd = leapDayCount / int64(extraYearMultiple)
+		dayAdd = yearAdd
 
-	// fmt.Println("years", years)
-	// years += extraYears
-	// years = years + extraYears
+		yearAdd = leapYears - yearAdd + 1
 
-	// fmt.Println("remainder", remainder, "days remaining", daysRemaining)
-	// if daysRemaining > 0 {
-	// 	if remainder > daysRemaining {
-	// 		if remainder+daysRemaining > 365 {
-	// 			// fmt.Println("adding year")
-	// 			// years++
-	// 		}
-	// 		// fmt.Println("gt")
-	// 		remainder = remainder - daysRemaining
-	// 	} else {
-	// 		if remainder+daysRemaining > 365 {
-	// 			// fmt.Println("adding year 2")
-	// 			// years++
-	// 			extra := 365 - daysRemaining
-	// 			remainder = remainder + extra
-	// 		} else {
-	// 			remainder = daysRemaining - remainder
-	// 		}
-	// 	}
-	// }
+		if yearAdd != 0 {
+			years = years - leapYears + 1
+		} else {
+			years = years + yearAdd
+		}
+		if leapYearRemainder+commonDayRemainder > 365 {
+			years--
+			days += yearAdd
+			if yearAdd == 0 {
+				days++
+			}
+		}
+	} else {
+		if leapYears == 0 {
+			years++
+		}
+	}
+	years += leapYears
+	if leapYearRemainder+commonDayRemainder > 365 {
+		years++
+	}
 
-	// if !ce {
-	// 	years = -years - 1
-	// }
+	// Compensate
+	if leapYearRemainder+commonDayRemainder > 365 {
+
+		// Need to understand why common day remainder is a high proportion of the
+		// leap year remainder
+		var ratio int64
+		if commonDayRemainder > 0 {
+			ratio = leapYearRemainder / commonDayRemainder
+		}
+
+		if ce == true {
+			if isLeap(years) {
+				if dayAdd > 0 {
+					commonDayRemainder += dayAdd + 1
+				} else {
+					commonDayRemainder++
+				}
+			} else {
+				if ratio < 2 {
+					commonDayRemainder++
+				}
+				if dayAdd == 0 {
+					// fmt.Println("common day remainder 3", commonDayRemainder)
+				} else {
+					// fmt.Print("missing")
+				}
+			}
+			if yearAdd == 0 {
+				// commonDayRemainder++
+			} else {
+				// commonDayRemainder += yearAdd
+			}
+		} else {
+			commonDayRemainder += yearAdd - 1
+			if yearAdd == 0 {
+				commonDayRemainder++
+			}
+		}
+	} else {
+		fmt.Println("day add less", dayAdd)
+		yearsRef := years
+		if ce == false {
+			yearsRef = -yearsRef
+		}
+		if dayAdd > 0 {
+			if isLeap(years) {
+				commonDayRemainder = commonDayRemainder + dayAdd
+			} else {
+				commonDayRemainder = commonDayRemainder + dayAdd - 1
+			}
+		}
+	}
 
 	d, err := NewDate(years, 1, 1)
 	if err != nil {
 		return Date{}, err
 	}
-	fmt.Println("ce", ce, "days", days, "leap day count", leapDayCount, "daysRemaining", remainder, "leapDayRemainder", leapDayRemainder, "date", d.String())
 
 	d2 := d
-	// Look at tests for 3999
-	if leapDayRemainder > remainder {
-		d2.year++
-	}
-	if remainder > leapDayRemainder && remainder+leapDayRemainder < 365 {
-		fmt.Println("greater than and over a year")
-		adjust := remainder - leapDayRemainder - extraYears
-		d2, err = d.fromDaysWithinYear(int(adjust))
-	} else if remainder > leapDayRemainder {
-		var adjust int64
-		fmt.Println("greater than and under a year")
-		if d2.IsLeap() {
-			fmt.Println("is leap")
-			extraYearAdj := extraYears - (extraYears / 4)
-			fmt.Println("adjust", adjust, "extraYearAdj", extraYearAdj)
-			adjust = remainder - leapDayRemainder - extraYearAdj
-			// adjust = remainder - leapDayRemainder - extraYears + 1
-		} else {
-			extraYearAdj := extraYears - (extraYears / 4)
-			adjust = remainder - leapDayRemainder - extraYearAdj
-			fmt.Println("adjust", adjust, "extraYearAdj", extraYearAdj)
-			// adjust = remainder - leapDayRemainder - extraYears
-		}
-		d2, err = d.fromDaysWithinYear(int(adjust))
-	}
-	// adjust := remainder
-	// if remainder > leapDayRemainder {
-	// 	adjust = remainder - leapDayRemainder
-	// }
-
-	// d2, err = d.fromDaysWithinYear(int(adjust))
-	// if err != nil {
-	// 	return Date{}, err
-	// }
-
 	if ce == false {
-		d2.year = -d2.year
+		d.year = -d.year
 	}
+
+	d2, err = d.fromDays(int(commonDayRemainder))
 
 	return d2, nil
 }
@@ -511,19 +496,39 @@ func (d Date) daysToOneYearFromDate() int {
 		}
 	}
 	d2 := d
-	d2.year++
-	if !hasLeap {
-		hasLeap = d2.IsLeap()
-		if hasLeap {
-			// It's a leap year and we're past the leap day
-			if d2.month > 2 {
-				hasLeap = true
-				return 366
-			}
-			if d2.month == 2 {
-				// It's a leap year and we're on the leap day
-				if d2.day == 29 {
+	if d.year > 0 {
+		d2.year++
+		if !hasLeap {
+			hasLeap = d2.IsLeap()
+			if hasLeap {
+				// It's a leap year and we're past the leap day
+				if d2.month > 2 {
+					hasLeap = true
 					return 366
+				}
+				if d2.month == 2 {
+					// It's a leap year and we're on the leap day
+					if d2.day == 29 {
+						return 366
+					}
+				}
+			}
+		}
+	} else {
+		d2.year--
+		if !hasLeap {
+			hasLeap = d2.IsLeap()
+			if hasLeap {
+				// It's a leap year and we're past the leap day
+				if d2.month < 2 {
+					hasLeap = true
+					return 366
+				}
+				if d2.month == 2 {
+					// It's a leap year and we're on the leap day
+					if d2.day < 29 {
+						return 366
+					}
 				}
 			}
 		}

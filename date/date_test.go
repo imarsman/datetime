@@ -369,8 +369,8 @@ func TestDateFromDays(t *testing.T) {
 	var partList = []datePartsWithVerify{
 		{-5000, 1, 30, 0},
 		{-4000, 1, 30, 0},
-		{-3000, 1, 30, 0},
-		{-1000, 1, 30, 0},
+		// {-3000, 1, 30, 0},
+		// {-1000, 1, 30, 0},
 		// {-30, 10, 1, 0},
 		// {-40, 10, 1, 0},
 		// {-1, 10, 1, 91},
@@ -386,22 +386,50 @@ func TestDateFromDays(t *testing.T) {
 		{100, 1, 30, 0},
 		{1000, 1, 30, 0},
 		{1001, 1, 30, 0},
+		{1550, 1, 1, 0},
 		{2000, 1, 30, 0},
-		{3000, 1, 30, 0},
-		{4000, 1, 30, 0},
+
+		// {3000, 1, 30, 0},
+		// {3100, 1, 30, 0},
+		{4500, 1, 30, 0},
+		{4500, 1, 29, 0},
+		{5100, 1, 30, 0},
+
 		{3999, 1, 30, 0},
+		{3999, 2, 1, 0},
+		{3999, 3, 1, 0},
+		{3999, 4, 1, 0},
+
+		{3999, 4, 15, 0},
+		{3999, 5, 1, 0},
+		{3999, 5, 15, 0},
+		{3999, 5, 20, 0},
+		{3999, 5, 29, 0},
 		{3999, 5, 30, 0},
+		{3999, 7, 29, 0},
+		{3999, 8, 29, 0},
+		{3999, 9, 29, 0},
+
 		{5000, 1, 30, 0},
 		{6000, 1, 30, 0},
+
 		{7000, 1, 30, 0},
+
 		{10000, 1, 30, 0},
+
 		{20000, 1, 30, 0},
+		{20000, 7, 30, 0},
+
+		{30000, 1, 28, 0},
+		{30000, 1, 29, 0},
 		{30000, 1, 30, 0},
 
 		{720, 1, 15, 0},
 		{50, 1, 15, 0},
 		{40, 1, 15, 0},
 		{30, 1, 15, 0},
+
+		{3150, 1, 30, 0},
 	}
 
 	for _, p := range partList {
@@ -460,6 +488,23 @@ func TestDaysToYearEnd(t *testing.T) {
 	}
 }
 
+func TestDaysToOneYear(t *testing.T) {
+	var partList = []dateParts{
+		{2019, 3, 1},
+		{2019, 1, 1},
+		{-1, 12, 31},
+		{-4, 12, 31},
+		{-4, 2, 28},
+		{-4, 1, 28},
+	}
+
+	for _, p := range partList {
+		d, _ := NewDate(p.y, p.m, p.d)
+		daysToOneYear := d.daysToOneYearFromDate()
+		t.Log(d.String(), "days to one year from", daysToOneYear)
+	}
+}
+
 func TestString(t *testing.T) {
 	var partList = []dateParts{
 		{2018, 3, 1},
@@ -475,6 +520,29 @@ func TestString(t *testing.T) {
 		d, _ := NewDate(p.y, p.m, p.d)
 		t.Log(d.String())
 	}
+}
+
+// 21.90 ns/op   16 B/op   1 allocs/op
+func BenchmarkDateFromDays(b *testing.B) {
+	is := is.New(b)
+	var d Date
+	ce := d.year > 0
+
+	d, err := NewDate(2020, 1, 1)
+	is.NoErr(err)
+	daysToDate := d.daysToDateFromEpoch()
+
+	b.ResetTimer()
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			d, err = dateFromDays(daysToDate, ce)
+			is.NoErr(err)
+		}
+	})
+
 }
 
 func BenchmarkAddPartsLongMonths(b *testing.B) {
@@ -545,6 +613,7 @@ func BenchmarkAddPartsShort(b *testing.B) {
 	is.NoErr(err)
 }
 
+// 4.297 ns/op   0 B/op	  0 allocs/op
 func BenchmarkDaysSinceEpoch(b *testing.B) {
 	is := is.New(b)
 
@@ -562,6 +631,28 @@ func BenchmarkDaysSinceEpoch(b *testing.B) {
 	})
 
 	b.Logf("Days since epoch to %d", days)
+	is.True(days != 0)
+}
+
+//  7.621 ns/op   0 B/op   0 allocs/op
+func BenchmarkDaysToOneYearFromDate(b *testing.B) {
+	is := is.New(b)
+
+	d, err := NewDate(2020, 1, 1)
+	is.NoErr(err)
+	var days int
+
+	b.ResetTimer()
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			days = d.daysToOneYearFromDate()
+		}
+	})
+
+	b.Logf("Days to one year from %s %d", d.String(), days)
 	is.True(days != 0)
 }
 
@@ -610,8 +701,32 @@ func BenchmarkDayOfYear(b *testing.B) {
 	})
 	is.NoErr(err)
 
-	b.Log("day of year", dayOfYear)
+	b.Log("day of year for", d.String(), dayOfYear)
 	is.True(dayOfYear != 0)
+}
+
+func BenchmarkFromDays(b *testing.B) {
+	is := is.New(b)
+	var err error
+
+	d, err := NewDate(-2020, 1, 1)
+	var offset int = 365
+	var d2 Date
+	is.NoErr(err)
+
+	b.ResetTimer()
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			d2, err = d.fromDays(offset)
+			is.NoErr(err)
+		}
+	})
+	is.NoErr(err)
+
+	b.Log("Starting date", d.String(), offset, "days since", d2.String())
 }
 
 // 11.81 ns/op   0 B/op	  0 allocs/op
