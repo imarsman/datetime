@@ -287,92 +287,89 @@ func (d Date) subtractDays(subtract int) (date Date, err error) {
 // AddDays add days to a date
 // With year subtractions    -  1818 ns/op   5.50 MB/s   0 B/op   0 allocs/op
 // Without year subtractions - 23472 ns/op   0.43 MB/s   1 B/op   0 allocs/op
+// Currently very inefficient for values of billions of years
+// Can likely improve by doing a calculation over all intervening years instead
+// of year by year. This would involve doing leap days counting taking into
+// account the start day of year and end day of year.
 func (d Date) AddDays(days int64) (Date, error) {
-	// fmt.Println("days", days)
-	// Much faster than subtracting just days
-
 	var d2 Date
 	d2 = d
 
-	// if days > 366 {
-	// 	years := days / 365
-	// 	daysMinus := years * 365
-	// 	// fmt.Println("years", years)
-	// 	ay := astronomicalYear(years)
-	// 	leapDayCount := (ay / 4) - (ay / 100) + (ay / 400)
-	// 	leapYearAdjustment := leapDayCount / 365
-	// 	d2.year = years
-	// 	if leapYearAdjustment == 0 {
-	// 		d2.year = d2.year + 1
-	// 	} else if d.year > 0 {
-	// 		d2.year = years - leapYearAdjustment
-	// 		// fmt.Println("adjusting years", years, d2)
-	// 	}
-	// 	leapDayAdjustment := d.leapDaysNYearsFromDate(years)
+	// var startingYears int64 = 400
+	// var ay int64 = startingYears
+	// var leapDayCount int64 = (ay / 4) - (ay / 100) + (ay / 400)
+	// var baseDays int64 = 365*400 + leapDayCount
 
-	// 	fmt.Println("d2", d2, "adjustment", leapDayAdjustment, "leap day count", leapDayCount, "ay", ay, "leap year adjustment", leapYearAdjustment)
+	// 400 years of days, including leap days
+	const baseDays int64 = 146097
 
-	// 	if d.year < 0 {
-	// 		d2.year = -d2.year
-	// 	}
-	// 	if leapDayCount > 365 {
-	// 		fmt.Println("adjusting leap day count")
-	// 		leapDayAdjustment = leapDayCount % 365
-	// 	}
-	// 	fmt.Println("days minus", daysMinus, "days", days, "leap day adjustment", leapDayAdjustment)
-	// 	if days > daysMinus {
-	// 		fmt.Println(days - daysMinus - leapDayAdjustment)
-	// 		days = days - daysMinus - leapDayAdjustment
-	// 		if days < 0 {
-	// 			days = -days
-	// 		}
-	// 		// days = leapDayAdjustment - days
-	// 	} else {
-	// 		days -= daysMinus + leapDayAdjustment
-	// 	}
-	// 	fmt.Println("days minus", daysMinus, "days", days, "leap day adjustment", leapDayAdjustment)
-	// }
-	// fmt.Println("d2", d2)
+	// fmt.Println("baseDays", baseDays)
+	chunks := days / int64(baseDays)
 
-	lastDays := 0
-	if days > 366 {
-		for {
-			daysFrom := d2.daysOneYearFromDate()
-			if days < int64(daysFrom) {
-				break
-			}
-			if d2.year > 0 {
-				d2.year++
-			} else {
-				d2.year--
-			}
-			lastDays = daysFrom
-			days -= int64(daysFrom)
+	// fmt.Println("chunks", chunks)
+	if chunks > 0 {
+		chunkTotal := chunks * baseDays
+		days = days - chunkTotal
+
+		if chunks > 0 && d.year < 0 {
+			days++
 		}
-	}
-	if lastDays == 366 {
-		// fmt.Println("last days", lastDays, d2)
-		if d2.year > 0 {
+		if chunks > 0 && d.year > 0 {
 			days--
 		}
-		//  else {
-		// 	days--
-		// }
+		if chunks == 0 && d.year > 0 {
+			days++
+		}
+
+		d2.year = chunks * 400
+		if d.year < 0 {
+			days--
+			d2.year = -d2.year
+			d2.year = d2.year - 1
+		}
+		if d2.year > 0 {
+			d2.year = d2.year + 1
+		}
 	} else {
-		if d2.year > 0 {
-			days--
-		} else {
-			d3 := d2
-			d3.year = d3.year - 1
-			fmt.Println(d2, d2.astronomicalYear(), d2.IsLeap(), d3, d3.astronomicalYear(), d3.IsLeap())
-			if d2.IsLeap() || d3.IsLeap() {
-				days--
-				fmt.Println("leap", d3)
-			}
-		}
-		// days--
-		// fmt.Println("leap days", lastDays, d2)
+		days--
 	}
+	// d2 = d3
+
+	// var lastLeapYear int64 = 0
+	// if days > 366 && true == false {
+	// 	for {
+	// 		daysFrom := d2.daysOneYearFromDate()
+	// 		if days < int64(daysFrom) {
+	// 			break
+	// 		}
+	// 		if d2.year > 0 {
+	// 			d2.year++
+	// 		} else {
+	// 			d2.year--
+	// 		}
+	// 		if daysFrom == 366 {
+	// 			lastLeapYear = d2.year
+	// 		}
+	// 		days -= int64(daysFrom)
+	// 	}
+	// }
+	// // The daysOneYearFromDate looks at two years, which can skew the days count
+	// if lastLeapYear == d2.year {
+	// 	if d2.IsLeap() == false {
+	// 		days--
+	// 	}
+	// } else {
+	// 	d3 := d2
+	// 	d3.year = lastLeapYear
+	// 	if d3.IsLeap() == false {
+	// 		days--
+	// 	} else {
+	// 		abs := math.Abs(float64(d2.year)) - math.Abs(float64(lastLeapYear))
+	// 		if abs > 1 {
+	// 			days--
+	// 		}
+	// 	}
+	// }
 
 	var err error
 	if d.year > 0 {
