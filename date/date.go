@@ -118,9 +118,7 @@ func astronomicalYear(year int64) int64 {
 	if year == 0 {
 		return 1
 	} else if year <= -1 {
-		// fmt.Println("astronomical year", year)
 		year++
-		// fmt.Println("astronomical year", year)
 	}
 
 	return year
@@ -165,7 +163,7 @@ func (d Date) Day() int {
 func (d Date) daysInMonth() int {
 	// validate calls this so there should be a valid month and year
 	daysInMonth := gregorian.DaysInMonth[d.month]
-	year := d.yearAbs()
+	year := d.astronomicalYear()
 	leapD := d
 	leapD.year = year
 	isLeap := leapD.IsLeap()
@@ -290,7 +288,7 @@ func (d Date) subtractDays(subtract int) (date Date, err error) {
 // Without year subtractions - 23472 ns/op   0.43 MB/s   1 B/op   0 allocs/op
 func (d Date) AddDays(days int64) (Date, error) {
 	// Much faster than subtracting just days
-	if days > 365 {
+	if days > 366 {
 		for {
 			daysFrom := d.daysOneYearFromDate()
 			if days < int64(daysFrom) {
@@ -334,12 +332,19 @@ func (d Date) AddDays(days int64) (Date, error) {
 			return Date{}, err
 		}
 		daysInMonth := d2.daysInMonth()
+		// fmt.Println("starting with days", days, "for", d, "days in month", daysInMonth)
 		for {
 			if int64(daysInMonth) <= days {
+				// if d2.year == -7000 {
+				// 	fmt.Println(d2, "days", days)
+				// }
 				days -= int64(daysInMonth)
 				d2.month--
-				d2.day = daysInMonth
 				daysInMonth = d2.daysInMonth()
+				d2.day = daysInMonth
+				// if d2.year == -7000 {
+				// 	fmt.Println(d2, "days", days)
+				// }
 				if d2.month < 1 {
 					d2.month = 12
 					d2.day = 31
@@ -347,6 +352,9 @@ func (d Date) AddDays(days int64) (Date, error) {
 					daysInMonth = d2.daysInMonth()
 				}
 			} else {
+				if days == 1 && d2.day == 1 {
+					break
+				}
 				d2.day -= int(days)
 				break
 			}
@@ -544,10 +552,10 @@ func (d Date) daysToDateFromEpoch() int64 {
 // return 366, else return 365.
 // This is much cheaper than calculating days since epoch to date.
 func (d Date) daysOneYearFromDate() int {
-	hasLeap := d.IsLeap()
-	if hasLeap {
+	isLeap := d.IsLeap()
+	if isLeap {
 		if d.month > 2 {
-			hasLeap = false
+			isLeap = false
 		} else {
 			// It's a leap year and we are in February with the leap day
 			return 366
@@ -556,12 +564,12 @@ func (d Date) daysOneYearFromDate() int {
 	d2 := d
 	if d.year > 0 {
 		d2.year++
-		if !hasLeap {
-			hasLeap = d2.IsLeap()
-			if hasLeap {
+		if !isLeap {
+			isLeap = d2.IsLeap()
+			if isLeap {
 				// It's a leap year and we're past the leap day
 				if d2.month > 2 {
-					hasLeap = true
+					isLeap = true
 					return 366
 				}
 				if d2.month == 2 {
@@ -570,22 +578,44 @@ func (d Date) daysOneYearFromDate() int {
 						return 366
 					}
 				}
+			} else {
+				d2.year++
+				isLeap = d2.IsLeap()
+				if isLeap {
+					if d2.month <= 2 {
+						if d2.month == 2 && d2.day < 29 {
+							return 366
+						}
+					}
+				}
 			}
 		}
 	} else {
 		d2.year--
-		if !hasLeap {
-			hasLeap = d2.IsLeap()
-			if hasLeap {
+		if !isLeap {
+			isLeap = d2.IsLeap()
+			if isLeap {
 				// It's a leap year and we're past the leap day
-				if d2.month < 2 {
-					hasLeap = true
+				if d2.month > 2 {
+					isLeap = true
 					return 366
 				}
-				if d2.month == 2 {
+				if d2.month <= 2 {
+					isLeap = true
+					return 366
 					// It's a leap year and we're on the leap day
-					if d2.day < 29 {
-						return 366
+					// if d2.day < 29 {
+					// 	return 366
+					// }
+				}
+			} else {
+				d2.year--
+				isLeap = d2.IsLeap()
+				if isLeap {
+					if d2.month <= 2 {
+						if d2.month == 2 && d2.day < 29 {
+							return 366
+						}
 					}
 				}
 			}
@@ -764,7 +794,7 @@ func (d Date) AddDaysOld(add int) (date Date, err error) {
 			if int(daysBetween) <= add {
 				d2.year++
 				if d2.IsLeap() {
-					fmt.Println(d2.String(), "is leap")
+					// fmt.Println(d2.String(), "is leap")
 					d2, err = d2.AddDaysOld(1)
 					if err != nil {
 						return Date{}, err
