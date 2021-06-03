@@ -119,6 +119,7 @@ func astronomicalYear(year int64) int64 {
 		return 1
 	} else if year <= -1 {
 		year++
+		// fmt.Println("astronomical year", year)
 	}
 
 	return year
@@ -287,26 +288,95 @@ func (d Date) subtractDays(subtract int) (date Date, err error) {
 // With year subtractions    -  1818 ns/op   5.50 MB/s   0 B/op   0 allocs/op
 // Without year subtractions - 23472 ns/op   0.43 MB/s   1 B/op   0 allocs/op
 func (d Date) AddDays(days int64) (Date, error) {
+	// fmt.Println("days", days)
 	// Much faster than subtracting just days
+
+	var d2 Date
+	d2 = d
+
+	// if days > 366 {
+	// 	years := days / 365
+	// 	daysMinus := years * 365
+	// 	// fmt.Println("years", years)
+	// 	ay := astronomicalYear(years)
+	// 	leapDayCount := (ay / 4) - (ay / 100) + (ay / 400)
+	// 	leapYearAdjustment := leapDayCount / 365
+	// 	d2.year = years
+	// 	if leapYearAdjustment == 0 {
+	// 		d2.year = d2.year + 1
+	// 	} else if d.year > 0 {
+	// 		d2.year = years - leapYearAdjustment
+	// 		// fmt.Println("adjusting years", years, d2)
+	// 	}
+	// 	leapDayAdjustment := d.leapDaysNYearsFromDate(years)
+
+	// 	fmt.Println("d2", d2, "adjustment", leapDayAdjustment, "leap day count", leapDayCount, "ay", ay, "leap year adjustment", leapYearAdjustment)
+
+	// 	if d.year < 0 {
+	// 		d2.year = -d2.year
+	// 	}
+	// 	if leapDayCount > 365 {
+	// 		fmt.Println("adjusting leap day count")
+	// 		leapDayAdjustment = leapDayCount % 365
+	// 	}
+	// 	fmt.Println("days minus", daysMinus, "days", days, "leap day adjustment", leapDayAdjustment)
+	// 	if days > daysMinus {
+	// 		fmt.Println(days - daysMinus - leapDayAdjustment)
+	// 		days = days - daysMinus - leapDayAdjustment
+	// 		if days < 0 {
+	// 			days = -days
+	// 		}
+	// 		// days = leapDayAdjustment - days
+	// 	} else {
+	// 		days -= daysMinus + leapDayAdjustment
+	// 	}
+	// 	fmt.Println("days minus", daysMinus, "days", days, "leap day adjustment", leapDayAdjustment)
+	// }
+	// fmt.Println("d2", d2)
+
+	lastDays := 0
 	if days > 366 {
 		for {
-			daysFrom := d.daysOneYearFromDate()
+			daysFrom := d2.daysOneYearFromDate()
 			if days < int64(daysFrom) {
 				break
 			}
-			if d.year > 0 {
-				d.year++
+			if d2.year > 0 {
+				d2.year++
 			} else {
-				d.year--
+				d2.year--
 			}
+			lastDays = daysFrom
 			days -= int64(daysFrom)
 		}
 	}
+	if lastDays == 366 {
+		// fmt.Println("last days", lastDays, d2)
+		if d2.year > 0 {
+			days--
+		}
+		//  else {
+		// 	days--
+		// }
+	} else {
+		if d2.year > 0 {
+			days--
+		} else {
+			d3 := d2
+			d3.year = d3.year - 1
+			fmt.Println(d2, d2.astronomicalYear(), d2.IsLeap(), d3, d3.astronomicalYear(), d3.IsLeap())
+			if d2.IsLeap() || d3.IsLeap() {
+				days--
+				fmt.Println("leap", d3)
+			}
+		}
+		// days--
+		// fmt.Println("leap days", lastDays, d2)
+	}
 
-	var d2 Date
 	var err error
 	if d.year > 0 {
-		d2 = d
+		// d2 = d
 		if err != nil {
 			return Date{}, err
 		}
@@ -327,24 +397,17 @@ func (d Date) AddDays(days int64) (Date, error) {
 			}
 		}
 	} else {
-		d2 = d
+		// d2 = d
 		if err != nil {
 			return Date{}, err
 		}
 		daysInMonth := d2.daysInMonth()
-		// fmt.Println("starting with days", days, "for", d, "days in month", daysInMonth)
 		for {
 			if int64(daysInMonth) <= days {
-				// if d2.year == -7000 {
-				// 	fmt.Println(d2, "days", days)
-				// }
 				days -= int64(daysInMonth)
 				d2.month--
 				daysInMonth = d2.daysInMonth()
 				d2.day = daysInMonth
-				// if d2.year == -7000 {
-				// 	fmt.Println(d2, "days", days)
-				// }
 				if d2.month < 1 {
 					d2.month = 12
 					d2.day = 31
@@ -414,7 +477,7 @@ func dateFromDaysOld(days int64, ce bool) (Date, error) {
 	commonYears := commonDayCount / 365
 	commonDayRemainder := commonDayCount % 365
 
-	fmt.Println("leap day count", leapDayCount, "remainder", commonDayRemainder)
+	// fmt.Println("leap day count", leapDayCount, "remainder", commonDayRemainder)
 	toAdd := commonDayRemainder + leapDayCount
 	toAdd = leapDayCount - toAdd
 	if toAdd < 0 {
@@ -548,76 +611,162 @@ func (d Date) daysToDateFromEpoch() int64 {
 	return totalDays
 }
 
+func (d Date) leapDaysNYearsFromDate(from int64) int64 {
+	ay := astronomicalYear(d.year)
+	if isLeap(d.year) {
+		// fmt.Println("leap")
+	}
+	leapDayCount := (ay / 4) - (ay / 100) + (ay / 400)
+	yearsFrom := d.year + from
+	if isLeap(yearsFrom) {
+		// fmt.Println("leap 2")
+	}
+	ay = astronomicalYear(yearsFrom)
+	leapDayCount2 := (ay / 4) - (ay / 100) + (ay / 400)
+	leapDayCount = leapDayCount2 - leapDayCount
+
+	// totalYears := yearsFrom - d.year
+
+	if leapDayCount > 365 {
+		leapDayCount = leapDayCount % 365
+	}
+	return leapDayCount
+	// totalDays := 365*totalYears + leapDayCount
+	// fmt.Println("total years", totalYears, "leapDayCount", leapDayCount, "total days", totalDays)
+
+	// isLeap := d.IsLeap()
+	// if isLeap {
+	// 	if d.month > 2 {
+	// 		isLeap = false
+	// 	} else {
+	// 		// It's a leap year and we are in February with the leap day
+	// 		return 366
+	// 	}
+	// }
+	// d2 := d
+	// d2.year = yearsFrom
+	// if d.year > 0 {
+	// 	d2.year++
+	// 	if !isLeap {
+	// 		isLeap = d2.IsLeap()
+	// 		if isLeap {
+	// 			// It's a leap year and we're past the leap day
+	// 			if d2.month > 2 {
+	// 				isLeap = true
+	// 				return 366
+	// 			}
+	// 			if d2.month == 2 {
+	// 				// It's a leap year and we're on the leap day
+	// 				if d2.day == 29 {
+	// 					return 366
+	// 				}
+	// 			}
+	// 		} else {
+	// 			d2.year++
+	// 			isLeap = d2.IsLeap()
+	// 			if isLeap {
+	// 				if d2.month <= 2 {
+	// 					if d2.month == 2 && d2.day < 29 {
+	// 						return 366
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// } else {
+	// 	d2.year--
+	// 	if !isLeap {
+	// 		isLeap = d2.IsLeap()
+	// 		if isLeap {
+	// 			// It's a leap year and we're past the leap day
+	// 			if d2.month > 2 {
+	// 				isLeap = true
+	// 				return 366
+	// 			}
+	// 			if d2.month <= 2 {
+	// 				isLeap = true
+	// 				return 366
+	// 				// It's a leap year and we're on the leap day
+	// 				// if d2.day < 29 {
+	// 				// 	return 366
+	// 				// }
+	// 			}
+	// 		} else {
+	// 			d2.year--
+	// 			isLeap = d2.IsLeap()
+	// 			if isLeap {
+	// 				if d2.month <= 2 {
+	// 					if d2.month == 2 && d2.day < 29 {
+	// 						return 366
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// }
+
+	// return 365
+}
+
 // daysOneYearFromDate add a year and if the intervening days have a leap year days
 // return 366, else return 365.
 // This is much cheaper than calculating days since epoch to date.
 func (d Date) daysOneYearFromDate() int {
-	isLeap := d.IsLeap()
-	if isLeap {
-		if d.month > 2 {
-			isLeap = false
-		} else {
-			// It's a leap year and we are in February with the leap day
-			return 366
-		}
-	}
 	d2 := d
-	if d.year > 0 {
-		d2.year++
-		if !isLeap {
+	if d2.year > 0 {
+		isLeap := d2.IsLeap()
+		if isLeap == false {
+			d2.year++
 			isLeap = d2.IsLeap()
 			if isLeap {
-				// It's a leap year and we're past the leap day
 				if d2.month > 2 {
-					isLeap = true
+					return 365
+				}
+				// if d2.month < 2 {
+				// 	fmt.Println(d2, isLeap)
+				// 	return 366
+				// }
+				if d2.month == 2 && d2.day == 29 {
 					return 366
 				}
-				if d2.month == 2 {
-					// It's a leap year and we're on the leap day
-					if d2.day == 29 {
-						return 366
-					}
-				}
-			} else {
-				d2.year++
-				isLeap = d2.IsLeap()
-				if isLeap {
-					if d2.month <= 2 {
-						if d2.month == 2 && d2.day < 29 {
-							return 366
-						}
-					}
-				}
+			}
+		} else {
+			if d2.month < 2 {
+				// fmt.Println("366", d2)
+				return 366
+			}
+			// if d2.month < 2 {
+			// 	return 366
+			// }
+			if d2.month == 2 && d2.day < 29 {
+				return 366
 			}
 		}
 	} else {
+		isLeap := d2.IsLeap()
 		d2.year--
 		if !isLeap {
 			isLeap = d2.IsLeap()
 			if isLeap {
-				// It's a leap year and we're past the leap day
+				if d2.month < 2 {
+					return 365
+				}
 				if d2.month > 2 {
-					isLeap = true
 					return 366
 				}
-				if d2.month <= 2 {
-					isLeap = true
+				if d2.month == 2 && d2.day == 29 {
 					return 366
-					// It's a leap year and we're on the leap day
-					// if d2.day < 29 {
-					// 	return 366
-					// }
 				}
-			} else {
-				d2.year--
-				isLeap = d2.IsLeap()
-				if isLeap {
-					if d2.month <= 2 {
-						if d2.month == 2 && d2.day < 29 {
-							return 366
-						}
-					}
-				}
+			}
+		} else {
+			if d2.month < 2 {
+				return 366
+			}
+			if d2.month > 2 {
+				return 365
+			}
+			if d2.month == 2 && d2.day < 29 {
+				return 366
 			}
 		}
 	}
@@ -1152,6 +1301,7 @@ func isLeap(year int64) bool {
 	}
 
 	isLeap := year%4 == 0 && (year%100 != 0 || year%400 == 0)
+	// fmt.Println(year, isLeap)
 
 	return isLeap
 }

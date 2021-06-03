@@ -143,14 +143,12 @@ func gregorianYear(inputYear int64) (year int64) {
 func daysToAnchorDayFromEpoch(year int64) int64 {
 	var leapDayCount int64
 
-	if year < 0 {
-		year = -year
-	}
-
-	// Leap is calculated based on astronomical year
 	astronomicalYear := astronomicalYear(year)
+	var ce bool = true
 	if year < 0 {
 		year = -year
+		astronomicalYear = -astronomicalYear
+		ce = false
 	}
 
 	// - add all years divisible by 4
@@ -158,14 +156,14 @@ func daysToAnchorDayFromEpoch(year int64) int64 {
 	// - add back all years divisible by 400
 	leapDayCount = (astronomicalYear / 4) - (astronomicalYear / 100) + (astronomicalYear / 400)
 
-	// TODO: See if there is interplay between the subtractions of 1 here and
-	// the days to date count.
-	// See https://www.thecalculatorsite.com/time/days-between-dates.php
-
 	total := year * 365
 	total -= 365
 
-	total += leapDayCount
+	if !ce {
+		total += leapDayCount + 1
+	} else {
+		total += leapDayCount + 1
+	}
 
 	if isLeap(astronomicalYear) {
 		total--
