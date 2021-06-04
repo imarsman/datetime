@@ -320,41 +320,45 @@ func (d Date) AddDays(days int64) (Date, error) {
 	// The Gregorian calendar has cyles of 400 years. Every four years there is
 	// a leap day, minus one leap day on years divisible by 100 and adding back
 	// a leap day for years divisible by 400.
-	const chunkDays int64 = 146097
+	const chunk400YearDays int64 = 146097
 
-	chunks := days / chunkDays
-	remainder := days % chunkDays
+	// const chunk100YearDays int64 = 365*100 + 24
+	// const chunk200YearDays int64 = 365*200 + 48
+	// const chunk300YearDays int64 = 365*300 + 72
+
+	chunks := days / chunk400YearDays
+	remainder := days % chunk400YearDays
+
+	if d.year < 0 {
+		d2.year = d.year
+	}
 
 	if chunks > 0 {
-		chunkTotal := chunks * chunkDays
-		days = days - chunkTotal
+		// fmt.Println("found chunks", remainder)
+		chunkTotal := chunks * chunk400YearDays
 
-		if chunks > 0 && d.year < 0 {
-			days++
-		}
-		if chunks > 0 && d.year > 0 {
-			days--
-		}
-		// if chunks == 0 && d.year > 0 {
-		// 	days++
-		// }
+		if d2.year < 0 {
+			d2.year -= chunks * 400
+			days -= chunkTotal
 
-		d2.year = chunks * 400
-		if d.year < 0 {
-			days--
-			d2.year = -d2.year
-			d2.year = d2.year - 1
-		}
-		if d2.year > 0 {
-			d2.year = d2.year + 1
+			if d2.IsLeap() && remainder == 365 {
+				days--
+			}
+		} else {
+			d2.year += chunks * 400
+			days -= chunkTotal + 1
+			// d2.year--
 		}
 	} else {
-		if remainder > 0 {
+		if d2.year < 0 {
+			days--
+		} else {
 			days--
 		}
 	}
 
 	if remainder == 0 {
+		// fmt.Println("no remainder after chunks")
 		if days > 0 {
 			days--
 		} else {
@@ -377,7 +381,9 @@ func (d Date) AddDays(days int64) (Date, error) {
 
 	var err error
 	if days > 0 && remainder != 0 {
-		// fmt.Println(d2, "processing", days)
+		// if chunks == 0 {
+		// 	fmt.Println("days", days, "d2", d2, d2.year < 0)
+		// }
 		if d.year > 0 {
 			daysInMonth := d2.daysInMonth()
 			for {
@@ -396,9 +402,6 @@ func (d Date) AddDays(days int64) (Date, error) {
 				}
 			}
 		} else {
-			// if err != nil {
-			// 	return Date{}, err
-			// }
 			daysInMonth := d2.daysInMonth()
 			for {
 				if int64(daysInMonth) <= days {
@@ -411,6 +414,8 @@ func (d Date) AddDays(days int64) (Date, error) {
 						d2.day = 31
 						d2.year--
 						daysInMonth = d2.daysInMonth()
+						if d2.year > -1000 {
+						}
 					}
 				} else {
 					if days == 1 && d2.day == 1 {
