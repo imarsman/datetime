@@ -378,16 +378,15 @@ func TestDateFromDays(t *testing.T) {
 	is := is.New(t)
 
 	var partList = []datePartsWithVerify{
-		// {-2000, 1, 30, 0},
-		// {-8000, 1, 30, 0},
-		// {-7000, 1, 30, 0},
-		// {-5, 12, 1, 0},
 		{-10000, 12, 1, 0},
 		{-2003, 12, 1, 0},
 		{-2001, 12, 1, 0},
 		{-1999, 12, 1, 0},
 		{-401, 12, 1, 0},
-		{-400, 12, 1, 0},
+		// On chunk boundary
+		{-800, 12, 31, 0},
+		// On chunk boundary
+		{-400, 12, 31, 0},
 		{-103, 12, 1, 0},
 		{-104, 12, 1, 0},
 		{-105, 12, 1, 0},
@@ -399,6 +398,10 @@ func TestDateFromDays(t *testing.T) {
 		{4, 12, 1, 0},
 		{8, 12, 1, 0},
 		{12, 12, 1, 0},
+		// On chunk boundary
+		{400, 1, 1, 0},
+		// On chunk boundary
+		{800, 1, 1, 0},
 		{1997, 1, 1, 0},
 		{1997, 12, 1, 0},
 		{1998, 12, 1, 0},
@@ -406,16 +409,12 @@ func TestDateFromDays(t *testing.T) {
 		{1999, 1, 1, 0},
 		{2000, 12, 1, 0},
 		{2000, 6, 1, 0},
-		{2001, 12, 1, 0},
+		{2001, 12, 31, 0},
 		{2003, 12, 1, 0},
 		{4000, 12, 1, 0},
+		{4000, 12, 15, 0},
 		{8000, 12, 1, 0},
-		{800000, 12, 1, 0},
-		// {2, 1, 31, 0},
-		// {6, 12, 1, 0},
-		// {2000, 1, 30, 0},
-		// {7000, 1, 30, 0},
-		// {10000, 1, 30, 0},
+		{800000, 12, 31, 0},
 	}
 
 	for _, p := range partList {
@@ -424,9 +423,8 @@ func TestDateFromDays(t *testing.T) {
 		ce := d.year > 0
 		newDate, err := dateFromDays(daysToDate, ce)
 		is.NoErr(err)
-		is.NoErr(err)
-		// is.Equal(d.String(), newDate.String())
-		t.Log("Date", d.String(), "days to date", daysToDate, "newDate", newDate.String())
+		is.Equal(d.String(), newDate.String())
+		t.Logf("starting date %-12s days to date %-12d date from days %-10s", d.String(), daysToDate, newDate.String())
 	}
 }
 
@@ -510,10 +508,11 @@ func TestString(t *testing.T) {
 func BenchmarkDateFromDays(b *testing.B) {
 	is := is.New(b)
 	var d Date
-	ce := d.year > 0
 
-	d, err := NewDate(1000000000, 1, 1)
+	d, err := NewDate(2001, 1, 1)
 	is.NoErr(err)
+	ce := d.year > 0
+	d2 := d
 	daysToDate := d.daysToDateFromEpoch()
 
 	b.ResetTimer()
@@ -522,10 +521,11 @@ func BenchmarkDateFromDays(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			d, err = dateFromDays(daysToDate, ce)
+			d2, err = dateFromDays(daysToDate, ce)
 			is.NoErr(err)
 		}
 	})
+	b.Log("starting date", d, "new date", d2)
 
 }
 
