@@ -160,9 +160,9 @@ func daysToAnchorDayFromEpoch(year int64) int64 {
 	total -= 365
 
 	if !ce {
-		total += leapDayCount + 1
+		total += leapDayCount
 	} else {
-		total += leapDayCount + 1
+		total += leapDayCount
 	}
 
 	if isLeap(astronomicalYear) {

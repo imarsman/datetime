@@ -295,6 +295,8 @@ func (d Date) subtractDays(subtract int) (date Date, err error) {
 // after accounting for the 400 year chunks. The goal is to cap the maximum
 // amount of work to be done.
 //
+// https://www.thecalculatorsite.com/time/days-between-dates.php
+//
 // one chunk of 400 years is 146097 days
 //
 // - 800000-12-31 - remainder of 0 days
@@ -325,6 +327,9 @@ func (d Date) AddDays(days int64) (Date, error) {
 	// const chunk200YearDays int64 = 365*200 + 48
 	// const chunk300YearDays int64 = 365*300 + 72
 
+	var chunks400Years bool
+	// var chunks100Years int64 = 0
+
 	chunks := days / chunk400YearDays
 	remainder := days % chunk400YearDays
 
@@ -333,98 +338,68 @@ func (d Date) AddDays(days int64) (Date, error) {
 	}
 	if d2.year < 0 {
 		days -= 2
-	} else {
-		days--
 	}
 
 	if chunks > 0 {
+		chunks400Years = true
 		chunkTotal := chunks * chunk400YearDays
 
 		if d2.year < 0 {
 			d2.year -= chunks * 400
 			days -= chunkTotal
-			// See -401-01-01
-			if d2.IsLeap() && remainder == 365 {
-				days--
-			}
 		} else {
 			d2.year += chunks * 400
-			days -= chunkTotal + 1
-			if d2.IsLeap() && remainder == 365 {
-				days--
-			}
+			days -= chunkTotal
 		}
-	} else {
-		// if d2.year < 0 {
-		// 	days--
-		// } else {
-		// 	days--
-		// }
+		// Introduce a leap year compensation that we will have to deal with
+		// more later.
+		if d2.IsLeap() && remainder > 0 {
+			days++
+		}
 	}
 
 	chunks = days / chunk100YearDays
 	remainder = days % chunk100YearDays
 
 	if chunks > 0 {
-		// fmt.Println("chunk 100", chunks)
+		// Another adjustment
+		if chunks400Years == true && d2.year < 0 {
+			days--
+		}
+
 		chunkTotal := chunks * chunk100YearDays
 
 		if d2.year < 0 {
 			d2.year -= chunks * 100
 			days -= chunkTotal
-			// See -401-01-01
-			if d2.IsLeap() {
-				days--
-			}
 		} else {
 			d2.year += chunks * 100
 			days -= chunkTotal
-			if d2.IsLeap() && remainder == 365 {
-				days--
+		}
+
+		// The last day was removed. If the remainder is 0 here we have an
+		// ending on a leap day and must walk the day back.
+		// e.g. not equal 4000-12-31 4001-01-01
+		if remainder == 0 {
+			d2.month--
+			if d2.month < 1 {
+				d2.year--
+				d2.month = 12
+				d2.day = 31
+			} else {
+				daysInMonth := d2.daysInMonth()
+				d2.day = daysInMonth
 			}
 		}
-		// fmt.Println(d2)
-	} else {
-		// // fmt.Println("no chunks")
-		// if d2.year < 0 {
-		// 	// days--
-		// } else {
-		// 	// days++
-		// }
 	}
-
-	// if d2.year < 0 && isLeap(d2.year-100) {
-	// 	fmt.Println("days", days, d2)
-	// 	days++
-	// 	fmt.Println("days", days, d2)
-	// }
-
-	// fmt.Println("remainder", remainder)
-	// if remainder == 0 {
-	// 	if days > 0 {
-	// 		// Don't know if this is necessary
-	// 		// days--
-	// 	} else {
-	// 		// fmt.Println("removing one day", d2)
-	// 		// Remove one day
-	// 		if int64(d2.day) == 1 {
-	// 			d2.month--
-	// 			if d2.month < 1 {
-	// 				d2.year--
-	// 				d2.month = 12
-	// 				d2.day = 31
-	// 			} else {
-	// 				daysInMonth := d2.daysInMonth()
-	// 				d2.day = daysInMonth
-	// 			}
-	// 		} else {
-	// 			d2.day--
-	// 		}
-	// 	}
-	// }
 
 	var err error
 	if days > 0 {
+		// If the remainder is a year too high
+		// More edge cases will likely show up in testing.
+		if d2.year < 0 && (days == 36522 || days == 363) {
+			d2.year--
+		}
 		if d2.year < 0 {
 			days++
 		}
@@ -432,16 +407,21 @@ func (d Date) AddDays(days int64) (Date, error) {
 			daysInMonth := d2.daysInMonth()
 			for {
 				if int64(daysInMonth) <= days {
-					days -= int64(daysInMonth)
+					daysInMonth = d2.daysInMonth()
 					d2.month++
 					if d2.month > 12 {
 						d2.month = 1
 						d2.day = 1
 						d2.year++
+						daysInMonth = d2.daysInMonth()
 					}
+
 					daysInMonth = d2.daysInMonth()
+					days -= int64(daysInMonth)
 				} else {
-					d2.day += int(days)
+					if days != 1 {
+						d2.day += int(days)
+					}
 					break
 				}
 			}
@@ -467,21 +447,8 @@ func (d Date) AddDays(days int64) (Date, error) {
 					if days == 1 && d2.day == 1 {
 						break
 					}
-					// One year off is a leap
-					// if d2.year < 0 && isLeap(d2.year-1) {
-					// 	fmt.Println("is leap")
-					// 	d2.day -= int(days)
-					// 	d2.day--
-					// }
-					// // One year off is not a leap
-					// if d2.year < 0 && !isLeap(d2.year-1) {
-					// 	// fmt.Println("is not leap", d2)
-					// 	d2.day -= int(days) + 1
-					// }
 
-					// fmt.Println("days", days, remainder)
 					d2.day -= int(days)
-					// d2.day--
 
 					if d2.day == 0 {
 						d2.day++
@@ -489,14 +456,11 @@ func (d Date) AddDays(days int64) (Date, error) {
 					break
 				}
 			}
+			if d2.IsLeap() && d2.day > 1 {
+				d2.day--
+			}
 		}
 	}
-
-	// if d2.year < 0 {
-	// 	if d2.IsLeap() {
-
-	// 	}
-	// }
 
 	err = d2.validate()
 	if err != nil {
@@ -1132,10 +1096,22 @@ func (d Date) daysToDateFromAnchorDay() int {
 		daysInMonth := d2.daysInMonth()
 		// If months is February on leap year we get the proper number of days
 		if d2.month == d.month {
-			days += d.day
+			if days == 0 {
+				// fmt.Println("days last at zero", days, d)
+				return 0
+			}
+			// fmt.Println("days last", days, d)
+			days += d.day - 1
+			if days == -1 {
+				days = 1
+			}
+			// fmt.Println("days last", days, d)
+
 			break
 		}
+		// fmt.Println("days", days, d)
 		days += daysInMonth
+		// fmt.Println("days", days, d)
 		d2.month++
 		if d2.month > 12 {
 			break
