@@ -278,7 +278,7 @@ func TestIsLeap(t *testing.T) {
 		// Comment out to try more
 		is.Equal(isLeap, item.v)
 		is.Equal(true, true)
-		t.Logf("mathematical year %-5d gregorian year %-5d isLeap %-5v verify %-5v", d.astronomicalYear(), d.year, isLeap, item.v)
+		t.Logf("mathematical year %-5d gregorian year %-5d isLeap %-5v verify %-5v", d.AstronomicalYear(), d.year, isLeap, item.v)
 	}
 }
 
@@ -394,19 +394,19 @@ func TestAddDays(t *testing.T) {
 	// date_test.go:436: not equal - new date 10400-12-31 date from days 10401-01-01
 	// date_test.go:436: not equal - new date 10800-02-01 date from days 10800-01-30
 
-	dayCount := 3000000
-	d, err := NewDate(10000000, 1, 1)
+	dayCount := 365
+	d, err := NewDate(1, 1, 1)
 	var newDate Date
 	is.NoErr(err)
-	startYear := d.year
+	startYear := d
 	t.Log("Trying a series of", dayCount, "days starting with year", d.year)
 	foundErr := false
 	var lastDay Date
 	var errorsFound int = 0
-	var endYear int64
+	var endYear Date
 
 	for i := 0; i < dayCount; i++ {
-		d, err = NewDate(startYear, 1, 1)
+		d, err = NewDate(startYear.year, 1, 1)
 		is.NoErr(err)
 		addedDays, err := d.AddDays(int64(i + 1))
 		is.NoErr(err)
@@ -419,7 +419,7 @@ func TestAddDays(t *testing.T) {
 			foundErr = true
 			errorsFound++
 		}
-		endYear = newDate.year
+		endYear = newDate
 	}
 	if foundErr == false {
 		t.Log("no errors found for", dayCount, "day increments. Last date", lastDay.String(), "years from", startYear, "to", endYear)

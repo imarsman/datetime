@@ -114,34 +114,14 @@ func (d Date) yearAbs() int64 {
 	return d.year
 }
 
-func astronomicalYear(year int64) int64 {
-	if year == 0 {
-		return 1
-	} else if year <= -1 {
-		year++
-		// fmt.Println("astronomical year", year)
-	}
-
-	return year
-}
-
-func (d Date) astronomicalYear() int64 {
-	// year := d.year
-
-	// if year == 1 {
-	// 	return 1
-	// } else if year <= -1 {
-	// 	year++
-	// }
+// AstronomicalYear get the year, which for ce years starts at 0 instead of -1.
+// This means that 1 BCE is astronomical year 0.
+func (d Date) AstronomicalYear() int64 {
 	return astronomicalYear(d.year)
 }
 
 // IsCE is the year CE
 func (d Date) IsCE() bool {
-	// err := d.validate()
-	// if err != nil {
-	// 	return false, err
-	// }
 	return d.year > 0
 }
 
@@ -164,7 +144,7 @@ func (d Date) Day() int {
 func (d Date) daysInMonth() int {
 	// validate calls this so there should be a valid month and year
 	daysInMonth := gregorian.DaysInMonth[d.month]
-	year := d.astronomicalYear()
+	year := d.AstronomicalYear()
 	leapD := d
 	leapD.year = year
 	isLeap := leapD.IsLeap()
@@ -179,7 +159,7 @@ func (d Date) daysInMonth() int {
 func (d Date) AtYearDay(day int) Date {
 	var days int = 0
 	copy := d
-	copy.year = copy.astronomicalYear()
+	copy.year = copy.AstronomicalYear()
 	for i := 1; i < 13; i++ {
 		copy.month = i
 		if copy.month > d.month {
@@ -202,7 +182,7 @@ func (d Date) AtYearDay(day int) Date {
 func (d Date) YearDay() int {
 	var days int = 0
 	copy := d
-	copy.year = copy.astronomicalYear()
+	copy.year = copy.AstronomicalYear()
 	for i := 1; i < 13; i++ {
 		copy.month = i
 		if copy.month > d.month {
@@ -218,71 +198,6 @@ func (d Date) YearDay() int {
 
 	return days
 }
-
-// subtractDays add days to a date
-// TODO: Fix this so that it works properly
-// func (d Date) subtractDays(subtract int) (date Date, err error) {
-// 	d2 := d
-// 	// fmt.Println("subtracing from", d.String(), subtract)
-// 	newYear := false
-// 	for {
-// 		daysInMonth := d2.daysInMonth()
-// 		if err != nil {
-// 			return Date{}, err
-// 		}
-// 		// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
-// 		if d2.month == 1 && d2.day == 1 {
-// 			// fmt.Println("equal")
-// 			d2.year--
-// 			newYear = true
-// 		}
-// 		if subtract > daysInMonth {
-// 			// fmt.Println("d2.day", d2.day)
-// 			if newYear {
-// 				// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
-// 				d2.day = 1
-// 				d2.month = 12
-
-// 				newYear = false
-// 			}
-// 			// if d2.day == daysInMonth {
-// 			// 	// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
-// 			// 	subtract = subtract - d2.day
-// 			// 	// fmt.Println("d2.day", d2.day)
-// 			// 	d2.day = 1
-
-// 			// 	continue
-// 			// } else {
-// 			// 	// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
-// 			// 	// d2.day--
-// 			// 	// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
-// 			// }
-// 			fmt.Println("d2.day", d2.day)
-// 			d2.month--
-// 			fmt.Println("more subtract", subtract, "daysinmonth", daysInMonth, "d2.day", d2.day, "d2", d2.String())
-// 			subtract = subtract - daysInMonth
-// 			d2.day -= subtract
-// 			fmt.Println("more subtract", subtract, "daysinmonth", daysInMonth, "d2.day", d2.day, "d2", d2.String())
-// 			// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
-// 		} else {
-// 			// subtract = subtract - d2.day
-// 			// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
-// 			// curDay := d2.day
-// 			// fmt.Println("subtract", subtract, "daysinmonth", daysInMonth, "d2.day", d2.day, "d2", d2.String())
-// 			d2.day = d2.day - subtract
-// 			// subtract = -curDay
-// 			fmt.Println("less subtract", subtract, "daysinmonth", daysInMonth, "d2.day", d2.day, "d2", d2.String())
-// 			fmt.Println("d2.day", d2.day)
-// 			// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
-// 			subtract--
-// 			if subtract == 0 {
-// 				break
-// 			}
-// 		}
-// 	}
-
-// 	return d2, nil
-// }
 
 // AddDays add days to a date
 //
@@ -300,11 +215,11 @@ func (d Date) YearDay() int {
 // one chunk of 400 years is 146097 days
 //
 // - 800000-12-31 - remainder of 0 days
-//   15.60 ns/op   641.12 MB/s   0 B/op   0 allocs/op
+//   15.78 ns/op   633.84 MB/s   0 B/op   0 allocs/op
 // - 2001-12-31 - remainder of 364 days
-//   15.35 ns/op   651.54 MB/s   0 B/op   0 allocs/op
-// - 800-12-01 - remainder of 146080 days
-//   33271 ns/op   3.06 MB/s     0 B/op   0 allocs/op
+//   18.47 ns/op   541.31 MB/s   0 B/op   0 allocs/op
+// - 800-12-01 - remainder of 36494 days
+//   926.2 ns/op    10.80 MB/s   0 B/op   0 allocs/op
 func (d Date) AddDays(days int64) (Date, error) {
 	d2 := d
 	// fmt.Println("days", days)
@@ -326,19 +241,14 @@ func (d Date) AddDays(days int64) (Date, error) {
 	const chunk400YearDays int64 = 146097
 
 	const chunk100YearDays int64 = 365*100 + 24
-	// const chunk200YearDays int64 = 365*200 + 48
-	// const chunk300YearDays int64 = 365*300 + 72
 
 	var chunks400Years bool
-	// var chunks100Years int64 = 0
 
 	chunks400 := days / chunk400YearDays
 	chunk400YearRemainder := days % chunk400YearDays
 
 	chunks100 := chunk400YearRemainder / chunk100YearDays
-	// fmt.Println("100 year chunks", chunks100)
 	chunk100YearRemainder := chunk400YearRemainder / chunk100YearDays
-	// fmt.Println("chunks 100 year remainder", chunk100YearRemainder)
 
 	if d.year < 0 {
 		d2.year = d.year
@@ -350,7 +260,6 @@ func (d Date) AddDays(days int64) (Date, error) {
 	var totalCunkYears int64 = 1
 
 	if chunks400 > 0 {
-		// fmt.Println("400 year chunks", chunks400, "remainder", chunk400YearRemainder)
 		chunks400Years = true
 		chunkTotal := chunks400 * chunk400YearDays
 
@@ -361,12 +270,10 @@ func (d Date) AddDays(days int64) (Date, error) {
 			d2.year += chunks400 * 400
 			days -= chunkTotal
 		}
-		// fmt.Println("d2 400", d2, chunk400YearRemainder)
 		totalCunkYears += chunks400 * 400
 		// Introduce a leap year compensation that we will have to deal with
 		// more later.
 		if d2.IsLeap() && chunk400YearRemainder > 0 {
-			// fmt.Println("leap adjustment")
 			days++
 		}
 	}
@@ -374,15 +281,9 @@ func (d Date) AddDays(days int64) (Date, error) {
 		d2.month--
 	}
 
-	// fmt.Println("days", days)
 	days = chunk400YearRemainder + chunk100YearRemainder
-	// fmt.Println("days", days, "400 remainder", chunk400YearRemainder, "100 remainder", chunk100YearRemainder)
-	// days += chunk400YearRemainder
-	// days = days + chunk400YearRemainder
 
 	if chunks100 > 0 {
-		// fmt.Println("100 year chunks", chunks100, "remainder", chunk100YearRemainder, "chunk 100 days", chunk100YearDays, "days - remainder", chunk100YearDays-chunk100YearRemainder)
-		// Another adjustment
 		if chunks400Years == true && d2.year < 0 {
 			days--
 		}
@@ -399,7 +300,6 @@ func (d Date) AddDays(days int64) (Date, error) {
 	}
 
 	days = days + chunk100YearRemainder
-	// fmt.Println(d2, "days", days, "chunks 100", chunks100, "chunks 400", chunks400)
 
 	var err error
 	if days > 0 {
@@ -422,13 +322,9 @@ func (d Date) AddDays(days int64) (Date, error) {
 
 						continue
 					}
-					// previousDaysInMonth := daysInMonth
 					days -= int64(daysInMonth)
-					// fmt.Println(d2, "dim", daysInMonth, days)
 					d2.day = 1
-					// fmt.Println(d2, days, daysInMonth)
 				} else {
-					// fmt.Println("days pre", d2, days)
 					d2.day += int(days)
 					days = 0
 					break
@@ -447,18 +343,14 @@ func (d Date) AddDays(days int64) (Date, error) {
 						d2.day = 31
 						d2.year--
 						daysInMonth = d2.daysInMonth()
+						days -= int64(daysInMonth)
+
+						continue
 					}
+					days -= int64(daysInMonth)
+					d2.day = 1
 				} else {
-					if d2.month != 12 && d2.day != 30 {
-
-					}
-
-					if days == 1 && d2.day == 1 {
-						break
-					}
-
 					d2.day -= int(days)
-
 					if d2.day == 0 {
 						d2.day++
 					}
@@ -466,7 +358,6 @@ func (d Date) AddDays(days int64) (Date, error) {
 				}
 			}
 			if d2.IsLeap() && d2.day > 1 {
-				// fmt.Println("final leap")
 				d2.day--
 			}
 		}
@@ -553,22 +444,14 @@ func (d Date) daysOneYearFromDate() int {
 				if d2.month > 2 {
 					return 365
 				}
-				// if d2.month < 2 {
-				// 	fmt.Println(d2, isLeap)
-				// 	return 366
-				// }
 				if d2.month == 2 && d2.day == 29 {
 					return 366
 				}
 			}
 		} else {
 			if d2.month < 2 {
-				// fmt.Println("366", d2)
 				return 366
 			}
-			// if d2.month < 2 {
-			// 	return 366
-			// }
 			if d2.month == 2 && d2.day < 29 {
 				return 366
 			}
@@ -983,7 +866,7 @@ func (d Date) ISOWeeksInYear() int {
 	}
 
 	dMathematical, _ := NewDate(year, 1, 1)
-	year = dMathematical.astronomicalYear()
+	year = dMathematical.AstronomicalYear()
 
 	p := math.Mod(float64(year+(year/4)-(year/100)+(year/400)), 7)
 	weeks := 52

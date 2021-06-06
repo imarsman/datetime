@@ -137,6 +137,16 @@ func gregorianYear(inputYear int64) (year int64) {
 	return year
 }
 
+func astronomicalYear(year int64) int64 {
+	if year == 0 {
+		return 1
+	} else if year <= -1 {
+		year++
+	}
+
+	return year
+}
+
 // daysToAnchorDayFromEpoch takes a year and returns the number of days from
 // the absolute epoch to the start of that year.
 // This will work for CE but not for BCE
@@ -177,7 +187,5 @@ func isoWeekOfYearForDate(doy int, dow time.Weekday) int {
 	// var woy int = (10 + doy - int(dow)) % 7
 	var woy int = (10 + doy - int(dow)) / 7
 
-	// fmt.Println((10 + doy - int(dow)))
-	// fmt.Println("doy", doy, "wd", dow, "woy", woy)
 	return woy
 }
