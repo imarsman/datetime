@@ -668,7 +668,7 @@ func (d Date) daysToDateFromAnchorDay() int {
 	if d.year > 0 {
 		if d2.IsLeap() {
 			// Remove extra day for days in Feb before the 29th CE leap yearr
-			if d.month > 1 {
+			if d.month == 1 {
 				days--
 			}
 			if d.month == 2 && d.day < 29 {
@@ -681,9 +681,6 @@ func (d Date) daysToDateFromAnchorDay() int {
 		if d2.IsLeap() {
 			// Remove extra day if previous to February 29 on a leap year
 			if d.month > 2 {
-				days--
-			}
-			if d.month == 2 && d.day < 29 {
 				days--
 			}
 		}
