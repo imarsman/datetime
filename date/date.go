@@ -1,9 +1,5 @@
 package date
 
-// Copyright 2015 The Go Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
 import (
 	"errors"
 	"fmt"
@@ -12,45 +8,6 @@ import (
 
 	"github.com/imarsman/datetime/gregorian"
 )
-
-// PeriodOfDays describes a period of time measured in whole days. Negative values
-// indicate days earlier than some mark.
-// type PeriodOfDays int64
-
-// // ZeroDays is the named zero value for PeriodOfDays.
-// const ZeroDays PeriodOfDays = 0
-
-// A Date represents a date under the (proleptic) Gregorian calendar as
-// used by ISO 8601. This calendar uses astronomical year numbering,
-// so it includes a year 0 and represents earlier years as negative numbers
-// (i.e. year 0 is 1 CE; year -1 is 1 BCE, and so on).
-//
-// TODO: update this to reflect altered design
-// A Date value requires 4 bytes of storage and can represent dates from
-// Tue, 23 Jun -5,877,641 (5,877,642 BC) to Fri, 11 Jul 5,881,580.
-// Dates outside that range will "wrap around".
-//
-// Programs using dates should typically store and pass them as values,
-// not pointers.  That is, date variables and struct fields should be of
-// type date.Date, not *date.Date.  A Date value can be used by
-// multiple goroutines simultaneously.
-//
-// Date values can be compared using the Before, After, and Equal methods
-// as well as the == and != operators.
-//
-// The Sub method subtracts two dates, returning the number of days between
-// them. The Add method adds a Date and a number of days, producing a Date.
-//
-// The zero value of type Date is Thursday, January 1, 1970 (called 'the
-// epoch'), based on Unix convention. As this date is unlikely to come up in
-// practice, the IsZero method gives a simple way of detecting a date that
-// has not been initialized explicitly.
-//
-// The first official date of the Gregorian calendar was Friday, October 15th
-// 1582, quite unrelated to the epoch used here. The Date type does not
-// distinguish between official Gregorian dates and earlier proleptic dates,
-// which can also be represented when needed.
-//
 
 // Date a date holds values for year, month, and day as well as a flag tied to
 // instantiation. The Gregorian calendar starts on year 1, not zero. The year
@@ -63,7 +20,7 @@ import (
 // the NewDate function to set safelyInstantiated to true rather than its
 // default value of false. A check function can then determine if a date struct
 // instance was accidentally created with new(Date) or Date{}. Calls that
-// require this check will return an error.
+// require this check will return an error if validation fails.
 type Date struct {
 	year               int64
 	month              int
@@ -91,6 +48,7 @@ func NewDate(year int64, month int, day int) (Date, error) {
 	return d, nil
 }
 
+// validate validate a date to ensure it is a proper date.
 func (d *Date) validate() error {
 	if d.IsZero() || d.safelyInstantiated == false {
 		return errors.New("date invalidly instantiated with new(Date) or Date{}")
@@ -98,7 +56,7 @@ func (d *Date) validate() error {
 	if d.month < 1 || d.month > 12 {
 		return fmt.Errorf("invalid month %d for date", d.month)
 	}
-	daysInMonth := d.daysInMonth()
+	daysInMonth := d.DaysInMonth()
 	// Ensure valid day number
 	if d.day > daysInMonth {
 		return fmt.Errorf("invalid day %d for month %d", d.day, d.month)
@@ -107,6 +65,7 @@ func (d *Date) validate() error {
 	return nil
 }
 
+// yearAbs get positive value for year.
 func (d Date) yearAbs() int64 {
 	if d.year < 0 {
 		return -d.year
@@ -141,7 +100,8 @@ func (d Date) Day() int {
 	return d.day
 }
 
-func (d Date) daysInMonth() int {
+// DaysInMonth the number of days for a month taking the year into consideration.
+func (d Date) DaysInMonth() int {
 	// validate calls this so there should be a valid month and year
 	daysInMonth := gregorian.DaysInMonth[d.month]
 	year := d.AstronomicalYear()
@@ -169,7 +129,7 @@ func (d Date) AtYearDay(day int) Date {
 			days += int(d.day)
 			break
 		}
-		val := copy.daysInMonth()
+		val := copy.DaysInMonth()
 		days += int(val)
 	}
 
@@ -192,7 +152,7 @@ func (d Date) YearDay() int {
 			days += d.day
 			break
 		}
-		val := copy.daysInMonth()
+		val := copy.DaysInMonth()
 		days += val
 	}
 
@@ -221,7 +181,7 @@ func (d Date) YearDay() int {
 // - 800-12-01 - remainder of 36494 days
 //   926.2 ns/op    10.80 MB/s   0 B/op   0 allocs/op
 func (d Date) AddDays(days int64) (Date, error) {
-	d2 := d
+	copy := d
 	// fmt.Println("days", days)
 	// startingDays := days
 
@@ -251,9 +211,9 @@ func (d Date) AddDays(days int64) (Date, error) {
 	chunk100YearRemainder := chunk400YearRemainder / chunk100YearDays
 
 	if d.year < 0 {
-		d2.year = d.year
+		copy.year = d.year
 	}
-	if d2.year < 0 {
+	if copy.year < 0 {
 		days -= 2
 	}
 
@@ -263,38 +223,38 @@ func (d Date) AddDays(days int64) (Date, error) {
 		chunks400Years = true
 		chunkTotal := chunks400 * chunk400YearDays
 
-		if d2.year < 0 {
-			d2.year -= chunks400 * 400
+		if copy.year < 0 {
+			copy.year -= chunks400 * 400
 			days -= chunkTotal
 		} else {
-			d2.year += chunks400 * 400
+			copy.year += chunks400 * 400
 			days -= chunkTotal
 		}
 		totalCunkYears += chunks400 * 400
 		// Introduce a leap year compensation that we will have to deal with
 		// more later.
-		if d2.IsLeap() && chunk400YearRemainder > 0 {
+		if copy.IsLeap() && chunk400YearRemainder > 0 {
 			days++
 		}
 	}
 	if chunk400YearRemainder == 0 {
-		d2.month--
+		copy.month--
 	}
 
 	days = chunk400YearRemainder + chunk100YearRemainder
 
 	if chunks100 > 0 {
-		if chunks400Years == true && d2.year < 0 {
+		if chunks400Years == true && copy.year < 0 {
 			days--
 		}
 
 		chunkTotal := chunks100 * chunk100YearDays
 
-		if d2.year < 0 {
-			d2.year -= chunks100 * 100
+		if copy.year < 0 {
+			copy.year -= chunks100 * 100
 			days -= chunkTotal
 		} else {
-			d2.year += chunks100 * 100
+			copy.year += chunks100 * 100
 			days -= chunkTotal + (chunks100 * 2)
 		}
 	}
@@ -303,99 +263,103 @@ func (d Date) AddDays(days int64) (Date, error) {
 
 	var err error
 	if days > 0 {
-		if d2.year < 0 {
+		if copy.year < 0 {
 			days++
 		}
 		if d.year > 0 {
 			// days--
-			daysInMonth := d2.daysInMonth()
+			daysInMonth := copy.DaysInMonth()
 			for days > 0 {
-				daysInMonth = d2.daysInMonth()
+				daysInMonth = copy.DaysInMonth()
 				if int64(daysInMonth) <= days {
-					d2.month++
-					if d2.month > 12 {
-						d2.month = 1
-						d2.day = 1
-						d2.year++
-						daysInMonth = d2.daysInMonth()
+					copy.month++
+					if copy.month > 12 {
+						copy.month = 1
+						copy.day = 1
+						copy.year++
+						daysInMonth = copy.DaysInMonth()
 						days -= int64(daysInMonth)
 
 						continue
 					}
 					days -= int64(daysInMonth)
-					d2.day = 1
+					copy.day = 1
 				} else {
-					d2.day += int(days)
+					copy.day += int(days)
 					days = 0
 					break
 				}
 			}
 		} else {
-			daysInMonth := d2.daysInMonth()
+			daysInMonth := copy.DaysInMonth()
 			for {
 				if int64(daysInMonth) <= days {
 					days -= int64(daysInMonth)
-					d2.month--
-					daysInMonth = d2.daysInMonth()
-					d2.day = daysInMonth
-					if d2.month < 1 {
-						d2.month = 12
-						d2.day = 31
-						d2.year--
-						daysInMonth = d2.daysInMonth()
+					copy.month--
+					daysInMonth = copy.DaysInMonth()
+					copy.day = daysInMonth
+					if copy.month < 1 {
+						copy.month = 12
+						copy.day = 31
+						copy.year--
+						daysInMonth = copy.DaysInMonth()
 						days -= int64(daysInMonth)
 
 						continue
 					}
 					days -= int64(daysInMonth)
-					d2.day = 1
+					copy.day = 1
 				} else {
-					d2.day -= int(days)
-					if d2.day == 0 {
-						d2.day++
+					copy.day -= int(days)
+					if copy.day == 0 {
+						copy.day++
 					}
 					break
 				}
 			}
-			if d2.IsLeap() && d2.day > 1 {
-				d2.day--
+			if copy.IsLeap() && copy.day > 1 {
+				copy.day--
 			}
 		}
 	} else {
+		// Year day counts are of the total days in a year, and do not start at
+		// day one. Thus, with no remainder after 400 and 100 year chunks have
+		// been removed, there will be one day to add.
 		// e.g. 900-12-31
-		d2.month++
-		if d2.month > 12 {
-			d2.year++
-			d2.month = 1
-			d2.day = 1
+		copy.month++
+		if copy.month > 12 {
+			copy.year++
+			copy.month = 1
+			copy.day = 1
 		} else {
-			d2.day = 1
+			copy.day = 1
 		}
 	}
+
 	// Have not discovered the reson for consistent errors. Most likely to do
-	// with chunks.
-	if d2.year > 0 {
+	// with chunks of 400 and 100 years.
+	if copy.year > 0 {
 		for {
-			if (d2.year-1)%400 == 0 && d2.month == 2 && d2.day == 1 {
-				d2.year--
-				d2.month = 12
-				d2.day = 31
+			if (copy.year-1)%400 == 0 && copy.month == 2 && copy.day == 1 {
+				copy.year--
+				copy.month = 12
+				copy.day = 31
 				break
-			} else if (d2.year-1)%100 == 0 && d2.month == 2 && d2.day == 1 {
-				d2.month = 1
-				d2.day = 1
+			} else if (copy.year-1)%100 == 0 && copy.month == 2 && copy.day == 1 {
+				copy.month = 1
+				copy.day = 1
 				break
 			}
 			break
 		}
 	}
 
-	err = d2.validate()
+	err = copy.validate()
 	if err != nil {
 		return Date{}, err
 	}
 
-	return d2, nil
+	return copy, nil
 }
 
 // FromDays get date from days from epoch
@@ -434,52 +398,52 @@ func (d Date) daysToDateFromEpoch() int64 {
 // return 366, else return 365.
 // This is much cheaper than calculating days since epoch to date.
 func (d Date) daysOneYearFromDate() int {
-	d2 := d
-	if d2.year > 0 {
-		isLeap := d2.IsLeap()
+	copy := d
+	if copy.year > 0 {
+		isLeap := copy.IsLeap()
 		if isLeap == false {
-			d2.year++
-			isLeap = d2.IsLeap()
+			copy.year++
+			isLeap = copy.IsLeap()
 			if isLeap {
-				if d2.month > 2 {
+				if copy.month > 2 {
 					return 365
 				}
-				if d2.month == 2 && d2.day == 29 {
+				if copy.month == 2 && copy.day == 29 {
 					return 366
 				}
 			}
 		} else {
-			if d2.month < 2 {
+			if copy.month < 2 {
 				return 366
 			}
-			if d2.month == 2 && d2.day < 29 {
+			if copy.month == 2 && copy.day < 29 {
 				return 366
 			}
 		}
 	} else {
-		isLeap := d2.IsLeap()
-		d2.year--
+		isLeap := copy.IsLeap()
+		copy.year--
 		if !isLeap {
-			isLeap = d2.IsLeap()
+			isLeap = copy.IsLeap()
 			if isLeap {
-				if d2.month < 2 {
+				if copy.month < 2 {
 					return 365
 				}
-				if d2.month > 2 {
+				if copy.month > 2 {
 					return 366
 				}
-				if d2.month == 2 && d2.day == 29 {
+				if copy.month == 2 && copy.day == 29 {
 					return 366
 				}
 			}
 		} else {
-			if d2.month < 2 {
+			if copy.month < 2 {
 				return 366
 			}
-			if d2.month > 2 {
+			if copy.month > 2 {
 				return 365
 			}
-			if d2.month == 2 && d2.day < 29 {
+			if copy.month == 2 && copy.day < 29 {
 				return 366
 			}
 		}
@@ -492,16 +456,16 @@ func (d Date) daysOneYearFromDate() int {
 // - add years and then increment the date using the remainder days
 // - add sum of days for months to date
 // - add days days to date
-func (d Date) AddParts(years int64, months, days int) (dFinal Date, remainder int64, err error) {
-	dFinal = d
+func (d Date) AddParts(years int64, months, days int) (copy Date, remainder int64, err error) {
+	copy = d
 
 	// Add years. Surplus days are added to result
 	if years > 0 {
-		dFinal, err = dFinal.AddYears(years)
+		copy, err = copy.AddYears(years)
 	}
 	// Month handling adding surplus days to result
 	if months > 0 {
-		dFinal, err = dFinal.AddMonths(months)
+		copy, err = copy.AddMonths(months)
 		if err != nil {
 			return Date{}, 0, err
 		}
@@ -509,15 +473,15 @@ func (d Date) AddParts(years int64, months, days int) (dFinal Date, remainder in
 
 	// Add days
 	if days > 0 {
-		dFinal, err = dFinal.AddDays(int64(days))
+		copy, err = copy.AddDays(int64(days))
 	}
 
-	return dFinal, remainder, nil
+	return copy, remainder, nil
 }
 
 // AddYears add years to date
-func (d Date) AddYears(years int64) (dFinal Date, err error) {
-	dFinal = d
+func (d Date) AddYears(years int64) (copy Date, err error) {
+	copy = d
 
 	var totalDays int64
 	if d.year < 0 {
@@ -532,9 +496,9 @@ func (d Date) AddYears(years int64) (dFinal Date, err error) {
 
 			totalDays = endDays + startDays
 			newYears := totalDays / 365
-			dFinal.year += newYears + 1 // Crossing CE boundary
+			copy.year += newYears + 1 // Crossing CE boundary
 			remainder := totalDays % 365
-			dFinal, err = dFinal.AddDays(remainder)
+			copy, err = copy.AddDays(remainder)
 		} else {
 			// Get years with end in CE
 
@@ -547,9 +511,9 @@ func (d Date) AddYears(years int64) (dFinal Date, err error) {
 
 			totalDays = endDays - startDays
 			newYears := totalDays / 365
-			dFinal.year += newYears
+			copy.year += newYears
 			remainder := totalDays % 365
-			dFinal, err = dFinal.AddDays(remainder)
+			copy, err = copy.AddDays(remainder)
 		}
 	} else {
 		startDays := d.daysToDateFromEpoch()
@@ -560,18 +524,18 @@ func (d Date) AddYears(years int64) (dFinal Date, err error) {
 
 		totalDays = endDays - startDays
 		newYears := totalDays / 365
-		dFinal.year += newYears
+		copy.year += newYears
 		remainder := totalDays % 365
-		dFinal, err = dFinal.AddDays(remainder)
+		copy, err = copy.AddDays(remainder)
 	}
 
-	return dFinal, nil
+	return copy, nil
 }
 
 // AddMonths add months to a date
 // TODO: decide if it would be good to add days
-func (d Date) AddMonths(add int) (d2 Date, err error) {
-	d2 = d
+func (d Date) AddMonths(add int) (copy Date, err error) {
+	copy = d
 
 	// Benchmark adding 1000 months to 2019-01-01
 	// With adding years:    122.3 ns/op	  81.76 MB/s   0 B/op   0 allocs/op
@@ -581,12 +545,12 @@ func (d Date) AddMonths(add int) (d2 Date, err error) {
 		for {
 			// Asking for year days using IsLeap logic is much much faster than
 			// counting days from epoch to date.
-			daysBetween := d2.daysOneYearFromDate()
+			daysBetween := copy.daysOneYearFromDate()
 			if daysBetween < 0 {
 				break
 			}
 			if add >= 12 {
-				d2, err = d2.AddYears(1)
+				copy, err = copy.AddYears(1)
 				if err != nil {
 					return Date{}, err
 				}
@@ -604,135 +568,33 @@ func (d Date) AddMonths(add int) (d2 Date, err error) {
 	// TODO: add years if there are multiples of 12 months
 	// daysToAdd := 0
 	for i := 0; i < add; i++ {
-		if d2.month == 12 {
-			d2.year++
-			d2.month = 1
-			d2.day = 1
+		if copy.month == 12 {
+			copy.year++
+			copy.month = 1
+			copy.day = 1
 		} else {
-			if d2.month == 2 {
-				daysInMonth := d2.daysInMonth()
+			if copy.month == 2 {
+				daysInMonth := copy.DaysInMonth()
 				if daysInMonth == 29 {
-					d2, err = d2.AddDays(1)
+					copy, err = copy.AddDays(1)
 					if err != nil {
 						return Date{}, err
 					}
 				}
 			}
-			d2.month++
-			d2.day = 1
+			copy.month++
+			copy.day = 1
 		}
 	}
 
 	// Do validation of result
-	err = d2.validate()
+	err = copy.validate()
 	if err != nil {
 		return Date{}, err
 	}
 
-	return d2, nil
+	return copy, nil
 }
-
-// AddDaysOld add days to a date
-// Reasonably efficient given that it adds as many days at a time as possible.
-// TODO: Adding days will end up with more total days if leap days are added
-// func (d Date) AddDaysOld(add int) (date Date, err error) {
-// 	d2 := d
-// 	// fmt.Println("count leap days", countLeapDays)
-
-// 	// daysAdded := 0
-// 	// leapDays := 0
-// 	// Benchmark adding 1000000 days to 2019-03-01
-// 	// With adding years:     1832 ns/op   5.46 MB/s   0 B/op   0 allocs/op
-// 	// Without adding years: 27300 ns/op   0.37 MB/s   0 B/op   0 allocs/op
-// 	// With and without the years add produces same result
-// 	if add > 365 {
-// 		for {
-// 			// Asking for year days using IsLeap logic is much much faster than
-// 			// counting days from epoch to date.
-// 			daysBetween := d2.daysOneYearFromDate()
-// 			// fmt.Println("d2", d2.String(), "add", add, "days between", daysBetween)
-// 			if daysBetween < 0 {
-// 				break
-// 			}
-// 			if int(daysBetween) <= add {
-// 				d2.year++
-// 				if d2.IsLeap() {
-// 					// fmt.Println(d2.String(), "is leap")
-// 					d2, err = d2.AddDaysOld(1)
-// 					if err != nil {
-// 						return Date{}, err
-// 					}
-// 					add -= int(daysBetween)
-// 				} else if d2.IsLeap() {
-// 					add -= daysBetween
-// 				} else {
-// 					add -= int(daysBetween)
-// 				}
-// 			} else {
-// 				break
-// 			}
-// 		}
-// 	}
-
-// 	daysInMonth := d2.daysInMonth()
-// 	if err != nil {
-// 		return Date{}, err
-// 	}
-// 	for add > 0 {
-// 		if add >= daysInMonth && d2.day <= daysInMonth {
-// 			if d2.month >= 12 {
-// 				daysTilEOM := daysInMonth - d2.day
-// 				d2.year++
-// 				if d2.year == 0 {
-// 					d2.year = 1
-// 				}
-// 				d2.month = 1
-// 				d2.day = 1
-// 				add = add - daysTilEOM - 1
-// 				daysInMonth = d2.daysInMonth()
-// 			} else {
-// 				daysTilEOM := daysInMonth - d2.day
-// 				d2.day = 1
-// 				d2.month++
-// 				add = add - daysTilEOM - 1
-
-// 				daysInMonth = d2.daysInMonth()
-// 			}
-// 			continue
-// 		} else {
-// 			if add+d2.day >= daysInMonth {
-// 				daysTilEOM := daysInMonth - d2.day
-
-// 				add = add - daysTilEOM - 1
-// 				d2.day = 1
-// 				d2.month++
-// 				if d2.month > 12 {
-// 					d2.month = 1
-// 					d2.year++
-// 					if d2.year == 0 {
-// 						d2.year = 1
-// 					}
-// 				}
-// 				// Get days in month once month has had a chance to be corrected
-// 				daysInMonth = d2.daysInMonth()
-
-// 				continue
-// 			}
-// 			// There are fewer days to add than are remaining in the month
-// 			d2.day += add
-
-// 			break
-// 		}
-// 	}
-
-// 	// Validate result
-// 	err = d2.validate()
-// 	if err != nil {
-// 		return Date{}, err
-// 	}
-
-// 	return d2, nil
-// }
 
 // DaysTo get the number of days to a date
 func (d Date) DaysTo(d2 Date) int64 {
@@ -743,8 +605,20 @@ func (d Date) DaysTo(d2 Date) int64 {
 }
 
 // AtOrPastLeapDay is the date at or past leap day
+// Written assuming that counting days is backwards for BCE.
 func (d Date) AtOrPastLeapDay() bool {
 	if d.IsLeap() {
+		if d.year > 0 {
+			if d.month == 1 {
+				return false
+			}
+			if d.month == 2 {
+				if d.day < 29 {
+					return false
+				}
+			}
+			return true
+		}
 		if d.month == 1 {
 			return false
 		}
@@ -754,6 +628,7 @@ func (d Date) AtOrPastLeapDay() bool {
 			}
 		}
 		return true
+
 	}
 	return false
 }
@@ -767,51 +642,52 @@ func (d Date) daysToDateFromAnchorDay() int {
 	d2.month = 1
 	d2.day = 1
 	for {
-		daysInMonth := d2.daysInMonth()
+		daysInMonth := d2.DaysInMonth()
 		// If months is February on leap year we get the proper number of days
 		if d2.month == d.month {
 			if days == 0 {
-				// fmt.Println("days last at zero", days, d)
 				return d.day - 1
 			}
 			days += d.day - 1
-			// fmt.Println("days last", days, d)
 			if days == -1 {
 				days = 1
 			}
-			// fmt.Println("days last", days, d)
 
 			break
 		}
-		// fmt.Println("days", days, d)
 		days += daysInMonth
-		// fmt.Println(d2, days)
 		d2.month++
-		daysInMonth = d2.daysInMonth()
-		// fmt.Println(d2, days)
-		// fmt.Println("days", days, d)
+		daysInMonth = d2.DaysInMonth()
 		if d2.month > 12 {
 			break
 		}
 	}
 
-	// Deal with reverse offset for BCE year.
-	if d.year < 0 {
-		days = 365 - days
+	// TODO: double check using test
+	// CE years
+	if d.year > 0 {
 		if d2.IsLeap() {
-			if d.month < 2 {
-				days++
+			// Remove extra day for days in Feb before the 29th CE leap yearr
+			if d.month > 1 {
+				days--
+			}
+			if d.month == 2 && d.day < 29 {
+				days--
 			}
 		}
+		// BCE years
 	} else {
+		days = 365 - days
 		if d2.IsLeap() {
+			// Remove extra day if previous to February 29 on a leap year
 			if d.month > 2 {
-				// fmt.Println("leap")
-				// days++
+				days--
+			}
+			if d.month == 2 && d.day < 29 {
+				days--
 			}
 		}
 	}
-	// fmt.Println("days", days)
 
 	return days
 }
@@ -910,7 +786,7 @@ func (d Date) Date() (year int64, month int, day int) {
 // LastDayOfMonth returns the last day of the month specified by d.
 // The first day of the month is 1.
 func (d Date) LastDayOfMonth() int {
-	dim := d.daysInMonth()
+	dim := d.DaysInMonth()
 
 	return dim
 }
