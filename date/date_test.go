@@ -5,6 +5,7 @@
 package date
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/matryer/is"
@@ -373,59 +374,48 @@ func TestAddParts(t *testing.T) {
 func TestAddDays(t *testing.T) {
 	is := is.New(t)
 
-	// Problem dates
-	// date_test.go:405: Trying a series of 3000000 days starting with
-	// date_test.go:422: not equal - new date 401-01-01 date from days 401-02-01
-	// date_test.go:422: not equal - new date 401-02-01 date from days 401-01-29
-	// date_test.go:422: not equal - new date 801-01-01 date from days 801-02-01
-	// date_test.go:422: not equal - new date 801-02-01 date from days 801-01-29
-
-	// Not handled
-
-	// date_test.go:431: not equal - new date 5200-12-31 date from days 5201-01-01
-	// date_test.go:431: not equal - new date 5400-02-01 date from days 5400-01-29
-	// date_test.go:431: not equal - new date 5600-12-31 date from days 5601-01-01
-	// date_test.go:431: not equal - new date 5800-02-01 date from days 5800-01-29
-	// date_test.go:431: not equal - new date 6000-12-31 date from days 6001-01-01
-	// date_test.go:431: not equal - new date 6200-02-01 date from days 6200-01-29
-
-	// date_test.go:436: not equal - new date 10000-12-31 date from days 10001-01-01
-	// date_test.go:436: not equal - new date 10400-02-01 date from days 10400-01-30
-	// date_test.go:436: not equal - new date 10400-12-31 date from days 10401-01-01
-	// date_test.go:436: not equal - new date 10800-02-01 date from days 10800-01-30
-
-	dayCount := 365
-	d, err := NewDate(1, 1, 1)
+	// Ensure that cyles go through all probably multiples of 400
+	dayCount := 2 * 1
+	d, err := NewDate(-1, 12, 31)
 	var newDate Date
 	is.NoErr(err)
-	startYear := d
+	startDate := d
 	t.Log("Trying a series of", dayCount, "days starting with year", d.year)
 	foundErr := false
 	var lastDay Date
 	var errorsFound int = 0
-	var endYear Date
+	var endDate Date
 
 	for i := 0; i < dayCount; i++ {
-		d, err = NewDate(startYear.year, 1, 1)
+		if d.year < 0 {
+			d, err = NewDate(startDate.year, 12, 31)
+		} else {
+			d, err = NewDate(startDate.year, 1, 1)
+		}
 		is.NoErr(err)
 		addedDays, err := d.AddDays(int64(i + 1))
 		is.NoErr(err)
 		daysToDate := addedDays.daysToDateFromEpoch()
+		t.Log("adding", i+1, "days to ", d, addedDays, "days to date", daysToDate)
 		newDate, err = FromDays(daysToDate, d.year > 0)
 		is.NoErr(err)
 		lastDay = newDate
+		if i > 999 && (i+1)%100000 == 0 {
+			t.Logf("On day %d of %d date %s...\n", i+1, dayCount, newDate)
+		}
 		if addedDays.String() != newDate.String() {
-			t.Log("not equal - new date", addedDays.String(), "date from days", newDate.String())
+			t.Log("not equal - new date", addedDays.String(), "date from days", newDate.String(), "days to date", daysToDate, "starting date", d)
 			foundErr = true
 			errorsFound++
 		}
-		endYear = newDate
+		endDate = newDate
 	}
 	if foundErr == false {
-		t.Log("no errors found for", dayCount, "day increments. Last date", lastDay.String(), "years from", startYear, "to", endYear)
+		t.Log("no errors found for", dayCount, "day increments. Last date", lastDay.String(), "years from", startDate, "to", endDate)
 	} else {
-		t.Log("Found", errorsFound, "errors", "years from", startYear, "to", endYear)
+		t.Log("Found", errorsFound, "errors", "Check from", startDate, "to", endDate)
 	}
+	fmt.Println("Day check finished!")
 }
 
 func TestDateFromDays(t *testing.T) {
