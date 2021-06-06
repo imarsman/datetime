@@ -679,7 +679,7 @@ func (d Date) daysToDateFromAnchorDay() int {
 	} else {
 		days = 365 - days
 		if d2.IsLeap() {
-			// Remove extra day if previous to February 29 on a leap year
+			// Remove extra day if previous to February 29s
 			if d.month > 2 {
 				days--
 			}

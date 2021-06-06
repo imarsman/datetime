@@ -166,7 +166,7 @@ func TestDaysInMonth(t *testing.T) {
 	for _, p := range partList {
 		d, err := NewDate(p.y, p.m, p.d)
 		is.NoErr(err)
-		days := d.daysInMonth()
+		days := d.DaysInMonth()
 		is.Equal(days, p.v)
 		t.Log("Days in year", d.year, "month", d.month, "days", days)
 	}
@@ -710,7 +710,7 @@ func BenchmarkDaysInMonth(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			dayOfYear = d.daysInMonth()
+			dayOfYear = d.DaysInMonth()
 		}
 	})
 
