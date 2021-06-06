@@ -221,68 +221,68 @@ func (d Date) YearDay() int {
 
 // subtractDays add days to a date
 // TODO: Fix this so that it works properly
-func (d Date) subtractDays(subtract int) (date Date, err error) {
-	d2 := d
-	// fmt.Println("subtracing from", d.String(), subtract)
-	newYear := false
-	for {
-		daysInMonth := d2.daysInMonth()
-		if err != nil {
-			return Date{}, err
-		}
-		// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
-		if d2.month == 1 && d2.day == 1 {
-			// fmt.Println("equal")
-			d2.year--
-			newYear = true
-		}
-		if subtract > daysInMonth {
-			// fmt.Println("d2.day", d2.day)
-			if newYear {
-				// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
-				d2.day = 1
-				d2.month = 12
+// func (d Date) subtractDays(subtract int) (date Date, err error) {
+// 	d2 := d
+// 	// fmt.Println("subtracing from", d.String(), subtract)
+// 	newYear := false
+// 	for {
+// 		daysInMonth := d2.daysInMonth()
+// 		if err != nil {
+// 			return Date{}, err
+// 		}
+// 		// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
+// 		if d2.month == 1 && d2.day == 1 {
+// 			// fmt.Println("equal")
+// 			d2.year--
+// 			newYear = true
+// 		}
+// 		if subtract > daysInMonth {
+// 			// fmt.Println("d2.day", d2.day)
+// 			if newYear {
+// 				// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
+// 				d2.day = 1
+// 				d2.month = 12
 
-				newYear = false
-			}
-			// if d2.day == daysInMonth {
-			// 	// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
-			// 	subtract = subtract - d2.day
-			// 	// fmt.Println("d2.day", d2.day)
-			// 	d2.day = 1
+// 				newYear = false
+// 			}
+// 			// if d2.day == daysInMonth {
+// 			// 	// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
+// 			// 	subtract = subtract - d2.day
+// 			// 	// fmt.Println("d2.day", d2.day)
+// 			// 	d2.day = 1
 
-			// 	continue
-			// } else {
-			// 	// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
-			// 	// d2.day--
-			// 	// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
-			// }
-			fmt.Println("d2.day", d2.day)
-			d2.month--
-			fmt.Println("more subtract", subtract, "daysinmonth", daysInMonth, "d2.day", d2.day, "d2", d2.String())
-			subtract = subtract - daysInMonth
-			d2.day -= subtract
-			fmt.Println("more subtract", subtract, "daysinmonth", daysInMonth, "d2.day", d2.day, "d2", d2.String())
-			// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
-		} else {
-			// subtract = subtract - d2.day
-			// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
-			// curDay := d2.day
-			// fmt.Println("subtract", subtract, "daysinmonth", daysInMonth, "d2.day", d2.day, "d2", d2.String())
-			d2.day = d2.day - subtract
-			// subtract = -curDay
-			fmt.Println("less subtract", subtract, "daysinmonth", daysInMonth, "d2.day", d2.day, "d2", d2.String())
-			fmt.Println("d2.day", d2.day)
-			// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
-			subtract--
-			if subtract == 0 {
-				break
-			}
-		}
-	}
+// 			// 	continue
+// 			// } else {
+// 			// 	// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
+// 			// 	// d2.day--
+// 			// 	// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
+// 			// }
+// 			fmt.Println("d2.day", d2.day)
+// 			d2.month--
+// 			fmt.Println("more subtract", subtract, "daysinmonth", daysInMonth, "d2.day", d2.day, "d2", d2.String())
+// 			subtract = subtract - daysInMonth
+// 			d2.day -= subtract
+// 			fmt.Println("more subtract", subtract, "daysinmonth", daysInMonth, "d2.day", d2.day, "d2", d2.String())
+// 			// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
+// 		} else {
+// 			// subtract = subtract - d2.day
+// 			// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
+// 			// curDay := d2.day
+// 			// fmt.Println("subtract", subtract, "daysinmonth", daysInMonth, "d2.day", d2.day, "d2", d2.String())
+// 			d2.day = d2.day - subtract
+// 			// subtract = -curDay
+// 			fmt.Println("less subtract", subtract, "daysinmonth", daysInMonth, "d2.day", d2.day, "d2", d2.String())
+// 			fmt.Println("d2.day", d2.day)
+// 			// fmt.Println("date", d2.String(), d2.month == 1 && d2.day == 1)
+// 			subtract--
+// 			if subtract == 0 {
+// 				break
+// 			}
+// 		}
+// 	}
 
-	return d2, nil
-}
+// 	return d2, nil
+// }
 
 // AddDays add days to a date
 //
@@ -307,6 +307,8 @@ func (d Date) subtractDays(subtract int) (date Date, err error) {
 //   33271 ns/op   3.06 MB/s     0 B/op   0 allocs/op
 func (d Date) AddDays(days int64) (Date, error) {
 	d2 := d
+	// fmt.Println("days", days)
+	// startingDays := days
 
 	/*
 		How chunkDays is calculated
@@ -330,8 +332,13 @@ func (d Date) AddDays(days int64) (Date, error) {
 	var chunks400Years bool
 	// var chunks100Years int64 = 0
 
-	chunks := days / chunk400YearDays
-	remainder := days % chunk400YearDays
+	chunks400 := days / chunk400YearDays
+	chunk400YearRemainder := days % chunk400YearDays
+
+	chunks100 := chunk400YearRemainder / chunk100YearDays
+	// fmt.Println("100 year chunks", chunks100)
+	chunk100YearRemainder := chunk400YearRemainder / chunk100YearDays
+	// fmt.Println("chunks 100 year remainder", chunk100YearRemainder)
 
 	if d.year < 0 {
 		d2.year = d.year
@@ -340,88 +347,90 @@ func (d Date) AddDays(days int64) (Date, error) {
 		days -= 2
 	}
 
-	if chunks > 0 {
+	var totalCunkYears int64 = 1
+
+	if chunks400 > 0 {
+		// fmt.Println("400 year chunks", chunks400, "remainder", chunk400YearRemainder)
 		chunks400Years = true
-		chunkTotal := chunks * chunk400YearDays
+		chunkTotal := chunks400 * chunk400YearDays
 
 		if d2.year < 0 {
-			d2.year -= chunks * 400
+			d2.year -= chunks400 * 400
 			days -= chunkTotal
 		} else {
-			d2.year += chunks * 400
+			d2.year += chunks400 * 400
 			days -= chunkTotal
 		}
+		// fmt.Println("d2 400", d2, chunk400YearRemainder)
+		totalCunkYears += chunks400 * 400
 		// Introduce a leap year compensation that we will have to deal with
 		// more later.
-		if d2.IsLeap() && remainder > 0 {
+		if d2.IsLeap() && chunk400YearRemainder > 0 {
+			// fmt.Println("leap adjustment")
 			days++
 		}
 	}
+	if chunk400YearRemainder == 0 {
+		d2.month--
+	}
 
-	chunks = days / chunk100YearDays
-	remainder = days % chunk100YearDays
+	// fmt.Println("days", days)
+	days = chunk400YearRemainder + chunk100YearRemainder
+	// fmt.Println("days", days, "400 remainder", chunk400YearRemainder, "100 remainder", chunk100YearRemainder)
+	// days += chunk400YearRemainder
+	// days = days + chunk400YearRemainder
 
-	if chunks > 0 {
+	if chunks100 > 0 {
+		// fmt.Println("100 year chunks", chunks100, "remainder", chunk100YearRemainder, "chunk 100 days", chunk100YearDays, "days - remainder", chunk100YearDays-chunk100YearRemainder)
 		// Another adjustment
 		if chunks400Years == true && d2.year < 0 {
 			days--
 		}
 
-		chunkTotal := chunks * chunk100YearDays
+		chunkTotal := chunks100 * chunk100YearDays
 
 		if d2.year < 0 {
-			d2.year -= chunks * 100
+			d2.year -= chunks100 * 100
 			days -= chunkTotal
 		} else {
-			d2.year += chunks * 100
-			days -= chunkTotal
-		}
-
-		// The last day was removed. If the remainder is 0 here we have an
-		// ending on a leap day and must walk the day back.
-		// e.g. not equal 4000-12-31 4001-01-01
-		if remainder == 0 {
-			d2.month--
-			if d2.month < 1 {
-				d2.year--
-				d2.month = 12
-				d2.day = 31
-			} else {
-				daysInMonth := d2.daysInMonth()
-				d2.day = daysInMonth
-			}
+			d2.year += chunks100 * 100
+			days -= chunkTotal + (chunks100 * 2)
 		}
 	}
 
+	days = days + chunk100YearRemainder
+	// fmt.Println(d2, "days", days, "chunks 100", chunks100, "chunks 400", chunks400)
+
 	var err error
 	if days > 0 {
-		// If the remainder is a year too high
-		// More edge cases will likely show up in testing.
-		if d2.year < 0 && (days == 36522 || days == 363) {
-			d2.year--
-		}
 		if d2.year < 0 {
 			days++
 		}
 		if d.year > 0 {
+			// days--
 			daysInMonth := d2.daysInMonth()
-			for {
+			for days > 0 {
+				daysInMonth = d2.daysInMonth()
 				if int64(daysInMonth) <= days {
-					daysInMonth = d2.daysInMonth()
 					d2.month++
 					if d2.month > 12 {
 						d2.month = 1
 						d2.day = 1
 						d2.year++
 						daysInMonth = d2.daysInMonth()
-					}
+						days -= int64(daysInMonth)
 
-					daysInMonth = d2.daysInMonth()
-					days -= int64(daysInMonth)
-				} else {
-					if days != 1 {
-						d2.day += int(days)
+						continue
 					}
+					// previousDaysInMonth := daysInMonth
+					days -= int64(daysInMonth)
+					// fmt.Println(d2, "dim", daysInMonth, days)
+					d2.day = 1
+					// fmt.Println(d2, days, daysInMonth)
+				} else {
+					// fmt.Println("days pre", d2, days)
+					d2.day += int(days)
+					days = 0
 					break
 				}
 			}
@@ -457,8 +466,36 @@ func (d Date) AddDays(days int64) (Date, error) {
 				}
 			}
 			if d2.IsLeap() && d2.day > 1 {
+				// fmt.Println("final leap")
 				d2.day--
 			}
+		}
+	} else {
+		// e.g. 900-12-31
+		d2.month++
+		if d2.month > 12 {
+			d2.year++
+			d2.month = 1
+			d2.day = 1
+		} else {
+			d2.day = 1
+		}
+	}
+	// Have not discovered the reson for consistent errors. Most likely to do
+	// with chunks.
+	if d2.year > 0 {
+		for {
+			if (d2.year-1)%400 == 0 && d2.month == 2 && d2.day == 1 {
+				d2.year--
+				d2.month = 12
+				d2.day = 31
+				break
+			} else if (d2.year-1)%100 == 0 && d2.month == 2 && d2.day == 1 {
+				d2.month = 1
+				d2.day = 1
+				break
+			}
+			break
 		}
 	}
 
@@ -470,7 +507,8 @@ func (d Date) AddDays(days int64) (Date, error) {
 	return d2, nil
 }
 
-func dateFromDays(days int64, ce bool) (Date, error) {
+// FromDays get date from days from epoch
+func FromDays(days int64, ce bool) (Date, error) {
 	d, err := NewDate(1, 1, 1)
 	if err != nil {
 		return Date{}, err
@@ -489,160 +527,10 @@ func dateFromDays(days int64, ce bool) (Date, error) {
 	return d, nil
 }
 
-// dateFromDays ascertain a date from days from the epoch.
-// This currently is not reliable. It is correct about 80% of the time but other
-// times is off by a day or two. This is mostly an experiment.
-func dateFromDaysOld(days int64, ce bool) (Date, error) {
-	var leapDayCount int64
-
-	years := days / 365
-
-	// - add all years divisible by 4
-	// - subtract all years divisible by 100
-	// - add back all years divisible by 400
-	leapDayCount = (years / 4) - (years / 100) + (years / 400)
-	if !ce {
-		if isLeap(years - 1) {
-			leapDayCount--
-		}
-	} else {
-		if isLeap(years) {
-			leapDayCount--
-		}
-	}
-
-	commonDayCount := days - leapDayCount
-
-	commonYears := commonDayCount / 365
-	commonDayRemainder := commonDayCount % 365
-
-	// fmt.Println("leap day count", leapDayCount, "remainder", commonDayRemainder)
-	toAdd := commonDayRemainder + leapDayCount
-	toAdd = leapDayCount - toAdd
-	if toAdd < 0 {
-		toAdd = -toAdd
-	}
-	// toAdd := leapDayCount
-
-	fmt.Println("days", days, "leap days", leapDayCount, "commondaycount", commonDayCount, "commonyears", commonYears, "commondayremainder", commonDayRemainder, "toadd", toAdd)
-	d, err := NewDate(commonYears, 1, 1)
-	if err != nil {
-		return Date{}, err
-	}
-
-	if ce == false {
-		d.year = -d.year
-	}
-
-	// dAdjust := d
-	// if ce == false {
-	// 	dAdjust.year = -dayAdjust.year
-	// }
-
-	// d3 := d2
-	d, err = d.AddDays(toAdd)
-	if err != nil {
-		return Date{}, err
-	}
-
-	return d, nil
-	// leapYears := leapDayCount / 365
-	// leapDayRemainder := leapYears % 365
-
-	// leapRatio := float64(leapDayCount) / float64(days)
-
-	// // ctx := apd.BaseContext.WithPrecision(10)
-	// // leapDayCountAPD := apd.New(leapDayCount, 0)
-	// // leapYearsAPD := apd.New(days, 0)
-	// // _, err := ctx.Quo(leapYearsAPD, leapDayCountAPD, apd.New(365, 0))
-	// // if err != nil {
-	// // 	fmt.Println(err)
-	// // }
-
-	// // daysAPD := apd.New(days, 0)
-	// // extraDaysAPD := apd.New(0, 0)
-	// // dayCountAPD := apd.New(days, 0)
-
-	// // leapRatioAPD := apd.New(0, 0)
-
-	// // _, err = ctx.Quo(leapRatioAPD, leapDayCountAPD, dayCountAPD)
-	// // if err != nil {
-	// // 	fmt.Println(err)
-	// // }
-	// // _, err = ctx.Mul(extraDaysAPD, daysAPD, leapRatioAPD)
-	// // if err != nil {
-	// // 	fmt.Println(err)
-	// // }
-
-	// // // extraDaysInt64, _ := extraDaysAPD.Int64()
-
-	// // commondDaysAPD := apd.New(0, 0)
-	// // _, err = ctx.Sub(commondDaysAPD, dayCountAPD, extraDaysAPD)
-	// // if err != nil {
-	// // 	fmt.Println(err)
-	// // }
-	// // commondDaysRemainderAPD := apd.New(0, 0)
-	// // _, err = ctx.Rem(commondDaysRemainderAPD, commondDaysAPD, apd.New(365, 0))
-
-	// // fmt.Println("extra days", extraDaysAPD, "days", daysAPD, "leap days", leapDayCountAPD, "days", dayCountAPD, "leap ratio", leapRatioAPD, "extra days", extraDaysInt64, "common days", commondDaysAPD, "remainder", commondDaysRemainderAPD, "leap years", leapYearsAPD)
-
-	// // every 1550 years there is an extra year of leap days.
-	// // const extraYearMultiple = 1550
-
-	// extraDays := float64(days) * leapRatio
-	// // extraDays := float64(days) * leapRatio
-
-	// // commonDays := days - int64(extraDays)
-	// commonDays := days - leapDayCount
-	// commonYears := commonDays / 365
-
-	// years = commonYears + 1
-
-	// dayAdjust := years / 10000
-	// dayAdjust += years / 20000
-
-	// if dayAdjust > 0 {
-	// 	dayAdjust++
-	// }
-
-	// commonDayRemainder := commonDays % 365
-
-	// // if isLeap(years) {
-	// // 	commonDayRemainder++
-	// // }
-	// // fmt.Println("day adjust", dayAdjust)
-	// commonDayRemainder += dayAdjust
-
-	// fmt.Println("initial days", days, "days", commonDays, "leap days", leapDayCount, "extra days", extraDays, "years", years, "days remainder", commonDayRemainder, "leap day remainder", leapDayRemainder)
-
-	// d, err := NewDate(years, 1, 1)
-	// if err != nil {
-	// 	return Date{}, err
-	// }
-
-	// d2 := d
-	// if ce == false {
-	// 	d2.year = -d2.year
-	// }
-
-	// // dAdjust := d
-	// // if ce == false {
-	// // 	dAdjust.year = -dayAdjust.year
-	// // }
-
-	// // d3 := d2
-	// d2, err = d2.AddDays(int(commonDayRemainder))
-	// // d3, err = d3.AddDays(int(commonDayRemainder + 20))
-	// // // if err != nil {
-	// // fmt.Println("d2", d2, "d3", d3)
-	// // }
-
-	// return d2, nil
-}
-
 func (d Date) daysToDateFromEpoch() int64 {
 	// To 1 Jan for CE or 31 Dec for BCE
 	daysToAnchorDate := daysToAnchorDayFromEpoch(d.year)
+	// fmt.Println("days to anchor day", daysToAnchorDate)
 
 	daysToDate := d.daysToDateFromAnchorDay()
 	// fmt.Println("days to date", daysToDate, d)
@@ -650,103 +538,6 @@ func (d Date) daysToDateFromEpoch() int64 {
 
 	return totalDays
 }
-
-// func (d Date) leapDaysNYearsFromDate(from int64) int64 {
-// 	ay := astronomicalYear(d.year)
-// 	if isLeap(d.year) {
-// 		// fmt.Println("leap")
-// 	}
-// 	leapDayCount := (ay / 4) - (ay / 100) + (ay / 400)
-// 	yearsFrom := d.year + from
-// 	if isLeap(yearsFrom) {
-// 		// fmt.Println("leap 2")
-// 	}
-// 	ay = astronomicalYear(yearsFrom)
-// 	leapDayCount2 := (ay / 4) - (ay / 100) + (ay / 400)
-// 	leapDayCount = leapDayCount2 - leapDayCount
-
-// 	// totalYears := yearsFrom - d.year
-
-// 	if leapDayCount > 365 {
-// 		leapDayCount = leapDayCount % 365
-// 	}
-// 	return leapDayCount
-// 	// totalDays := 365*totalYears + leapDayCount
-// 	// fmt.Println("total years", totalYears, "leapDayCount", leapDayCount, "total days", totalDays)
-
-// 	// isLeap := d.IsLeap()
-// 	// if isLeap {
-// 	// 	if d.month > 2 {
-// 	// 		isLeap = false
-// 	// 	} else {
-// 	// 		// It's a leap year and we are in February with the leap day
-// 	// 		return 366
-// 	// 	}
-// 	// }
-// 	// d2 := d
-// 	// d2.year = yearsFrom
-// 	// if d.year > 0 {
-// 	// 	d2.year++
-// 	// 	if !isLeap {
-// 	// 		isLeap = d2.IsLeap()
-// 	// 		if isLeap {
-// 	// 			// It's a leap year and we're past the leap day
-// 	// 			if d2.month > 2 {
-// 	// 				isLeap = true
-// 	// 				return 366
-// 	// 			}
-// 	// 			if d2.month == 2 {
-// 	// 				// It's a leap year and we're on the leap day
-// 	// 				if d2.day == 29 {
-// 	// 					return 366
-// 	// 				}
-// 	// 			}
-// 	// 		} else {
-// 	// 			d2.year++
-// 	// 			isLeap = d2.IsLeap()
-// 	// 			if isLeap {
-// 	// 				if d2.month <= 2 {
-// 	// 					if d2.month == 2 && d2.day < 29 {
-// 	// 						return 366
-// 	// 					}
-// 	// 				}
-// 	// 			}
-// 	// 		}
-// 	// 	}
-// 	// } else {
-// 	// 	d2.year--
-// 	// 	if !isLeap {
-// 	// 		isLeap = d2.IsLeap()
-// 	// 		if isLeap {
-// 	// 			// It's a leap year and we're past the leap day
-// 	// 			if d2.month > 2 {
-// 	// 				isLeap = true
-// 	// 				return 366
-// 	// 			}
-// 	// 			if d2.month <= 2 {
-// 	// 				isLeap = true
-// 	// 				return 366
-// 	// 				// It's a leap year and we're on the leap day
-// 	// 				// if d2.day < 29 {
-// 	// 				// 	return 366
-// 	// 				// }
-// 	// 			}
-// 	// 		} else {
-// 	// 			d2.year--
-// 	// 			isLeap = d2.IsLeap()
-// 	// 			if isLeap {
-// 	// 				if d2.month <= 2 {
-// 	// 					if d2.month == 2 && d2.day < 29 {
-// 	// 						return 366
-// 	// 					}
-// 	// 				}
-// 	// 			}
-// 	// 		}
-// 	// 	}
-// 	// }
-
-// 	// return 365
-// }
 
 // daysOneYearFromDate add a year and if the intervening days have a leap year days
 // return 366, else return 365.
@@ -961,104 +752,104 @@ func (d Date) AddMonths(add int) (d2 Date, err error) {
 // AddDaysOld add days to a date
 // Reasonably efficient given that it adds as many days at a time as possible.
 // TODO: Adding days will end up with more total days if leap days are added
-func (d Date) AddDaysOld(add int) (date Date, err error) {
-	d2 := d
-	// fmt.Println("count leap days", countLeapDays)
+// func (d Date) AddDaysOld(add int) (date Date, err error) {
+// 	d2 := d
+// 	// fmt.Println("count leap days", countLeapDays)
 
-	// daysAdded := 0
-	// leapDays := 0
-	// Benchmark adding 1000000 days to 2019-03-01
-	// With adding years:     1832 ns/op   5.46 MB/s   0 B/op   0 allocs/op
-	// Without adding years: 27300 ns/op   0.37 MB/s   0 B/op   0 allocs/op
-	// With and without the years add produces same result
-	if add > 365 {
-		for {
-			// Asking for year days using IsLeap logic is much much faster than
-			// counting days from epoch to date.
-			daysBetween := d2.daysOneYearFromDate()
-			// fmt.Println("d2", d2.String(), "add", add, "days between", daysBetween)
-			if daysBetween < 0 {
-				break
-			}
-			if int(daysBetween) <= add {
-				d2.year++
-				if d2.IsLeap() {
-					// fmt.Println(d2.String(), "is leap")
-					d2, err = d2.AddDaysOld(1)
-					if err != nil {
-						return Date{}, err
-					}
-					add -= int(daysBetween)
-				} else if d2.IsLeap() {
-					add -= daysBetween
-				} else {
-					add -= int(daysBetween)
-				}
-			} else {
-				break
-			}
-		}
-	}
+// 	// daysAdded := 0
+// 	// leapDays := 0
+// 	// Benchmark adding 1000000 days to 2019-03-01
+// 	// With adding years:     1832 ns/op   5.46 MB/s   0 B/op   0 allocs/op
+// 	// Without adding years: 27300 ns/op   0.37 MB/s   0 B/op   0 allocs/op
+// 	// With and without the years add produces same result
+// 	if add > 365 {
+// 		for {
+// 			// Asking for year days using IsLeap logic is much much faster than
+// 			// counting days from epoch to date.
+// 			daysBetween := d2.daysOneYearFromDate()
+// 			// fmt.Println("d2", d2.String(), "add", add, "days between", daysBetween)
+// 			if daysBetween < 0 {
+// 				break
+// 			}
+// 			if int(daysBetween) <= add {
+// 				d2.year++
+// 				if d2.IsLeap() {
+// 					// fmt.Println(d2.String(), "is leap")
+// 					d2, err = d2.AddDaysOld(1)
+// 					if err != nil {
+// 						return Date{}, err
+// 					}
+// 					add -= int(daysBetween)
+// 				} else if d2.IsLeap() {
+// 					add -= daysBetween
+// 				} else {
+// 					add -= int(daysBetween)
+// 				}
+// 			} else {
+// 				break
+// 			}
+// 		}
+// 	}
 
-	daysInMonth := d2.daysInMonth()
-	if err != nil {
-		return Date{}, err
-	}
-	for add > 0 {
-		if add >= daysInMonth && d2.day <= daysInMonth {
-			if d2.month >= 12 {
-				daysTilEOM := daysInMonth - d2.day
-				d2.year++
-				if d2.year == 0 {
-					d2.year = 1
-				}
-				d2.month = 1
-				d2.day = 1
-				add = add - daysTilEOM - 1
-				daysInMonth = d2.daysInMonth()
-			} else {
-				daysTilEOM := daysInMonth - d2.day
-				d2.day = 1
-				d2.month++
-				add = add - daysTilEOM - 1
+// 	daysInMonth := d2.daysInMonth()
+// 	if err != nil {
+// 		return Date{}, err
+// 	}
+// 	for add > 0 {
+// 		if add >= daysInMonth && d2.day <= daysInMonth {
+// 			if d2.month >= 12 {
+// 				daysTilEOM := daysInMonth - d2.day
+// 				d2.year++
+// 				if d2.year == 0 {
+// 					d2.year = 1
+// 				}
+// 				d2.month = 1
+// 				d2.day = 1
+// 				add = add - daysTilEOM - 1
+// 				daysInMonth = d2.daysInMonth()
+// 			} else {
+// 				daysTilEOM := daysInMonth - d2.day
+// 				d2.day = 1
+// 				d2.month++
+// 				add = add - daysTilEOM - 1
 
-				daysInMonth = d2.daysInMonth()
-			}
-			continue
-		} else {
-			if add+d2.day >= daysInMonth {
-				daysTilEOM := daysInMonth - d2.day
+// 				daysInMonth = d2.daysInMonth()
+// 			}
+// 			continue
+// 		} else {
+// 			if add+d2.day >= daysInMonth {
+// 				daysTilEOM := daysInMonth - d2.day
 
-				add = add - daysTilEOM - 1
-				d2.day = 1
-				d2.month++
-				if d2.month > 12 {
-					d2.month = 1
-					d2.year++
-					if d2.year == 0 {
-						d2.year = 1
-					}
-				}
-				// Get days in month once month has had a chance to be corrected
-				daysInMonth = d2.daysInMonth()
+// 				add = add - daysTilEOM - 1
+// 				d2.day = 1
+// 				d2.month++
+// 				if d2.month > 12 {
+// 					d2.month = 1
+// 					d2.year++
+// 					if d2.year == 0 {
+// 						d2.year = 1
+// 					}
+// 				}
+// 				// Get days in month once month has had a chance to be corrected
+// 				daysInMonth = d2.daysInMonth()
 
-				continue
-			}
-			// There are fewer days to add than are remaining in the month
-			d2.day += add
+// 				continue
+// 			}
+// 			// There are fewer days to add than are remaining in the month
+// 			d2.day += add
 
-			break
-		}
-	}
+// 			break
+// 		}
+// 	}
 
-	// Validate result
-	err = d2.validate()
-	if err != nil {
-		return Date{}, err
-	}
+// 	// Validate result
+// 	err = d2.validate()
+// 	if err != nil {
+// 		return Date{}, err
+// 	}
 
-	return d2, nil
-}
+// 	return d2, nil
+// }
 
 // DaysTo get the number of days to a date
 func (d Date) DaysTo(d2 Date) int64 {
@@ -1098,10 +889,10 @@ func (d Date) daysToDateFromAnchorDay() int {
 		if d2.month == d.month {
 			if days == 0 {
 				// fmt.Println("days last at zero", days, d)
-				return 0
+				return d.day - 1
 			}
-			// fmt.Println("days last", days, d)
 			days += d.day - 1
+			// fmt.Println("days last", days, d)
 			if days == -1 {
 				days = 1
 			}
@@ -1111,8 +902,11 @@ func (d Date) daysToDateFromAnchorDay() int {
 		}
 		// fmt.Println("days", days, d)
 		days += daysInMonth
-		// fmt.Println("days", days, d)
+		// fmt.Println(d2, days)
 		d2.month++
+		daysInMonth = d2.daysInMonth()
+		// fmt.Println(d2, days)
+		// fmt.Println("days", days, d)
 		if d2.month > 12 {
 			break
 		}
@@ -1128,11 +922,13 @@ func (d Date) daysToDateFromAnchorDay() int {
 		}
 	} else {
 		if d2.IsLeap() {
-			if d.month < 2 {
-				days--
+			if d.month > 2 {
+				// fmt.Println("leap")
+				// days++
 			}
 		}
 	}
+	// fmt.Println("days", days)
 
 	return days
 }
