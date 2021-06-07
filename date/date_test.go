@@ -375,7 +375,7 @@ func TestAddDays(t *testing.T) {
 	is := is.New(t)
 
 	// Ensure that cyles go through all probably multiples of 400
-	dayCount := 2 * 1
+	dayCount := 365 * 10
 	d, err := NewDate(-1, 12, 31)
 	var newDate Date
 	is.NoErr(err)
@@ -396,8 +396,8 @@ func TestAddDays(t *testing.T) {
 		addedDays, err := d.AddDays(int64(i + 1))
 		is.NoErr(err)
 		daysToDate := addedDays.daysToDateFromEpoch()
-		t.Log("adding", i+1, "days to ", d, addedDays, "days to date", daysToDate)
 		newDate, err = FromDays(daysToDate, d.year > 0)
+		// t.Log("adding", i+1, "days to", d, "new date from adding", newDate, "days to date", daysToDate, "new date from days", newDate)
 		is.NoErr(err)
 		lastDay = newDate
 		if i > 999 && (i+1)%100000 == 0 {
@@ -423,25 +423,20 @@ func TestDateFromDays(t *testing.T) {
 
 	var partList = []datePartsWithVerify{
 
-		// 400 year 0 remainder
-		// {401, 1, 1, 0},
-		{401, 2, 1, 0},
-		{401, 6, 1, 0},
-		// 400 year 0 remainder
-		{801, 1, 1, 0},
-		{1201, 1, 1, 0},
-		{1201, 9, 1, 0},
-		{2000, 1, 1, 0},
-		{3000, 1, 1, 0},
-		{4000, 1, 1, 0},
-		// {5200, 12, 31, 0},
-		// {5400, 2, 1, 0},
-		// 400 year 0 remainder
-		{10001, 1, 1, 0},
-		{10400, 2, 1, 0},
-		{10400, 2, 2, 0},
-		{10400, 6, 2, 0},
-		{10401, 6, 2, 0},
+		{-1, 1, 31, 0},
+		// {401, 2, 1, 0},
+		// {401, 6, 1, 0},
+		// {801, 1, 1, 0},
+		// {1201, 1, 1, 0},
+		// {1201, 9, 1, 0},
+		// {2000, 1, 1, 0},
+		// {3000, 1, 1, 0},
+		// {4000, 1, 1, 0},
+		// {10001, 1, 1, 0},
+		// {10400, 2, 1, 0},
+		// {10400, 2, 2, 0},
+		// {10400, 6, 2, 0},
+		// {10401, 6, 2, 0},
 	}
 
 	for _, p := range partList {
@@ -463,22 +458,25 @@ func TestDaysToDate(t *testing.T) {
 	is := is.New(t)
 
 	var partList = []datePartsWithVerify{
-		{-1, 10, 1, 91},
-		{-1, 12, 1, 30},
-		{-1, 12, 30, 30},
-		{1, 12, 1, 334},
-		{590, 2, 26, 0},
-		{2020, 3, 11, 0},
-		{2020, 4, 9, 0},
-		{2020, 4, 11, 0},
-		{2020, 4, 12, 0},
-		{2001, 1, 1, 0},
-		{2001, 1, 2, 0},
-		{2001, 1, 3, 0},
-		{2001, 2, 3, 0},
-		{2021, 1, 30, 737819},
-		{5107, 2, 28, 0},
-		{10401, 6, 2, 0},
+		{-1, 2, 28, 0},
+		{-1, 1, 1, 0},
+		{-1, 1, 31, 0},
+		// {-1, 10, 1, 91},
+		// {-1, 12, 1, 30},
+		// {-1, 12, 30, 30},
+		// {1, 12, 1, 334},
+		// {590, 2, 26, 0},
+		// {2020, 3, 11, 0},
+		// {2020, 4, 9, 0},
+		// {2020, 4, 11, 0},
+		// {2020, 4, 12, 0},
+		// {2001, 1, 1, 0},
+		// {2001, 1, 2, 0},
+		// {2001, 1, 3, 0},
+		// {2001, 2, 3, 0},
+		// {2021, 1, 30, 737819},
+		// {5107, 2, 28, 0},
+		// {10401, 6, 2, 0},
 	}
 
 	for _, p := range partList {
