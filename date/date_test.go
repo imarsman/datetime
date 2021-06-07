@@ -105,6 +105,15 @@ func TestDaysToDateFromAnchorDay(t *testing.T) {
 	}
 
 	var partList = []datePartsWithVerify{
+		// {-4, 4, 1, 0},
+		// {-5, 4, 1, 0},
+		// {-4, 1, 31, 0},
+		// {-5, 1, 31, 0},
+		// {-5, 8, 31, 0},
+		// {-4, 8, 31, 0},
+		{-298, 10, 04, 0},
+		{-298, 10, 03, 0},
+
 		// {-800, 12, 31, 0},
 		// {-10, 1, 1, 0},
 		// {-10, 1, 2, 0},
@@ -120,8 +129,8 @@ func TestDaysToDateFromAnchorDay(t *testing.T) {
 		// {-5, 1, 1, 365},
 		// {-2, 1, 1, 30},
 		// {800, 1, 1, 0},
-		{401, 2, 1, 0},
-		{401, 4, 30, 0},
+		// {401, 2, 1, 0},
+		// {401, 4, 30, 0},
 
 		// {8, 12, 1, 0},
 		// {4, 2, 28, 0},
@@ -374,9 +383,11 @@ func TestAddParts(t *testing.T) {
 func TestAddDays(t *testing.T) {
 	is := is.New(t)
 
+	// date_test.go:413: not equal - new date -101-12-31 date from days -101-12-29 days to date 36524 starting date -100-12-31
+	// date_test.go:413: not equal - new date -101-12-31 date from days -101-12-29 days to date 36524 starting date -100-12-31
 	// Ensure that cyles go through all probably multiples of 400
-	dayCount := 365 * 10
-	d, err := NewDate(-1, 12, 31)
+	dayCount := 1 * 40
+	d, err := NewDate(-297, 10, 1)
 	var newDate Date
 	is.NoErr(err)
 	startDate := d
@@ -388,7 +399,7 @@ func TestAddDays(t *testing.T) {
 
 	for i := 0; i < dayCount; i++ {
 		if d.year < 0 {
-			d, err = NewDate(startDate.year, 12, 31)
+			d, err = NewDate(startDate.year, 11, 1)
 		} else {
 			d, err = NewDate(startDate.year, 1, 1)
 		}
@@ -404,7 +415,7 @@ func TestAddDays(t *testing.T) {
 			t.Logf("On day %d of %d date %s...\n", i+1, dayCount, newDate)
 		}
 		if addedDays.String() != newDate.String() {
-			t.Log("not equal - new date", addedDays.String(), "date from days", newDate.String(), "days to date", daysToDate, "starting date", d)
+			t.Log("not equal - new date", addedDays.String(), "added days", i+1, "date from days", newDate.String(), "days to date", daysToDate, "starting date", d)
 			foundErr = true
 			errorsFound++
 		}
@@ -413,7 +424,7 @@ func TestAddDays(t *testing.T) {
 	if foundErr == false {
 		t.Log("no errors found for", dayCount, "day increments. Last date", lastDay.String(), "years from", startDate, "to", endDate)
 	} else {
-		t.Log("Found", errorsFound, "errors", "Check from", startDate, "to", endDate)
+		t.Log("Found", errorsFound, "errors out of ", dayCount, "Check from", startDate, "to", endDate)
 	}
 	fmt.Println("Day check finished!")
 }
@@ -422,13 +433,14 @@ func TestDateFromDays(t *testing.T) {
 	is := is.New(t)
 
 	var partList = []datePartsWithVerify{
-
 		{-1, 1, 31, 0},
 		// {401, 2, 1, 0},
 		// {401, 6, 1, 0},
 		// {801, 1, 1, 0},
 		// {1201, 1, 1, 0},
 		// {1201, 9, 1, 0},
+		{-298, 10, 04, 0},
+		{-298, 10, 03, 0},
 		// {2000, 1, 1, 0},
 		// {3000, 1, 1, 0},
 		// {4000, 1, 1, 0},

@@ -182,7 +182,7 @@ func (d Date) YearDay() int {
 //   926.2 ns/op    10.80 MB/s   0 B/op   0 allocs/op
 func (d Date) AddDays(days int64) (Date, error) {
 	newDate := d
-	// fmt.Println("days", days)
+	fmt.Println("date", newDate, days)
 	// startingDays := days
 
 	/*
@@ -298,22 +298,45 @@ func (d Date) AddDays(days int64) (Date, error) {
 					if newDate.month < 1 {
 						newDate.month = 12
 						newDate.day = 31
+						// newDate.day = 1
 						newDate.year--
 						daysInMonth = newDate.DaysInMonth()
 						days -= int64(daysInMonth)
+						fmt.Println("december", newDate, days)
 
 						continue
-					}
+					} else {
 
-					days -= int64(daysInMonth)
-					daysInMonth = newDate.DaysInMonth()
-					newDate.day = daysInMonth
+						daysInMonth = newDate.DaysInMonth()
+						days -= int64(daysInMonth)
+						newDate.day = daysInMonth
+						fmt.Println("days > 0", newDate, days)
+					}
 					continue
 				} else {
+					fmt.Println("daysInMonth > days", newDate, days)
 					if int(days) < newDate.day {
-						newDate.day -= int(days)
-						if newDate.day == 1 {
-							if newDate.month == 1 {
+						fmt.Println("days < day", newDate, days)
+						if newDate.month == 1 && newDate.IsLeap() {
+							days++
+						}
+						if newDate.month == 2 && newDate.IsLeap() {
+							if days < 30 {
+								days++
+							} else {
+							}
+						}
+
+						newDate.month++
+						newDate.day = int(days) + 1
+						fmt.Println(newDate)
+
+						if newDate.month == 3 && newDate.day == 1 && newDate.IsLeap() {
+							// fmt.Println("leap", days)
+						}
+
+						if newDate.month == 1 {
+							if newDate.day == 1 {
 								newDate.month = 12
 								newDate.year--
 								daysInMonth = newDate.DaysInMonth()
@@ -323,12 +346,16 @@ func (d Date) AddDays(days int64) (Date, error) {
 							days = 0
 							continue
 						}
+						fmt.Println("days < day", newDate, days)
+
 						days = 0
 						continue
 					} else {
+						fmt.Println(newDate)
 						days -= int64(newDate.day)
 						newDate.month--
 						newDate.year--
+						fmt.Println("here", newDate, days)
 						daysInMonth = newDate.DaysInMonth()
 						newDate.day = daysInMonth
 						continue
@@ -366,6 +393,12 @@ func (d Date) AddDays(days int64) (Date, error) {
 				break
 			}
 			break
+		}
+	} else {
+		// Feb 28 gets rolled to 1 March on negative leap years
+		if newDate.month == 3 && newDate.day == 1 && newDate.IsLeap() {
+			newDate.month = 2
+			newDate.day = 28
 		}
 	}
 
@@ -685,9 +718,14 @@ func (d Date) daysToDateFromAnchorDay() int {
 	if d.year < 0 {
 		days = 365 - days - 1
 		if d2.IsLeap() {
+			if d.month == 1 {
+				days++
+			}
 			// Remove extra day if previous to February 29s
-			if d.month > 2 {
-				days--
+			if d.month == 2 {
+				if d.day < 29 {
+					days--
+				}
 			}
 		}
 	}
