@@ -294,9 +294,7 @@ func (d Date) AddDays(days int64) (Date, error) {
 			// fmt.Println("starting days", days)
 			for days > 0 {
 				if int64(daysInMonth) <= days {
-					// fmt.Println("days > days in month 1", "days", days, daysInMonth, copy)
 					newDate.month--
-					// fmt.Println("days less than", days, copy)
 					if newDate.month < 1 {
 						newDate.month = 12
 						newDate.day = 31
@@ -309,44 +307,25 @@ func (d Date) AddDays(days int64) (Date, error) {
 
 					days -= int64(daysInMonth)
 					daysInMonth = newDate.DaysInMonth()
-					// fmt.Println("days > days in month 2-1", "days", days, "days in month", daysInMonth, "new date", newDate)
 					newDate.day = daysInMonth
-					// fmt.Println("days > days in month 2-2", "days", days, "days in month", daysInMonth, "new date", newDate)
 					continue
-					// fmt.Println("days > days in month 3", "days", days, daysInMonth, copy)
 				} else {
-					// diff := int(days) - newDate.day
-					// fmt.Println(copy, "days < days in month. diff", diff, "days", days)
 					if int(days) < newDate.day {
 						newDate.day -= int(days)
-						// fmt.Println("new date", newDate, "days", days, "days in month", daysInMonth)
 						if newDate.day == 1 {
-							// fmt.Println("new date!", newDate, days)
 							if newDate.month == 1 {
 								newDate.month = 12
 								newDate.year--
 								daysInMonth = newDate.DaysInMonth()
 								newDate.day = daysInMonth
-								// fmt.Println("rolled over", newDate)
 								break
 							}
-							// newDate.month--
-							// daysInMonth = newDate.DaysInMonth()
-							// newDate.day = daysInMonth
 							days = 0
-							// fmt.Println("newdate before subtraction", newDate, "days", days)
 							continue
-							// newDate.month--
-							// daysInMonth = newDate.DaysInMonth()
-							// fmt.Println("newdate before subtraction", newDate, "days", days)
-							// newDate.day = daysInMonth
-							// fmt.Println("newdate after subtraction", newDate)
 						}
 						days = 0
-						// fmt.Println("days at end", days)
 						continue
 					} else {
-						// fmt.Println("days greater than 1", days, newDate)
 						days -= int64(newDate.day)
 						newDate.month--
 						newDate.year--
@@ -674,7 +653,6 @@ func (d Date) AtOrPastLeapDay() bool {
 func (d Date) daysToDateFromAnchorDay() int {
 	days := 0
 
-	// fmt.Println("date", d)
 	// Count forwards to date from 1 Jan
 	d2 := d
 	d2.month = 1
@@ -683,11 +661,8 @@ func (d Date) daysToDateFromAnchorDay() int {
 		daysInMonth := d2.DaysInMonth()
 		// If months is February on leap year we get the proper number of days
 		if d2.month == d.month {
-			// fmt.Println("days", days)
 			if days == 0 {
-				// fmt.Println("days", days, d.day, d, daysInMonth)
 				days = d.day - 1
-				// fmt.Println("days", days, d.day, d, daysInMonth)
 				break
 			}
 			days += d.day - 1
@@ -705,28 +680,10 @@ func (d Date) daysToDateFromAnchorDay() int {
 		}
 	}
 
-	// fmt.Println(d.year < 0)
 	// TODO: double check using test
 	// CE years
-	if d.year > 0 {
-		// if d2.IsLeap() {
-		// 	// Remove extra day for days in Feb before the 29th CE leap yearr
-		// 	// if d.month == 1 {
-		// 	// 	days--
-		// 	// }
-		// 	// AddDays does not take this into account
-		// 	// Double check days in Feb on leap year
-		// 	if d.month == 2 && d.day < 29 {
-		// 		fmt.Println("d 1", d, days)
-		// 		days--
-		// 		fmt.Println("d", d, days)
-		// 	}
-		// }
-		// BCE years
-	} else {
-		// fmt.Println(d, "final days", days)
+	if d.year < 0 {
 		days = 365 - days - 1
-		// fmt.Println(d, "final days", days)
 		if d2.IsLeap() {
 			// Remove extra day if previous to February 29s
 			if d.month > 2 {
