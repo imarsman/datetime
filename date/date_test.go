@@ -105,14 +105,19 @@ func TestDaysToDateFromAnchorDay(t *testing.T) {
 	}
 
 	var partList = []datePartsWithVerify{
+		{-6, 3, 2, 0},
+		{-6, 1, 2, 0},
+		{-5, 1, 2, 0},
+		{-5, 3, 2, 0},
+		{-1, 3, 2, 0},
 		// {-4, 4, 1, 0},
 		// {-5, 4, 1, 0},
 		// {-4, 1, 31, 0},
 		// {-5, 1, 31, 0},
 		// {-5, 8, 31, 0},
 		// {-4, 8, 31, 0},
-		{-298, 10, 04, 0},
-		{-298, 10, 03, 0},
+		// {-298, 10, 04, 0},
+		// {-298, 10, 03, 0},
 
 		// {-800, 12, 31, 0},
 		// {-10, 1, 1, 0},
@@ -149,7 +154,7 @@ func TestDaysToDateFromAnchorDay(t *testing.T) {
 		is.NoErr(err)
 		daysToAnchor := daysToAnchorDayFromEpoch(d.year)
 		days := d.daysToDateFromAnchorDay()
-		t.Log("days to anchor date", daysToAnchor, "days to date", days)
+		t.Log(d, "days to anchor date", daysToAnchor, "days to date", days)
 		t.Log(d, "days", days)
 		if p.v != 0 {
 			// is.Equal(days, p.v)
@@ -220,7 +225,7 @@ func TestWeekday(t *testing.T) {
 		{1968, 5, 26},
 		{1998, 8, 14},
 		{2002, 4, 10},
-		{1980, 1, 1},
+		{1985, 7, 30},
 		{2000, 1, 1},
 		{2020, 1, 1},
 		{2020, 5, 18},
@@ -429,6 +434,23 @@ func TestAddDays(t *testing.T) {
 	fmt.Println("Day check finished!")
 }
 
+func TestDaysToDateParts(t *testing.T) {
+	is := is.New(t)
+
+	d, err := NewDate(-8, 3, 2)
+	// d, err := NewDate(-6, 3, 2)
+	// d, err := NewDate(-1, 3, 2)
+	// d, err := NewDate(-1, 3, 2)
+	// d, err := NewDate(-5, 3, 2)
+	is.NoErr(err)
+	t.Log(d, "days to date from anchor day", d.daysToDateFromAnchorDay())
+	daysToDate := d.daysToDateFromEpoch()
+	ce := d.year > 0
+	newDate, err := FromDays(daysToDate, ce)
+	is.NoErr(err)
+	t.Log("date", d, "new date", newDate)
+}
+
 func TestDateFromDays(t *testing.T) {
 	is := is.New(t)
 
@@ -440,42 +462,48 @@ func TestDateFromDays(t *testing.T) {
 		// {1201, 1, 1, 0},
 		// {1201, 9, 1, 0},
 		// {-298, 10, 04, 0},
-		{-2800, 1, 1, 0},
-		{-1600, 10, 4, 0},
-		{-1200, 10, 3, 0},
-		{-800, 6, 3, 0},
-		{-800, 2, 3, 0},
-		{-800, 10, 3, 0},
-		{-401, 6, 3, 0},
-		{-401, 2, 3, 0},
-		{-400, 10, 3, 0},
-		{-400, 2, 3, 0},
-		{-400, 6, 3, 0},
-		{-298, 10, 3, 0},
-		{-298, 10, 10, 0},
+		// {-2800, 1, 1, 0},
+		// {-1600, 10, 4, 0},
+		// {-1200, 10, 3, 0},
+		// {-800, 6, 3, 0},
+		// {-800, 2, 3, 0},
+		// {-800, 10, 3, 0},
+		// {-401, 6, 3, 0},
+		// {-401, 2, 3, 0},
+		// {-400, 10, 3, 0},
+		// {-400, 2, 3, 0},
+		// {-400, 6, 3, 0},
+		// {-298, 10, 3, 0},
+		// {-298, 10, 10, 0},
 		{-1, 3, 2, 0},
-		// {-1, 4, 2, 0},
+		{-1, 4, 2, 0},
 		// {-1, 4, 20, 0},
 		// {-1, 5, 2, 0},
 		// {-1, 5, 1, 0},
 		// {-1, 5, 31, 0},
 		// {-1, 10, 1, 0},
 		// {-1, 12, 30, 0},
-		{101, 1, 1, 0},
-		{201, 1, 1, 0},
-		{400, 1, 1, 0},
-		{500, 1, 1, 0},
-		{600, 1, 1, 0},
-		{401, 1, 1, 0},
-		{2000, 1, 1, 0},
+		// {101, 1, 1, 0},
+		// {201, 1, 1, 0},
+		// {400, 1, 1, 0},
+		// {500, 1, 1, 0},
+		// {600, 1, 1, 0},
+		// {401, 1, 1, 0},
+		// {2000, 1, 1, 0},
+		// Incorrect
+		{2021, 6, 10, 0},
 		{2400, 1, 1, 0},
-		// {3000, 1, 1, 0},
-		// {4000, 1, 1, 0},
-		// {10001, 1, 1, 0},
-		// {10400, 2, 1, 0},
-		// {10400, 2, 2, 0},
-		// {10400, 6, 2, 0},
-		// {10401, 6, 2, 0},
+		{3000, 1, 1, 0},
+		{4000, 1, 1, 0},
+		{10001, 1, 1, 0},
+		// Incorrect
+		{10400, 2, 1, 0},
+		// Incorrect
+		{10400, 2, 2, 0},
+		// Incorrect
+		{10400, 6, 2, 0},
+		// Incorrect
+		{10401, 6, 2, 0},
 	}
 
 	for _, p := range partList {
@@ -493,13 +521,55 @@ func TestDateFromDays(t *testing.T) {
 
 }
 
+// Test date on day
+func TestOnDay(t *testing.T) {
+	is := is.New(t)
+
+	type ydverify struct {
+		y int64
+		d int
+	}
+
+	var ymdList = []ydverify{
+		{2021, 10},
+		{2021, 100},
+		{2021, 364},
+	}
+
+	for _, p := range ymdList {
+		d, err := OnDay(p.y, p.d)
+		is.NoErr(err)
+		t.Log("Date", d.String())
+	}
+
+}
+
+func TestDaysToOneYear(t *testing.T) {
+	var partList = []datePartsWithVerify{
+		{2019, 3, 1, 366},
+		{2019, 1, 1, 365},
+		{2020, 12, 1, 365},
+		{2020, 1, 1, 366},
+		{-1, 12, 31, 365},
+		{-4, 12, 31, 365},
+		{-4, 2, 28, 366},
+		{-4, 1, 28, 366},
+	}
+
+	for _, p := range partList {
+		d, _ := NewDate(p.y, p.m, p.d)
+		daysToOneYear := d.DaysOneYearFromDate()
+		t.Log(d.String(), "days to one year from", daysToOneYear)
+	}
+}
+
 func TestDaysToDate(t *testing.T) {
 	is := is.New(t)
 
 	var partList = []datePartsWithVerify{
-		{-400, 2, 3, 0},
-		{-401, 2, 3, 0},
-		{-1, 2, 3, 0},
+		// {-400, 2, 3, 0},
+		// {-401, 2, 3, 0},
+		// {-1, 2, 3, 0},
 		// {-1, 2, 28, 0},
 		// {-1, 1, 1, 0},
 		// {-1, 1, 31, 0},
@@ -508,9 +578,9 @@ func TestDaysToDate(t *testing.T) {
 		// {-1, 12, 30, 30},
 		// {1, 12, 1, 334},
 		// {590, 2, 26, 0},
-		// {2020, 3, 11, 0},
-		// {2020, 4, 9, 0},
-		// {2020, 4, 11, 0},
+		{2020, 3, 11, 0},
+		{2020, 4, 9, 0},
+		{2020, 4, 11, 0},
 		// {2020, 4, 12, 0},
 		// {2001, 1, 1, 0},
 		// {2001, 1, 2, 0},
@@ -553,23 +623,6 @@ func TestDaysToYearEnd(t *testing.T) {
 	}
 }
 
-func TestDaysToOneYear(t *testing.T) {
-	var partList = []dateParts{
-		{2019, 3, 1},
-		{2019, 1, 1},
-		{-1, 12, 31},
-		{-4, 12, 31},
-		{-4, 2, 28},
-		{-4, 1, 28},
-	}
-
-	for _, p := range partList {
-		d, _ := NewDate(p.y, p.m, p.d)
-		daysToOneYear := d.daysOneYearFromDate()
-		t.Log(d.String(), "days to one year from", daysToOneYear)
-	}
-}
-
 func TestString(t *testing.T) {
 	var partList = []dateParts{
 		{2018, 3, 1},
@@ -592,7 +645,9 @@ func BenchmarkDateFromDays(b *testing.B) {
 	is := is.New(b)
 	var d Date
 
-	d, err := NewDate(800, 12, 1)
+	d, err := NewDate(800000, 12, 21)
+	// d, err := NewDate(800, 12, 1)
+	// d, err := NewDate(2001, 12, 31)
 	is.NoErr(err)
 	ce := d.year > 0
 	d2 := d
@@ -716,7 +771,7 @@ func BenchmarkDaysToOneYearFromDate(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			days = d.daysOneYearFromDate()
+			days = d.DaysOneYearFromDate()
 		}
 	})
 
