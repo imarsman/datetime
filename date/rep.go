@@ -175,6 +175,9 @@ func daysToAnchorDayFromEpoch(year int64) int64 {
 		total += leapDayCount
 	}
 
+	// We are looking at the number of days to 1 Jan for CE and 31 December for
+	// BCE. This means that if the year being evaluated is a leap year we should
+	// not count the leap day for that year.
 	if isLeap(astronomicalYear) {
 		total--
 	}

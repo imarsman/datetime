@@ -261,7 +261,7 @@ func (d Date) AddDays(days int64) (Date, error) {
 	// days = chunk400YearRemainder + chunk100YearRemainder
 	days = chunk100YearRemainder
 
-	fmt.Println(newDate, days)
+	// fmt.Println(newDate, days)
 
 	var err error
 	if days > 0 {
@@ -274,7 +274,7 @@ func (d Date) AddDays(days int64) (Date, error) {
 					newDate.year--
 				}
 			} else {
-				fmt.Println("final", days, newDate)
+				// fmt.Println("final", days, newDate)
 				newDate, err = OnDay(newDate.year, int(days))
 				if err != nil {
 					return Date{}, err
@@ -434,17 +434,20 @@ func FromDays(days int64, ce bool) (Date, error) {
 }
 
 func (d Date) daysToDateFromEpoch() int64 {
-	// To 1 Jan for CE or 31 Dec for BCE
+	// To 1 Jan for CE or 31 Dec for BCE. The function will remove the anchor
+	// day for a leap year.
 	daysToAnchorDate := daysToAnchorDayFromEpoch(d.year)
 	// fmt.Println("days to anchor day", daysToAnchorDate)
 
 	daysToDate := d.daysToDateFromAnchorDay()
 	// fmt.Println("days to date", daysToDate, d)
 	totalDays := daysToAnchorDate + int64(daysToDate)
-	// days to date from anchor day will decide wheter to add a leap day
-	if d.IsLeap() {
-		totalDays--
-	}
+
+	// days to date from anchor day will decide wheter to add a leap day. We
+	// would also get a leap day
+	// if d.IsLeap() {
+	// 	totalDays--
+	// }
 
 	return totalDays
 }
@@ -464,10 +467,10 @@ func OnDay(year int64, dayOfYear int) (Date, error) {
 		var days int = 0
 		var daysInMonth = newDate.DaysInMonth()
 		for i := 1; i < 13; i++ {
-			fmt.Println("date", newDate)
+			// fmt.Println("date", newDate)
 			if days+daysInMonth >= dayOfYear {
 				diff := dayOfYear - days
-				fmt.Println("finishing", diff, dayOfYear, days)
+				// fmt.Println("finishing", diff, dayOfYear, days)
 				if diff == daysInMonth {
 					newDate.month++
 					newDate.day = 1
@@ -497,9 +500,9 @@ func OnDay(year int64, dayOfYear int) (Date, error) {
 	var daysInMonth = newDate.DaysInMonth()
 	for i := 1; i < 13; i++ {
 		if days+daysInMonth >= dayOfYear {
-			fmt.Println("date", newDate, "days", days, "days in month", daysInMonth, "dayOfYear", dayOfYear, "days+daysInMonth", days+daysInMonth)
+			// fmt.Println("date", newDate, "days", days, "days in month", daysInMonth, "dayOfYear", dayOfYear, "days+daysInMonth", days+daysInMonth)
 			diff := dayOfYear - days
-			fmt.Println("finishing", newDate, "diff", diff, dayOfYear, days)
+			// fmt.Println("finishing", newDate, "diff", diff, dayOfYear, days)
 			if diff == 0 {
 				newDate.month--
 				daysInMonth = newDate.DaysInMonth()
@@ -509,12 +512,6 @@ func OnDay(year int64, dayOfYear int) (Date, error) {
 					newDate.month = 12
 				}
 			} else {
-				// fmt.Println("newdate", newDate, "day", dayOfYear, "days", days)
-				// newDate.day = dayOfYear - days + 1
-				// newDate.month--
-				// leapDays := 0
-				// if newDate.IsLeap() &&
-
 				// Starting at last day of the month
 				newDate.day = daysInMonth - diff
 			}
@@ -748,16 +745,10 @@ func (d Date) AtOrPastLeapDay() bool {
 			}
 			return true
 		}
-		if d.month == 1 {
+		if d.month > 2 {
 			return false
 		}
-		if d.month == 2 {
-			if d.day < 29 {
-				return false
-			}
-		}
 		return true
-
 	}
 	return false
 }
@@ -772,7 +763,6 @@ func (d Date) daysToDateFromAnchorDay() int {
 	d2.day = 1
 	for {
 		daysInMonth := d2.DaysInMonth()
-		// fmt.Println(d2, daysInMonth)
 		// If months is February on leap year we get the proper number of days
 		if d2.month == d.month {
 			if days == 0 {
@@ -797,21 +787,10 @@ func (d Date) daysToDateFromAnchorDay() int {
 	// TODO: double check using test
 	// CE years
 	if d.year < 0 {
-		// fmt.Println("days", days)
-		if d.IsLeap() {
-			days = 366 - days - 1
-		} else {
-			days = 365 - days - 1
-		}
-		if d2.IsLeap() {
-			if d2.month > 2 {
-				// fmt.Println("leap adjustment - removing leap day")
-				days--
-			}
-			// if d2.month == 2 && d2.day == 29 {
-			// 	fmt.Println("leap adjustment - removing leap day")
-			// 	days--
-			// }
+		days = 365 - days - 1
+		// Add in extra day if we are past leap day, counting backward from 31 december.
+		if d2.AtOrPastLeapDay() == true {
+			days++
 		}
 	}
 

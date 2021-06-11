@@ -470,11 +470,11 @@ func TestDateFromDays(t *testing.T) {
 		// {-800, 10, 3, 0},
 		// {-401, 6, 3, 0},
 		// {-401, 2, 3, 0},
-		// {-400, 10, 3, 0},
-		// {-400, 2, 3, 0},
-		// {-400, 6, 3, 0},
-		// {-298, 10, 3, 0},
-		// {-298, 10, 10, 0},
+		{-400, 10, 3, 0},
+		{-400, 2, 3, 0},
+		{-400, 6, 3, 0},
+		{-298, 10, 3, 0},
+		{-298, 10, 10, 0},
 		{-1, 3, 2, 0},
 		{-1, 4, 2, 0},
 		// {-1, 4, 20, 0},
@@ -485,38 +485,34 @@ func TestDateFromDays(t *testing.T) {
 		// {-1, 12, 30, 0},
 		// {101, 1, 1, 0},
 		// {201, 1, 1, 0},
-		// {400, 1, 1, 0},
-		// {500, 1, 1, 0},
-		// {600, 1, 1, 0},
-		// {401, 1, 1, 0},
-		// {2000, 1, 1, 0},
-		// Incorrect
+		{400, 1, 1, 0},
+		{500, 1, 1, 0},
+		{600, 1, 1, 0},
+		{401, 1, 1, 0},
+		{2000, 1, 1, 0},
 		{2021, 6, 10, 0},
 		{2400, 1, 1, 0},
 		{3000, 1, 1, 0},
 		{4000, 1, 1, 0},
 		{10001, 1, 1, 0},
-		// Incorrect
 		{10400, 2, 1, 0},
-		// Incorrect
 		{10400, 2, 2, 0},
-		// Incorrect
 		{10400, 6, 2, 0},
-		// Incorrect
 		{10401, 6, 2, 0},
 	}
 
 	for _, p := range partList {
 		d, err := NewDate(p.y, p.m, p.d)
 		daysToDate := d.daysToDateFromEpoch()
+		daysToDateFromAnchorDay := d.daysToDateFromAnchorDay()
 		ce := d.year > 0
 		newDate, err := FromDays(daysToDate, ce)
 		is.NoErr(err)
 		if d.String() != newDate.String() {
 			t.Log("not equal", d.String(), newDate.String())
-			// is.Equal(d.String(), newDate.String())
+			is.Equal(d.String(), newDate.String())
 		}
-		t.Logf("starting date %-12s days to date %-12d date from days %-10s", d.String(), daysToDate, newDate.String())
+		t.Logf("starting date %-12s days from epoch %-12d anchor day -> date %-12d date from days %-10s", d.String(), daysToDate, daysToDateFromAnchorDay, newDate.String())
 	}
 
 }
