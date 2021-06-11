@@ -200,21 +200,15 @@ func (d Date) AddDays(days int64) (Date, error) {
 
 	const chunk100YearDays int64 = 365*100 + 24
 
-	var chunks400Years bool
-
 	chunks400 := days / chunk400YearDays
 	chunk400YearRemainder := days % chunk400YearDays
 
 	chunks100 := chunk400YearRemainder / chunk100YearDays
 	chunk100YearRemainder := chunk400YearRemainder % chunk100YearDays
 
-	// fmt.Println("days", days, "remainders", chunk400YearRemainder, chunk100YearRemainder)
-
 	var totalCunkYears int64 = 1
 
 	if chunks400 > 0 {
-		// fmt.Println("chunks 400", chunks400, chunk400YearRemainder)
-		chunks400Years = true
 		chunkTotal := chunks400 * chunk400YearDays
 
 		days -= chunkTotal
@@ -225,43 +219,17 @@ func (d Date) AddDays(days int64) (Date, error) {
 		}
 
 		totalCunkYears += chunks400 * 400
-		// Introduce a leap year compensation that we will have to deal with
-		// more later.
-		if newDate.IsLeap() && chunk400YearRemainder > 0 {
-			// fmt.Println("adding day", newDate, days)
-			days++
-			// fmt.Println("adding day", newDate, days)
-		}
 	}
-	// if chunk400YearRemainder == 0 {
-	// 	newDate.month--
-	// }
-
-	// days = chunk400YearRemainder + chunk100YearRemainder
 
 	if chunks100 > 0 {
-		// fmt.Println("chunks 100", chunks100, chunk100YearRemainder)
-		if chunks400Years == true && newDate.year < 0 {
-			days--
-		}
-
-		// chunkTotal := chunks100 * chunk100YearDays
-
 		if newDate.year < 0 {
 			newDate.year -= chunks100 * 100
-			// days -= chunkTotal + (chunks100 * 2)
 		} else {
 			newDate.year += chunks100 * 100
-			// days -= chunkTotal
-			// days -= chunkTotal + (chunks100 * 2)
 		}
-		// fmt.Println("newdate", newDate, chunk100YearRemainder)
 	}
 
-	// days = chunk400YearRemainder + chunk100YearRemainder
 	days = chunk100YearRemainder
-
-	// fmt.Println(newDate, days)
 
 	var err error
 	if days > 0 {
@@ -274,137 +242,28 @@ func (d Date) AddDays(days int64) (Date, error) {
 					newDate.year--
 				}
 			} else {
-				// fmt.Println("final", days, newDate)
 				newDate, err = OnDay(newDate.year, int(days))
 				if err != nil {
 					return Date{}, err
+				}
+				// Overshoot
+				if newDate.year < 0 {
+					// TODO: this looks like a systematic issue which may or may
+					// not be OK or expected. It seems to apply to all BCE dates on a
+					// leap year.
+					if newDate.IsLeap() {
+						if newDate.AtOrPastLeapDay() == true {
+							newDate.day--
+						} else {
+							newDate.day -= 2
+						}
+					}
 				}
 				break
 			}
 		}
 	}
 
-	// if days > 0 {
-	// 	fmt.Println("adding days", newDate, days)
-	// 	if d.year > 0 {
-	// 		// days--
-	// 		daysInMonth := newDate.DaysInMonth()
-	// 		for days > 0 {
-	// 			daysInMonth = newDate.DaysInMonth()
-	// 			if int64(daysInMonth) <= days {
-	// 				newDate.month++
-	// 				if newDate.month > 12 {
-	// 					newDate.month = 1
-	// 					newDate.day = 1
-	// 					newDate.year++
-	// 					daysInMonth = newDate.DaysInMonth()
-	// 					days -= int64(daysInMonth)
-
-	// 					continue
-	// 				}
-	// 				days -= int64(daysInMonth)
-	// 				newDate.day = 1
-	// 			} else {
-	// 				// Even in a leap year we record the number of days properly
-	// 				newDate.day += int(days)
-
-	// 				days = 0
-	// 				break
-	// 			}
-	// 		}
-	// 	} else {
-	// 		if chunks400Years == true {
-	// 			days++
-	// 		}
-	// 		daysInMonth := newDate.DaysInMonth()
-	// 		for days > 0 {
-	// 			if int64(daysInMonth) <= days {
-	// 				newDate.month--
-	// 				if newDate.month < 1 {
-	// 					newDate.month = 12
-	// 					newDate.year--
-	// 					daysInMonth := newDate.DaysInMonth()
-
-	// 					newDate.day = daysInMonth
-
-	// 					days -= int64(daysInMonth)
-	// 					// fmt.Println("dec", newDate, days)
-
-	// 					continue
-	// 				} else {
-	// 					daysInMonth := newDate.DaysInMonth()
-	// 					days -= int64(daysInMonth)
-	// 					newDate.day = daysInMonth
-	// 				}
-	// 				continue
-	// 			} else {
-	// 				diff := daysInMonth - newDate.day
-	// 				if newDate.day-diff >= 1 {
-	// 					// fmt.Println("finishing days", newDate, days)
-	// 					newDate.day -= int(days)
-
-	// 					break
-	// 				} else {
-	// 					// Month will roll over and days will finish on next
-	// 					// month.
-	// 					// fmt.Println("Removing remaining days", newDate, days)
-	// 					daysToRemove := daysInMonth - newDate.day + 1
-	// 					days -= int64(daysToRemove)
-
-	// 					newDate.month--
-
-	// 					daysInMonth = newDate.DaysInMonth()
-	// 					newDate.day = daysInMonth
-
-	// 					newDate.day -= int(days)
-	// 					// fmt.Println("Removing remaining days", newDate, days)
-
-	// 					break
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// } else {
-	// 	// Year day counts are of the total days in a year, and do not start at
-	// 	// day one. Thus, with no remainder after 400 and 100 year chunks have
-	// 	// been removed, there will be one day to add.
-	// 	// e.g. 900-12-31
-	// 	newDate.month++
-	// 	if newDate.month > 12 {
-	// 		fmt.Println("invoking")
-	// 		newDate.year++
-	// 		newDate.month = 1
-	// 		newDate.day = 1
-	// 	} else {
-	// 		newDate.day = 1
-	// 	}
-	// }
-
-	// // Have not discovered the reson for consistent errors. Most likely to do
-	// // with chunks of 400 and 100 years.
-	// if newDate.year > 0 {
-	// 	for {
-	// 		if (newDate.year-1)%400 == 0 && newDate.month == 2 && newDate.day == 1 {
-	// 			newDate.year--
-	// 			newDate.month = 12
-	// 			newDate.day = 31
-	// 			break
-	// 		} else if (newDate.year-1)%100 == 0 && newDate.month == 2 && newDate.day == 1 {
-	// 			newDate.month = 1
-	// 			newDate.day = 1
-	// 			break
-	// 		}
-	// 		break
-	// 	}
-	// } else {
-	// 	// Feb 28 gets rolled to 1 March on negative leap years
-	// 	if newDate.month == 3 && newDate.day == 1 && newDate.IsLeap() {
-	// 		newDate.month = 2
-	// 		newDate.day = 28
-	// 	}
-	// }
-
-	// fmt.Println("final", copy)
 	err = newDate.validate()
 	if err != nil {
 		return Date{}, err
@@ -746,6 +605,7 @@ func (d Date) AtOrPastLeapDay() bool {
 			return true
 		}
 		if d.month > 2 {
+			// fmt.Println("leap", d.month)
 			return false
 		}
 		return true
