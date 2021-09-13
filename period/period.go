@@ -15,46 +15,22 @@ import (
 	"github.com/imarsman/datetime/xfmt"
 )
 
-// Y
-const yearChar = 'Y'
-
 // Parts of a period
 // month and minute both have the same character, so we have a minuteMonthChar
 
-// W
-const weekChar = 'W'
-
-// D
-const dayChar = 'D'
-
-// H
-const hourChar = 'H'
-
-// I
-const minuteChar = 'I'
-
-// O
-const monthChar = 'O' // O
-
-// M
-const minuteMonthChar = 'M'
-
-// S
-const secondChar = 'S' // S
-// P
-const periodChar = 'P'
-
-// T
-const timeChar = 'T'
-
-// -
-const negativeChar = '-'
-
-// .
-const dotChar = '.'
-
-// ,
-const commaChar = ','
+const periodChar = 'P'      // P
+const yearChar = 'Y'        // Y
+const monthChar = 'O'       // O
+const weekChar = 'W'        // W
+const dayChar = 'D'         // D
+const hourChar = 'H'        // H
+const minuteChar = 'I'      // I
+const minuteMonthChar = 'M' // M
+const secondChar = 'S'      // S
+const timeChar = 'T'        // T
+const negativeChar = '-'    // -
+const dotChar = '.'         // .
+const commaChar = ','       // ,
 
 // NewOf converts a time duration to a Period, and also indicates whether the conversion is precise.
 // Any time duration that spans more than ± 3276 hours will be approximated by assuming that there
@@ -74,7 +50,6 @@ func NewOf(duration time.Duration) (p Period, precise bool) {
 	}
 
 	sign10 := sign * 10
-
 	totalHours := int64(d / time.Hour)
 
 	// check for 16-bit overflow - occurs near the 4.5 month mark
@@ -82,7 +57,11 @@ func NewOf(duration time.Duration) (p Period, precise bool) {
 		// simple HMS case
 		minutes := d % time.Hour / time.Minute
 		seconds := d % time.Minute / hundredMSDuration
-		return NewPeriod(0, 0, 0, sign10*totalHours, sign10*int64(minutes), sign*int64(seconds)), true
+
+		p = NewPeriod(0, 0, 0, sign10*totalHours, sign10*int64(minutes), sign*int64(seconds))
+		precise = true
+
+		return
 	}
 
 	totalDays := totalHours / 24 // ignoring daylight savings adjustments
@@ -91,7 +70,11 @@ func NewOf(duration time.Duration) (p Period, precise bool) {
 		hours := totalHours - totalDays*24
 		minutes := d % time.Hour / time.Minute
 		seconds := d % time.Minute / hundredMSDuration
-		return NewPeriod(0, 0, sign10*totalDays, sign10*hours, sign10*int64(minutes), sign*int64(seconds)), false
+
+		p = NewPeriod(0, 0, sign10*totalDays, sign10*hours, sign10*int64(minutes), sign*int64(seconds))
+		precise = false
+
+		return
 	}
 
 	// TODO it is uncertain whether this is too imprecise and should be improved
@@ -99,7 +82,11 @@ func NewOf(duration time.Duration) (p Period, precise bool) {
 	months := ((oneE4 * totalDays) / daysPerMonthE4) - (12 * years)
 	hours := totalHours - totalDays*24
 	totalDays = ((totalDays * oneE4) - (daysPerMonthE4 * months) - (daysPerYearE4 * years)) / oneE4
-	return NewPeriod(sign10*years, sign10*months, sign10*totalDays, sign10*hours, 0, 0), false
+
+	p = NewPeriod(sign10*years, sign10*months, sign10*totalDays, sign10*hours, 0, 0)
+	precise = false
+
+	return
 }
 
 // Between converts the span between two times to a period. Based on the Gregorian conversion
@@ -171,18 +158,18 @@ func daysDiff(t1, t2 time.Time) (year, month, day, hour, min, sec, hundredth int
 	return
 }
 
-// Abs converts a negative period to a positive one.
-func (p Period) Abs() Period {
-	a, _ := p.absNeg()
-	return a
-}
-
 func (p Period) absNeg() (Period, bool) {
 	if p.IsNegative() {
 		p.negative = false
 		return p, true
 	}
 	return p, false
+}
+
+// Abs converts a negative period to a positive one.
+func (p Period) Abs() Period {
+	a, _ := p.absNeg()
+	return a
 }
 
 // Simplify applies some heuristic simplifications with the objective of reducing the number
@@ -236,11 +223,6 @@ func (p *Period) Simplify(precise bool, th ...int) *Period {
 }
 
 func (p *Period) doSimplify(precise bool, monthMax, hourMax, minuteMax, secondMax int64) *Period {
-	// What is this for?
-	// if p.years%10 != 0 {
-	// 	return p
-	// }
-
 	ap, neg := p.absNeg()
 
 	// single year is dropped if there are some months
@@ -324,10 +306,16 @@ func (p *Period) condNegate(neg bool) *Period {
 
 // IsZero is period emtpy
 func (p Period) IsZero() bool {
-	return p.Years() == 0 && p.Months() == 0 && p.Days() == 0 && p.Hours() == 0 && p.Minutes() == 0 && p.Seconds() == 0 && p.subseconds == 0
+	return p.Years() == 0 &&
+		p.Months() == 0 &&
+		p.Days() == 0 &&
+		p.Hours() == 0 &&
+		p.Minutes() == 0 &&
+		p.Seconds() == 0 &&
+		p.subseconds == 0
 }
 
-func (p *Period) validate() error {
+func (p *Period) validate() (err error) {
 	var f []string
 	if p.years > math.MaxInt64 {
 		f = append(f, "years")
@@ -349,13 +337,11 @@ func (p *Period) validate() error {
 	}
 
 	if len(f) > 0 {
-		// if p.Input == "" {
-		// 	p.Input = p.String()
-		// }
-		return fmt.Errorf("integer overflow occurred in %s", strings.Join(f, ","))
+		err = fmt.Errorf("integer overflow occurred in %s", strings.Join(f, ","))
+		return
 	}
 
-	return nil
+	return
 }
 
 // Normalise normalise period
@@ -790,12 +776,14 @@ func MustParse(value string, normalise bool, precise ...bool) Period {
 // are equivalent: "P0Y", "P0M", "P0W", "P0D", "PT0H", PT0M", PT0S", and "P0".
 // The canonical zero is "P0D".
 // Note that this will end up flagging precise in AjustRight.
-func Parse(period string, normalize bool, precise ...bool) (Period, error) {
+func Parse(period string, normalize bool, precise ...bool) (p Period, err error) {
 	usePrecise := false
 	if len(precise) > 0 {
 		usePrecise = precise[0]
 	}
-	return ParseWithNormalise(period, normalize, usePrecise)
+	p, err = ParseWithNormalise(period, normalize, usePrecise)
+
+	return
 }
 
 // ParseWithNormalise parses strings that specify periods using ISO-8601 rules
@@ -810,7 +798,6 @@ func ParseWithNormalise(period string, normalise bool, precise bool) (Period, er
 
 	if period == "P0" {
 		p := new(Period)
-		// p.Input = "P0"
 		return *p, nil
 	}
 
