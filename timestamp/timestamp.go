@@ -75,7 +75,7 @@ func Int64Overflows(int64s ...int64) (sum int64, ok bool) {
 		}
 	}
 
-	return sum, ok
+	return
 }
 
 // DurationOverflows does a list of durations overflow int64?
@@ -87,7 +87,7 @@ func DurationOverflows(durations ...time.Duration) (sum int64, ok bool) {
 		}
 	}
 
-	return sum, ok
+	return
 }
 
 func init() {
@@ -117,39 +117,39 @@ func init() {
 //
 // If the zone is not recognized in Go's tzdata database an error will be
 // returned.
-func OffsetForLocation(year int, month time.Month, day int, locationName string) (d time.Duration, err error) {
+func OffsetForLocation(year int, month time.Month, day int, locationName string) (duration time.Duration, err error) {
 	l, err := time.LoadLocation(locationName)
 	if err != nil {
 		return 0, err
 	}
 
 	t := time.Date(year, month, day, 0, 0, 0, 0, l)
-	d = OffsetForTime(t)
+	duration = OffsetForTime(t)
 
-	return d, nil
+	return
 }
 
 // OffsetForTime the duration of the offset from UTC. Mostly the same as doing
 // the same thing inline but this reliably gets a duration.
-func OffsetForTime(t time.Time) (d time.Duration) {
+func OffsetForTime(t time.Time) (duration time.Duration) {
 	_, offset := t.Zone()
 
-	d = time.Duration(offset) * time.Second
+	duration = time.Duration(offset) * time.Second
 
-	return d
+	return
 }
 
 // ZoneFromHM get fixed zone from hour and minute offset
 // A negative offsetH will result in a negative zone offset
-func ZoneFromHM(offsetH, offsetM int) *time.Location {
+func ZoneFromHM(offsetH, offsetM int) (location *time.Location) {
 	if offsetM < 0 {
 		offsetM = -offsetM
 	}
 
 	// Must be passed a value equivalent to total seconds for hours and minutes
-	location := LocationFromOffset(offsetH*60*60 + offsetM*60)
+	location = LocationFromOffset(offsetH*60*60 + offsetM*60)
 
-	return location
+	return
 }
 
 // OffsetHM get hours and minutes for location offset from UTC
@@ -164,7 +164,7 @@ func OffsetHM(d time.Duration) (offsetH, offsetM int) {
 	}
 	offsetM = offsetM % 60
 
-	return offsetH, offsetM
+	return
 }
 
 // LocationOffsetString get an offset in HHMM format based on hours and
@@ -195,11 +195,12 @@ func LocationOffsetStringDelimited(d time.Duration) (string, error) {
 // solely to help with calculating offset strings for timestamps without using
 // fmt.Sprintf, which causes allocations. This function is about 1/3 faster than
 // fmt.Sprintf.
-func TwoDigitOffset(in int, addPrefix bool) (string, error) {
+func TwoDigitOffset(in int, addPrefix bool) (digits string, err error) {
 	// This is only meant to be for 2 digit offsets, such as for hours and
 	// minutes offset from UTC.
 	if in > 99 || in < -99 {
-		return "", errors.New("Out of range")
+		err = errors.New("Out of range")
+		return
 	}
 
 	// Figure out prefix based on sign of input and make input always positive
@@ -229,14 +230,14 @@ func TwoDigitOffset(in int, addPrefix bool) (string, error) {
 //
 // For -5 hours and 30 minutes
 //  -0500
-func locationOffsetString(d time.Duration, delimited bool) (string, error) {
+func locationOffsetString(d time.Duration, delimited bool) (offset string, err error) {
 	offsetH, offsetM := OffsetHM(d)
 
 	xfmt := new(xfmt.Buffer)
 
 	h, err := TwoDigitOffset(offsetH, true)
 	if err != nil {
-		return "", err
+		return
 	}
 	xfmt.S(h)
 	if delimited == true {
@@ -244,11 +245,13 @@ func locationOffsetString(d time.Duration, delimited bool) (string, error) {
 	}
 	m, err := TwoDigitOffset(offsetM, false)
 	if err != nil {
-		return "", err
+		return
 	}
 	xfmt.S(m)
 
-	return BytesToString(xfmt.Bytes()...), nil
+	offset = BytesToString(xfmt.Bytes()...)
+
+	return
 }
 
 // RangeOverTimes returns a date range function over start date to end date inclusive.
@@ -300,7 +303,7 @@ func locationOffsetString(d time.Duration, delimited bool) (string, error) {
 		fmt.Println("Got", v)
 	}
 */
-func RangeOverTimes(start, end time.Time) func() (time.Time, error) {
+func RangeOverTimes(start, end time.Time) func() (time time.Time, err error) {
 	_, startZone := start.Zone()
 	_, endZone := end.Zone()
 

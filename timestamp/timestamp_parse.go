@@ -86,9 +86,8 @@ func init() {
 
 // LocationFromOffset get a location based on the offset seconds from UTC. Uses a cache
 // of locations based on offset.
-func LocationFromOffset(offsetSec int) *time.Location {
+func LocationFromOffset(offsetSec int) (location *time.Location) {
 	cachedZones := locationAtomic.Load().(map[int]*time.Location)
-	var location *time.Location
 	if l, ok := cachedZones[offsetSec]; ok {
 		location = l
 		// Given that zones are in at most 15 minute increments and can be
@@ -107,7 +106,7 @@ func LocationFromOffset(offsetSec int) *time.Location {
 		locationAtomic.Store(cachedZones)
 	}
 
-	return location
+	return
 }
 
 // RunesToString convert runes list to string with no allocation
@@ -155,14 +154,14 @@ func intPow(n, m int) int {
 
 // StringToInt convert a string with no decimal spaces to int.
 // It's slower by a tiny amount than Atoi and will be removed.
-func StringToInt(input string) (int, error) {
+func StringToInt(input string) (result int, err error) {
 	var runes []rune = []rune(input)
 	var l int = len(runes)
 	if l > 9 {
-		return 0, errors.New("length greater than 9")
+		err = errors.New("length greater than 9")
+		return
 	}
 
-	var result int = 0
 	for i := 0; i < l; i++ {
 		r := runes[i]
 		if unicode.IsDigit(r) {
@@ -170,10 +169,11 @@ func StringToInt(input string) (int, error) {
 			var pow int = intPow(10, l-i-1)
 			result = result + num*pow
 		} else {
-			return 0, errors.New("non digit in input")
+			err = errors.New("non digit in input")
+			return
 		}
 	}
-	return result, nil
+	return
 }
 
 // ParseInUTC parse for all timestamps, defaulting to UTC, and return UTC zoned
@@ -205,7 +205,7 @@ func ParseISOInLocation(timeStr string, location *time.Location) (time.Time, err
 // location.
 //
 // Can't inline due to use of range but it's too complex anyway.
-func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time.Time, error) {
+func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (t time.Time, err error) {
 	timeStr = strings.TrimSpace(timeStr)
 	var original string = timeStr
 
@@ -228,9 +228,9 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 	// format that is not ISO-8601 compliant, such as dashes where there should
 	// be colons and a space instead of a T to separate date and time.
 	if isTS == false {
-		t, err := ParseISOTimestamp(timeStr, location)
+		t, err = ParseISOTimestamp(timeStr, location)
 		if err == nil {
-			return t, nil
+			return
 		}
 	}
 
@@ -241,36 +241,40 @@ func parseTimestamp(timeStr string, location *time.Location, isoOnly bool) (time
 		// Avoid heap allocation
 		xfmtBuf.S("Could not parse as ISO timestamp ").S(timeStr)
 
-		return time.Time{}, errors.New(BytesToString(xfmtBuf.Bytes()...))
+		err = errors.New(BytesToString(xfmtBuf.Bytes()...))
+		return
 	}
 
 	if isTS == true {
-		t, err := ParseUnixTS(timeStr)
+		t, err = ParseUnixTS(timeStr)
 		if err != nil {
 			xfmtBuf := new(xfmt.Buffer)
 			// Avoid heap allocation
 			xfmtBuf.S("timestamp.parseTimestamp: could not parse as UNIX timestamp ").S(timeStr)
 
-			return time.Time{}, errors.New(BytesToString(xfmtBuf.Bytes()...))
+			err = errors.New(BytesToString(xfmtBuf.Bytes()...))
+			return
 		}
 
-		return t.In(location), nil
+		t = t.In(location)
+		return
 	}
 
 	// If not a unix type timestamp try alternate non-iso timestamp formats
 	s := nonISOTimeFormats
 	for _, format := range s {
 		// If no zone in timestamp use location
-		t, err := time.ParseInLocation(format, original, location)
+		t, err = time.ParseInLocation(format, original, location)
 		if err == nil {
-			return t, nil
+			return
 		}
 	}
 
 	xfmtBuf := new(xfmt.Buffer)
 	xfmtBuf.S("timestamp.parseTimestamp: could not parse with other timestamp patterns ").S(timeStr)
 
-	return time.Time{}, errors.New(BytesToString(xfmtBuf.Bytes()...))
+	err = errors.New(BytesToString(xfmtBuf.Bytes()...))
+	return
 }
 
 // parseUnixTS returns seconds and nanoseconds from a timestamp that has the
@@ -310,15 +314,6 @@ func parseUnixTS(timeStr string) (int64, int64, error) {
 	if err != nil {
 		return s, n, err
 	}
-
-	// big package cumbersome for this purpose and slower
-	// var nb = big.NewInt(n)
-	// var i = big.NewInt(10)
-	// var e = big.NewInt(int64(9 - len(sa[1])))
-	// var r = i.Exp(i, e, nil)
-
-	// bi := nb.Mul(nb, r)
-	// s = bi.Int64()
 
 	// should already be in nanoseconds but just in case convert n to
 	// nanoseconds. math.Pow works well here.
@@ -384,7 +379,7 @@ func ParseUnixTS(timeStr string) (time.Time, error) {
 // zone for the timestamp or if there is no zone offset in the incoming
 // timestamp the incoming location will bue used. It is the responsibility of
 // further steps to standardize to a specific zone offset.
-func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, error) {
+func ParseISOTimestamp(timeStr string, location *time.Location) (t time.Time, err error) {
 	// Define sections that can change.
 
 	const maxLength int = 35
@@ -396,7 +391,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		xfmtBuf.S("timestamp.ParseISOTimestamp: input ").S(timeStr[0:35]).S("... length is ").D(timeStrLength).S(" and > max of ").D(maxLength)
 
 		// errors.New escapes to heap
-		return time.Time{}, errors.New(BytesToString(xfmtBuf.Bytes()...))
+		err = errors.New(BytesToString(xfmtBuf.Bytes()...))
+		return
 	}
 
 	// Needs to not be a const since it gets reassigned
@@ -602,7 +598,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		xfmtBuf.S("timestamp.ParseISOTimestamp: got unparsed caracters ").S(strings.Join(unparsed, ",")).S(" in input ").S(timeStr)
 
 		// errors.New escapes to heap
-		return time.Time{}, errors.New(BytesToString(xfmtBuf.Bytes()...))
+		err = errors.New(BytesToString(xfmtBuf.Bytes()...))
+		return
 	}
 
 	zoneFound := false       // has time zone been found
@@ -618,7 +615,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 			xfmtBuf.S("timestamp.ParseISOTimestamp: zone is of length ").D(zoneLen).S(" wich is not enough to detect zone")
 
 			// errors.New escapes to heap
-			return time.Time{}, errors.New(BytesToString(xfmtBuf.Bytes()...))
+			err = errors.New(BytesToString(xfmtBuf.Bytes()...))
+			return
 
 			// With no zone assume UTC and set all offset characters to 0
 		} else if zoneLen == 0 {
@@ -666,35 +664,34 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 
 	// We have previously made sure that year has 4 digits
 	if yearLen != yearMax {
-		// errors.New escapes to heap
-		return time.Time{}, errors.New("timestamp.ParseISOTimestamp: input year length is not 4")
+		err = errors.New("timestamp.ParseISOTimestamp: input year length is not 4")
+		return
 	}
 	if monthLen != monthMax {
-		// errors.New escapes to heap
-		return time.Time{}, errors.New("timestamp.ParseISOTimestamp: input month length is not 2")
+		err = errors.New("timestamp.ParseISOTimestamp: input month length is not 2")
+		return
 	}
 	if dayLen != dayMax {
-		// errors.New escapes to heap
-		return time.Time{}, errors.New("timestamp.ParseISOTimestamp: input day length is not 2")
+		err = errors.New("timestamp.ParseISOTimestamp: input day length is not 2")
+		return
 	}
 	if hourLen != hourMax {
-		// errors.New escapes to heap
-		return time.Time{}, errors.New("timestamp.ParseISOTimestamp: input hour length is not 2")
+		err = errors.New("timestamp.ParseISOTimestamp: input hour length is not 2")
+		return
 	}
 	if minuteLen != minuteMax {
-		// errors.New escapes to heap
-		return time.Time{}, errors.New("timestamp.ParseISOTimestamp: input minute length is not 2")
+		err = errors.New("timestamp.ParseISOTimestamp: input minute length is not 2")
+		return
 	}
 	if secondLen != secondMax {
-		// errors.New escapes to heap
-		return time.Time{}, errors.New("timestamp.ParseISOTimestamp: input second length is not 2")
+		err = errors.New("timestamp.ParseISOTimestamp: input second length is not 2")
+		return
 	}
 
 	// We already only put digits into the parts so Atoi should be fine in all
 	// cases. The problem would have been with an incorrect number of digits in
 	// a part, which would have been caught above.
 
-	var err error
 	var y, m, d, h, mn, s int
 	y, m, d, h, mn, s = 0, 0, 0, 0, 0, 0
 
@@ -703,9 +700,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// If zero can avoid an allocation and time
 	if isZero(yearPart...) == false {
 		y, err = strconv.Atoi(RunesToString(yearPart...))
-		// y, err = StringToInt(RunesToString(yearParts...))
 		if err != nil {
-			return time.Time{}, err
+			return
 		}
 	}
 
@@ -714,9 +710,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// If zero can avoid an allocation and time
 	if isZero(monthPart...) == false {
 		m, err = strconv.Atoi(RunesToString(monthPart...))
-		// m, err = StringToInt(RunesToString(monthParts...))
 		if err != nil {
-			return time.Time{}, err
+			return
 		}
 	}
 
@@ -725,9 +720,8 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// If zero can avoid an allocation and time
 	if isZero(dayPart...) == false {
 		d, err = strconv.Atoi(RunesToString(dayPart...))
-		// d, err = StringToInt(RunesToString(dayParts...))
 		if err != nil {
-			return time.Time{}, err
+			return
 		}
 	}
 
@@ -735,10 +729,9 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
 	if isZero(hourPart...) == false {
-		// h, err = StringToInt(RunesToString(hourParts...))
 		h, err = strconv.Atoi(RunesToString(hourPart...))
 		if err != nil {
-			return time.Time{}, err
+			return
 		}
 	}
 
@@ -746,10 +739,9 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
 	if isZero(minutePart...) == false {
-		// mn, err = StringToInt(RunesToString(minuteParts...))
 		mn, err = strconv.Atoi(RunesToString(minutePart...))
 		if err != nil {
-			return time.Time{}, err
+			return
 		}
 	}
 
@@ -757,10 +749,9 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
 	if isZero(secondPart...) == false {
-		// s, err = StringToInt(RunesToString(secondParts...))
 		s, err = strconv.Atoi(RunesToString(secondPart...))
 		if err != nil {
-			return time.Time{}, err
+			return
 		}
 	}
 
@@ -772,10 +763,9 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 	if subsecondLen > 0 {
 		// If zero can avoid an allocation and time
 		if isZero(subsecondPart...) == false {
-			// subseconds, err = StringToInt(RunesToString(subsecondParts...))
 			subseconds, err = strconv.Atoi(RunesToString(subsecondPart...))
 			if err != nil {
-				return time.Time{}, err
+				return
 			}
 			// Calculate subseconds in terms of nanosecond if the length is less
 			// than the full length for nanoseconds since that is what the time.Date
@@ -819,11 +809,13 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 
 	// If no zone was found in scan use default location
 	if zoneFound == false {
-		return time.Date(y, time.Month(m), d, h, mn, s, subseconds, location), nil
+		t = time.Date(y, time.Month(m), d, h, mn, s, subseconds, location)
+		return
 	}
 
 	if offsetZero == true {
-		return time.Date(y, time.Month(m), d, h, mn, s, subseconds, time.UTC), nil
+		t = time.Date(y, time.Month(m), d, h, mn, s, subseconds, time.UTC)
+		return
 	}
 
 	var offsetH int = 0 // starting state for offset hours
@@ -837,7 +829,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		// offsetH, err = StringToInt(RunesToString(hourOffsetParts...))
 		offsetH, err = strconv.Atoi(RunesToString(hourOffsetParts...))
 		if err != nil {
-			return time.Time{}, err
+			return
 		}
 	}
 
@@ -849,7 +841,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		// offsetM, err = StringToInt(RunesToString(minuteOffsetParts...))
 		offsetM, err = strconv.Atoi(RunesToString(minuteOffsetParts...))
 		if err != nil {
-			return time.Time{}, err
+			return
 		}
 	}
 
@@ -873,9 +865,10 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (time.Time, erro
 		xfmtBuf := new(xfmt.Buffer)
 		xfmtBuf.S("timestamp.ParseISOTimestamp: UTC offset minutes ").D(offsetM).S(" not in a 15 minute increment")
 
-		// errors.New escapes to heap
-		return time.Time{}, errors.New(BytesToString(xfmtBuf.Bytes()...))
+		err = errors.New(BytesToString(xfmtBuf.Bytes()...))
+		return
 	}
 
-	return time.Date(y, time.Month(m), d, h, mn, s, subseconds, LocationFromOffset(offsetSec)), nil
+	t = time.Date(y, time.Month(m), d, h, mn, s, subseconds, LocationFromOffset(offsetSec))
+	return
 }
