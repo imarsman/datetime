@@ -110,17 +110,18 @@ func Between(t1, t2 time.Time) (p Period) {
 		t2 = t2.In(t1.Location())
 	}
 
-	year, month, day, hour, min, sec, hundredth := daysDiff(t1, t2)
+	year, month, day, hour, min, sec, subsecond := partsDiff(t1, t2)
 
 	p = NewPeriod(year, month, day, hour, min, sec)
-	p.seconds = int64(hundredth)
+	p.subseconds = int(subsecond)
 
 	p.negative = t1GTt2 == false
 
 	return
 }
 
-func daysDiff(t1, t2 time.Time) (year, month, day, hour, min, sec, hundredth int64) {
+// get year, month, day, hour, min, sec, hundredth of second diff between two times
+func partsDiff(t1, t2 time.Time) (year, month, day, hour, min, sec, subsecond int64) {
 	duration := t2.Sub(t1)
 
 	hh1, mm1, ss1 := t1.Clock()
@@ -131,7 +132,8 @@ func daysDiff(t1, t2 time.Time) (year, month, day, hour, min, sec, hundredth int
 	hour = int64(hh2 - hh1)
 	min = int64(mm2 - mm1)
 	sec = int64(ss2 - ss1)
-	hundredth = int64(t2.Nanosecond()-t1.Nanosecond()) / 100000000
+	// TODO: Make sure this is really subseconds
+	subsecond = int64(t2.Nanosecond()-t1.Nanosecond()) / 1000000
 
 	// Normalize negative values
 	if sec < 0 {
