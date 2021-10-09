@@ -10,6 +10,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/imarsman/datetime/utility"
 	"github.com/imarsman/datetime/xfmt"
 )
 
@@ -129,20 +130,6 @@ func LocationFromOffset(offsetSec int) (location *time.Location) {
 	}
 
 	return
-}
-
-// RunesToString convert runes list to string with no allocation
-//
-// WriteRune is more complex than WriteByte so can't inline
-//
-// A small cost a few ns in testing is incurred for using a string builder.
-// There are no heap allocations using strings.Builder.
-func RunesToString(runes ...rune) string {
-	var sb = new(strings.Builder)
-	for i := 0; i < len(runes); i++ {
-		sb.WriteRune(runes[i])
-	}
-	return sb.String()
 }
 
 // BytesToString convert byte list to string with no allocation
@@ -724,7 +711,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (t time.Time, er
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
 	if isZero(yearPart...) == false {
-		y, err = atoi4(RunesToString(yearPart...))
+		y, err = atoi4(utility.RunesToString(yearPart...))
 		if err != nil {
 			return
 		}
@@ -734,7 +721,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (t time.Time, er
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
 	if isZero(monthPart...) == false {
-		m, err = atoi2(RunesToString(monthPart...))
+		m, err = atoi2(utility.RunesToString(monthPart...))
 		if err != nil {
 			return
 		}
@@ -744,7 +731,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (t time.Time, er
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
 	if isZero(dayPart...) == false {
-		d, err = atoi2(RunesToString(dayPart...))
+		d, err = atoi2(utility.RunesToString(dayPart...))
 		if err != nil {
 			return
 		}
@@ -754,7 +741,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (t time.Time, er
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
 	if isZero(hourPart...) == false {
-		h, err = atoi2(RunesToString(hourPart...))
+		h, err = atoi2(utility.RunesToString(hourPart...))
 		if err != nil {
 			return
 		}
@@ -764,7 +751,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (t time.Time, er
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
 	if isZero(minutePart...) == false {
-		mn, err = atoi2(RunesToString(minutePart...))
+		mn, err = atoi2(utility.RunesToString(minutePart...))
 		if err != nil {
 			return
 		}
@@ -774,7 +761,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (t time.Time, er
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
 	if isZero(secondPart...) == false {
-		s, err = atoi2(RunesToString(secondPart...))
+		s, err = atoi2(utility.RunesToString(secondPart...))
 		if err != nil {
 			return
 		}
@@ -788,7 +775,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (t time.Time, er
 	if subsecondLen > 0 {
 		// If zero can avoid an allocation and time
 		if isZero(subsecondPart...) == false {
-			subseconds, err = strconv.Atoi(RunesToString(subsecondPart...))
+			subseconds, err = strconv.Atoi(utility.RunesToString(subsecondPart...))
 			if err != nil {
 				return
 			}
@@ -852,7 +839,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (t time.Time, er
 		// Evaluate hour offset from the timestamp value
 		// Should not error since only digits were place in slice
 		// offsetH, err = StringToInt(RunesToString(hourOffsetParts...))
-		offsetH, err = strconv.Atoi(RunesToString(hourOffsetParts...))
+		offsetH, err = strconv.Atoi(utility.RunesToString(hourOffsetParts...))
 		if err != nil {
 			return
 		}
@@ -864,7 +851,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (t time.Time, er
 		// Evaluate minute offset from the timestamp value
 		// Should not error since only digits were place in slice
 		// offsetM, err = StringToInt(RunesToString(minuteOffsetParts...))
-		offsetM, err = strconv.Atoi(RunesToString(minuteOffsetParts...))
+		offsetM, err = strconv.Atoi(utility.RunesToString(minuteOffsetParts...))
 		if err != nil {
 			return
 		}

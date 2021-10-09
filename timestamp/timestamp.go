@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/JohnCGriffin/overflow"
+	"github.com/imarsman/datetime/utility"
 	"github.com/imarsman/datetime/xfmt"
 	// gocache "github.com/patrickmn/go-cache"
 	// https://golang.org/pkg/time/tzdata/
@@ -217,9 +218,9 @@ func TwoDigitOffset(in int, addPrefix bool) (digits string, err error) {
 
 	// Return either the prefixed two characters or non-prefixed
 	if addPrefix == true {
-		return RunesToString(prefix, fr, lr), nil
+		return utility.RunesToString(prefix, fr, lr), nil
 	}
-	return RunesToString(fr, lr), nil
+	return utility.RunesToString(fr, lr), nil
 }
 
 // OffsetString get an offset in HHMM format based on hours and minutes offset
