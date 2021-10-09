@@ -2,6 +2,9 @@
 
 Time functionality for ISO-8601 standard formats.
 
+More work needs to be done on periods. Dealing with fractional time parts is not
+working properly yet.
+
 This library was initially written in an attempt to allow for the flexible
 parsing of a range of input timestamp formats with an emphasis on ISO-8601
 timestamps. The parsing produces Golang time.Time values. The desire to build
