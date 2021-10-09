@@ -180,7 +180,7 @@ func (d Date) YearDay() int {
 //   84.31 ns/op   118.61 MB/s   0 B/op   0 allocs/op
 func (d Date) AddDays(days int64) (Date, error) {
 	newDate := d
-	// fmt.Println("date", newDate, days)
+	// fmt.Println("AddDays date", newDate, days)
 	// startingDays := days
 
 	/*
@@ -236,13 +236,17 @@ func (d Date) AddDays(days int64) (Date, error) {
 		for {
 			if days > 365 {
 				days -= int64(newDate.DaysOneYearFromDate())
+				// fmt.Println("days > 1 yr", days)
 				if newDate.year > 0 {
 					newDate.year++
 				} else {
 					newDate.year--
 				}
+				// fmt.Println("days > 1 yr", days)
 			} else {
+				// fmt.Println("days 1", days, newDate)
 				newDate, err = OnDay(newDate.year, int(days))
+				// fmt.Println("days 2", days, newDate)
 				if err != nil {
 					return Date{}, err
 				}
@@ -255,7 +259,7 @@ func (d Date) AddDays(days int64) (Date, error) {
 						if newDate.AtOrPastLeapDay() == true {
 							newDate.day--
 						} else {
-							newDate.day -= 2
+							newDate.day--
 						}
 					}
 				}
@@ -275,6 +279,7 @@ func (d Date) AddDays(days int64) (Date, error) {
 // FromDays get date from days from epoch
 func FromDays(days int64, ce bool) (Date, error) {
 	d, err := NewDate(1, 1, 1)
+	// fmt.Println(err)
 	if err != nil {
 		return Date{}, err
 	}
@@ -286,9 +291,11 @@ func FromDays(days int64, ce bool) (Date, error) {
 
 	d, err = d.AddDays(days)
 	if err != nil {
+		// fmt.Println(days, err)
 		return Date{}, err
 	}
 
+	// fmt.Println("from days date", d)
 	return d, nil
 }
 
@@ -339,11 +346,11 @@ func OnDay(year int64, dayOfYear int) (Date, error) {
 					}
 				} else {
 					newDate.day = dayOfYear - days + 1
-
 				}
 				return newDate, nil
 			}
 			newDate.month++
+
 			days += daysInMonth
 			daysInMonth = newDate.DaysInMonth()
 		}
@@ -361,19 +368,26 @@ func OnDay(year int64, dayOfYear int) (Date, error) {
 		if days+daysInMonth >= dayOfYear {
 			// fmt.Println("date", newDate, "days", days, "days in month", daysInMonth, "dayOfYear", dayOfYear, "days+daysInMonth", days+daysInMonth)
 			diff := dayOfYear - days
-			// fmt.Println("finishing", newDate, "diff", diff, dayOfYear, days)
-			if diff == 0 {
+			// fmt.Println("finishing", newDate, "diff", diff, "day of year", dayOfYear, "days", days, "days in month", daysInMonth)
+			if daysInMonth-diff == 0 {
 				newDate.month--
 				daysInMonth = newDate.DaysInMonth()
 				newDate.day = daysInMonth
+				// fmt.Println("diff 0", newDate, days, "day of year", dayOfYear)
 				if newDate.month == 0 {
 					newDate.year--
 					newDate.month = 12
+					if newDate.day == 0 {
+						newDate.day = 1
+						// fmt.Println("zero", days, newDate)
+					}
 				}
 			} else {
 				// Starting at last day of the month
 				newDate.day = daysInMonth - diff
+				// fmt.Println("days in month", daysInMonth, "diff", diff, newDate)
 			}
+			// fmt.Println("new date", newDate)
 			return newDate, nil
 		}
 		newDate.month--
@@ -647,10 +661,22 @@ func (d Date) daysToDateFromAnchorDay() int {
 	// TODO: double check using test
 	// CE years
 	if d.year < 0 {
-		days = 365 - days - 1
+		if d2.IsLeap() {
+			days = 366 - days - 1
+			// if d2.AtOrPastLeapDay() == false {
+			// 	days -= 2
+			// 	fmt.Println("not at or past", d, days)
+			// }
+		} else {
+			days = 365 - days - 1
+		}
+		// fmt.Println("at or past leap day", d2.AtOrPastLeapDay(), days)
 		// Add in extra day if we are past leap day, counting backward from 31 december.
 		if d2.AtOrPastLeapDay() == true {
+			// fmt.Println("at or past leap day")
 			days++
+		} else {
+			// days--
 		}
 	}
 

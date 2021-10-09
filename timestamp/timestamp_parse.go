@@ -84,6 +84,28 @@ func init() {
 	locationAtomic.Store(make(map[int]*time.Location))
 }
 
+var errCannotParseNumber = errors.New("couldn't parse number")
+
+// Convert string of length 2 to int
+func atoi2(in string) (int, error) {
+	_ = in[1] // This helps the compiler reduce the number of times it checks `in` is long enough
+	a, b := int(in[0]-'0'), int(in[1]-'0')
+	if a < 0 || a > 9 || b < 0 || b > 9 {
+		return 0, errCannotParseNumber
+	}
+	return a*10 + b, nil
+}
+
+// Convert string of length 4 to int
+func atoi4(in string) (int, error) {
+	_ = in[3] // This helps the compiler reduce the number of times it checks `in` is long enough
+	a, b, c, d := int(in[0]-'0'), int(in[1]-'0'), int(in[2]-'0'), int(in[3]-'0')
+	if a < 0 || a > 9 || b < 0 || b > 9 || c < 0 || c > 9 || d < 0 || d > 9 {
+		return 0, errCannotParseNumber
+	}
+	return a*1000 + b*100 + c*10 + d, nil
+}
+
 // LocationFromOffset get a location based on the offset seconds from UTC. Uses a cache
 // of locations based on offset.
 func LocationFromOffset(offsetSec int) (location *time.Location) {
@@ -695,11 +717,14 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (t time.Time, er
 	var y, m, d, h, mn, s int
 	y, m, d, h, mn, s = 0, 0, 0, 0, 0, 0
 
+	// The atoi2 and atoi4 calls below are safe to use since the lengths have
+	// been verified above.
+
 	// Get year int value from yearParts rune slice
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
 	if isZero(yearPart...) == false {
-		y, err = strconv.Atoi(RunesToString(yearPart...))
+		y, err = atoi4(RunesToString(yearPart...))
 		if err != nil {
 			return
 		}
@@ -709,7 +734,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (t time.Time, er
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
 	if isZero(monthPart...) == false {
-		m, err = strconv.Atoi(RunesToString(monthPart...))
+		m, err = atoi2(RunesToString(monthPart...))
 		if err != nil {
 			return
 		}
@@ -719,7 +744,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (t time.Time, er
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
 	if isZero(dayPart...) == false {
-		d, err = strconv.Atoi(RunesToString(dayPart...))
+		d, err = atoi2(RunesToString(dayPart...))
 		if err != nil {
 			return
 		}
@@ -729,7 +754,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (t time.Time, er
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
 	if isZero(hourPart...) == false {
-		h, err = strconv.Atoi(RunesToString(hourPart...))
+		h, err = atoi2(RunesToString(hourPart...))
 		if err != nil {
 			return
 		}
@@ -739,7 +764,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (t time.Time, er
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
 	if isZero(minutePart...) == false {
-		mn, err = strconv.Atoi(RunesToString(minutePart...))
+		mn, err = atoi2(RunesToString(minutePart...))
 		if err != nil {
 			return
 		}
@@ -749,7 +774,7 @@ func ParseISOTimestamp(timeStr string, location *time.Location) (t time.Time, er
 	// Should not error since only digits were place in slice
 	// If zero can avoid an allocation and time
 	if isZero(secondPart...) == false {
-		s, err = strconv.Atoi(RunesToString(secondPart...))
+		s, err = atoi2(RunesToString(secondPart...))
 		if err != nil {
 			return
 		}

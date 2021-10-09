@@ -105,11 +105,16 @@ func TestDaysToDateFromAnchorDay(t *testing.T) {
 	}
 
 	var partList = []datePartsWithVerify{
-		{-6, 3, 2, 0},
-		{-6, 1, 2, 0},
-		{-5, 1, 2, 0},
-		{-5, 3, 2, 0},
-		{-1, 3, 2, 0},
+		// {-6, 3, 2, 0},
+		// {-6, 1, 2, 0},
+		// {-5, 1, 2, 0},
+		// {-5, 3, 2, 0},
+		// {-1, 3, 2, 0},
+		// {-5, 1, 2, 0},
+		// {-5, 3, 2, 0},
+		// {-401, 1, 1, 0},
+		// {-401, 6, 3, 0},
+		{-3, 1, 2, 0},
 		// {-4, 4, 1, 0},
 		// {-5, 4, 1, 0},
 		// {-4, 1, 31, 0},
@@ -385,14 +390,25 @@ func TestAddParts(t *testing.T) {
 	}
 }
 
+func TestAddDaysSimple(t *testing.T) {
+	is := is.New(t)
+	d, err := NewDate(-3, 1, 2)
+	is.NoErr(err)
+	addedDays, err := d.AddDays(730)
+	t.Log(addedDays)
+	daysToDate := addedDays.daysToDateFromEpoch()
+	newDate, err := FromDays(daysToDate, d.year > 0)
+	t.Log("days to date", daysToDate)
+	is.NoErr(err)
+	t.Log(newDate)
+}
+
 func TestAddDays(t *testing.T) {
 	is := is.New(t)
 
-	// date_test.go:413: not equal - new date -101-12-31 date from days -101-12-29 days to date 36524 starting date -100-12-31
-	// date_test.go:413: not equal - new date -101-12-31 date from days -101-12-29 days to date 36524 starting date -100-12-31
 	// Ensure that cyles go through all probably multiples of 400
-	dayCount := 1 * 40
-	d, err := NewDate(-297, 10, 1)
+	dayCount := 365 * 10
+	d, err := NewDate(-3, 1, 2)
 	var newDate Date
 	is.NoErr(err)
 	startDate := d
@@ -404,13 +420,16 @@ func TestAddDays(t *testing.T) {
 
 	for i := 0; i < dayCount; i++ {
 		if d.year < 0 {
-			d, err = NewDate(startDate.year, 11, 1)
+			d, err = NewDate(startDate.year, 1, 2)
 		} else {
 			d, err = NewDate(startDate.year, 1, 1)
 		}
 		is.NoErr(err)
 		addedDays, err := d.AddDays(int64(i + 1))
+		// fmt.Println("days from", addedDays)
 		is.NoErr(err)
+		daysFromAnchorDay := addedDays.daysToDateFromAnchorDay()
+		// fmt.Println(addedDays, "days to anchor", daysFromAnchorDay)
 		daysToDate := addedDays.daysToDateFromEpoch()
 		newDate, err = FromDays(daysToDate, d.year > 0)
 		// t.Log("adding", i+1, "days to", d, "new date from adding", newDate, "days to date", daysToDate, "new date from days", newDate)
@@ -420,7 +439,7 @@ func TestAddDays(t *testing.T) {
 			t.Logf("On day %d of %d date %s...\n", i+1, dayCount, newDate)
 		}
 		if addedDays.String() != newDate.String() {
-			t.Log("not equal - new date", addedDays.String(), "added days", i+1, "date from days", newDate.String(), "days to date", daysToDate, "starting date", d)
+			t.Log("not equal - new date", addedDays, "added days", i+1, "from days", newDate, "days to date", daysToDate, "days from anchor", daysFromAnchorDay, "starting date", d)
 			foundErr = true
 			errorsFound++
 		}
@@ -436,19 +455,35 @@ func TestAddDays(t *testing.T) {
 
 func TestDaysToDateParts(t *testing.T) {
 	is := is.New(t)
+	// === RUN   TestAddDays
+	// date_test.go:404: Trying a series of 3650 days starting with year -1
+	// date_test.go:428: not equal - new date -5-11-28 added days 1461 date from days -5-12--2 days to date 1492 starting date -1-12-31
+	// date_test.go:428: not equal - new date -9-11-28 added days 2922 date from days -9-12--2 days to date 2953 starting date -1-12-31
+	// date_test.go:437: Found 2 errors out of  3650 Check from -1-12-31 to -10-01-02
 
-	d, err := NewDate(-8, 3, 2)
-	// d, err := NewDate(-6, 3, 2)
+	var partList = []datePartsWithVerify{
+		{-2, 11, 30, 0},
+		{-5, 12, 28, 0},
+		{-5, 11, 29, 0},
+		{-5, 2, 27, 0},
+		{-2, 11, 30, 0},
+	}
+
+	// d, err := NewDate(-5, 11, 27)
+	// d, err := NewDate(-2, 11, 30)
 	// d, err := NewDate(-1, 3, 2)
 	// d, err := NewDate(-1, 3, 2)
 	// d, err := NewDate(-5, 3, 2)
-	is.NoErr(err)
-	t.Log(d, "days to date from anchor day", d.daysToDateFromAnchorDay())
-	daysToDate := d.daysToDateFromEpoch()
-	ce := d.year > 0
-	newDate, err := FromDays(daysToDate, ce)
-	is.NoErr(err)
-	t.Log("date", d, "new date", newDate)
+	for _, p := range partList {
+		d, err := NewDate(p.y, p.m, p.d)
+		is.NoErr(err)
+		daysToDate := d.daysToDateFromEpoch()
+		t.Log(d, "days to date from anchor day", d.daysToDateFromAnchorDay(), "from epoch", daysToDate)
+		ce := d.year > 0
+		newDate, err := FromDays(daysToDate, ce)
+		is.NoErr(err)
+		t.Log("date", d, "new date", newDate)
+	}
 }
 
 func TestDateFromDays(t *testing.T) {
@@ -461,49 +496,50 @@ func TestDateFromDays(t *testing.T) {
 		// {801, 1, 1, 0},
 		// {1201, 1, 1, 0},
 		// {1201, 9, 1, 0},
-		{-298, 10, 04, 0},
-		{-2800, 1, 1, 0},
-		{-1600, 10, 4, 0},
-		{-1205, 10, 3, 0},
-		{-1202, 10, 3, 0},
-		{-1201, 10, 3, 0},
-		{-1201, 1, 3, 0},
-		{-1200, 10, 3, 0},
-		{-801, 10, 3, 0},
-		{-800, 6, 3, 0},
-		{-800, 2, 3, 0},
-		{-800, 10, 3, 0},
-		{-401, 6, 3, 0},
-		{-401, 2, 3, 0},
-		{-401, 1, 1, 0},
-		{-400, 10, 3, 0},
-		{-400, 2, 3, 0},
-		{-400, 6, 3, 0},
-		{-298, 10, 3, 0},
-		{-298, 10, 10, 0},
-		{-201, 2, 3, 0},
-		{-5, 3, 2, 0},
-		{-5, 1, 2, 0},
-		{-1, 3, 2, 0},
-		{-1, 4, 2, 0},
+		// {-298, 10, 04, 0},
+		// {-2800, 1, 1, 0},
+		// {-1600, 10, 4, 0},
+		// {-1205, 10, 3, 0},
+		// {-1202, 10, 3, 0},
+		// {-1201, 10, 3, 0},
+		// {-1201, 1, 3, 0},
+		// {-1200, 10, 3, 0},
+		// {-801, 10, 3, 0},
+		// {-800, 6, 3, 0},
+		// {-800, 2, 3, 0},
+		// {-800, 10, 3, 0},
+		// {-401, 6, 3, 0},
+		// {-401, 2, 3, 0},
+		// {-401, 1, 1, 0},
+		// {-400, 10, 3, 0},
+		// {-400, 2, 3, 0},
+		// {-400, 6, 3, 0},
+		// {-298, 10, 3, 0},
+		// {-298, 10, 10, 0},
+		// {-201, 2, 3, 0},
+		// {-5, 3, 2, 0},
+		// {-5, 1, 2, 0},
+		{-5, 11, 27, 0},
+		// {-1, 3, 2, 0},
+		// {-1, 4, 2, 0},
 		// {101, 1, 1, 0},
 		// {201, 1, 1, 0},
-		{4, 1, 1, 0},
-		{12, 6, 1, 0},
-		{400, 1, 1, 0},
-		{500, 1, 1, 0},
-		{600, 1, 1, 0},
-		{401, 1, 1, 0},
-		{2000, 1, 1, 0},
-		{2021, 6, 10, 0},
-		{2400, 1, 1, 0},
-		{3000, 1, 1, 0},
-		{4000, 1, 1, 0},
-		{10001, 1, 1, 0},
-		{10400, 2, 1, 0},
-		{10400, 2, 2, 0},
-		{10400, 6, 2, 0},
-		{10401, 6, 2, 0},
+		// {4, 1, 1, 0},
+		// {12, 6, 1, 0},
+		// {400, 1, 1, 0},
+		// {500, 1, 1, 0},
+		// {600, 1, 1, 0},
+		// {401, 1, 1, 0},
+		// {2000, 1, 1, 0},
+		// {2021, 6, 10, 0},
+		// {2400, 1, 1, 0},
+		// {3000, 1, 1, 0},
+		// {4000, 1, 1, 0},
+		// {10001, 1, 1, 0},
+		// {10400, 2, 1, 0},
+		// {10400, 2, 2, 0},
+		// {10400, 6, 2, 0},
+		// {10401, 6, 2, 0},
 	}
 
 	for _, p := range partList {
@@ -646,8 +682,8 @@ func BenchmarkDateFromDays(b *testing.B) {
 	is := is.New(b)
 	var d Date
 
-	d, err := NewDate(800000, 12, 21)
-	// d, err := NewDate(800, 12, 1)
+	// d, err := NewDate(800000, 12, 21)
+	d, err := NewDate(800, 12, 1)
 	// d, err := NewDate(2001, 12, 31)
 	is.NoErr(err)
 	ce := d.year > 0

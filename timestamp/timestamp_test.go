@@ -1204,6 +1204,29 @@ func BenchmarkIterativeISOTimestampLongAllPartsNonzero(b *testing.B) {
 }
 
 // Benchmark the Go time parsing call with format
+func BenchmarkIterativeNativeEquivalent(b *testing.B) {
+	is := is.New(b)
+
+	var err error
+	var t1 time.Time
+
+	b.SetBytes(bechmarkBytesPerOp)
+	b.ReportAllocs()
+	b.SetParallelism(30)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			t1, err = timestamp.ParseISOTimestamp("2006-01-02T15:04:05-07:00", time.UTC)
+			if err != nil {
+				b.Log(err)
+			}
+		}
+	})
+
+	is.True(t1 != time.Time{}) // Should not have an empty time
+	is.NoErr(err)              // Parsing should not have caused an error
+}
+
+// Benchmark the Go time parsing call with format
 func BenchmarkNativeISOTimestampLong(b *testing.B) {
 	is := is.New(b)
 
