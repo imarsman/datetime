@@ -5,6 +5,7 @@
 package period
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/imarsman/datetime/xfmt"
@@ -87,21 +88,21 @@ func appendNonBlank(parts []string, s string) []string {
 }
 
 func (p *Period) String() string {
-	reduce := func(input int64) int64 {
-		// hasRemainder := false
-		var output int64
-		output = input
-		for {
-			intPart := output / 10
-			remainder := output % 10
-			if remainder == 0 {
-				output = intPart
-				continue
-			}
-			break
-		}
-		return output
-	}
+	// reduce := func(input int64) int64 {
+	// 	// hasRemainder := false
+	// 	var output int64
+	// 	output = input
+	// 	for {
+	// 		intPart := output / 10
+	// 		remainder := output % 10
+	// 		if remainder == 0 {
+	// 			output = intPart
+	// 			continue
+	// 		}
+	// 		break
+	// 	}
+	// 	return output
+	// }
 
 	// All zero parts equals "P0D"
 	if p.IsZero() == true {
@@ -151,17 +152,24 @@ func (p *Period) String() string {
 	}
 	// With seconds
 	if p.seconds != 0 {
-		if p.subseconds != 0 {
-			reduced := reduce(int64(p.subseconds))
-			// fmt.Println("reduced", reduced)
-			xfmt.D64(p.seconds).C(dotChar).D64(reduced).C(secondChar)
+		if p.nanoseconds != 0 {
+			// reduced := reduce(int64(p.nanoseconds))
+			nanoStr := fmt.Sprintf("%03d", p.nanoseconds)
+			// fmt.Println("nanoseconds!", nanoStr)
+			xfmt.D64(p.seconds).C(dotChar).S(nanoStr).C(secondChar)
+			// reduced := reduce(int64(p.nanoseconds))
+			// // fmt.Println("reduced", reduced)
+			// xfmt.D64(p.seconds).C(dotChar).D64(reduced).C(secondChar)
 		} else {
 			xfmt.D64(p.seconds).C(secondChar)
 		}
 		// If no seconds but subsection values
-	} else if p.subseconds != 0 {
-		reduced := reduce(int64(p.subseconds))
-		xfmt.C('0').C(dotChar).D64(reduced).C(secondChar)
+	} else if p.nanoseconds != 0 {
+		// fmt.Println("nanoseconds", p.nanoseconds, "nanoStr", nanoStr)
+		// reduced := reduce(int64(p.nanoseconds))
+		nanoStr := fmt.Sprintf("%03d", p.nanoseconds)
+		// fmt.Println("nanoseconds!", nanoStr)
+		xfmt.C('0').C(dotChar).S(nanoStr).C(secondChar)
 	}
 
 	return string(xfmt.Bytes())

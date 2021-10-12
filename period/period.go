@@ -100,6 +100,8 @@ func NewOf(duration time.Duration) (p Period, precise bool) {
 // Remember that the resultant period does not retain any knowledge of the calendar, so any subsequent
 // computations applied to the period can only be precise if they concern either the date (year, month,
 // day) part, or the clock (hour, minute, second) part, but not both.
+// TODO: This is inaccurate. Need to refactor to get proper number of years,
+// months, days between times.
 func Between(t1, t2 time.Time) (p Period) {
 	t1GTt2 := true
 	if t2.Before(t1) {
@@ -110,16 +112,30 @@ func Between(t1, t2 time.Time) (p Period) {
 		t2 = t2.In(t1.Location())
 	}
 
-	year, month, day, hour, min, sec, subsecond := partsDiff(t1, t2)
+	// year, month, day, hour, min, sec, subsecond := partsDiff(t1, t2)
 
-	p = NewPeriod(year, month, day, hour, min, sec)
-	p.subseconds = int(subsecond)
-
+	// p = NewPeriod(year, month, day, hour, min, sec)
+	// p.subseconds = int(subsecond)
+	duration := t2.Sub(t1)
+	// It would be imprecise to try to get year, month, and day
+	var year int64 = 0
+	var month int64 = 0
+	var day int64 = 0
+	hour := duration.Hours()
+	min := duration.Minutes()
+	sec := duration.Seconds()
+	p = NewPeriod(year, month, day, int64(hour), int64(min), int64(sec))
+	// TODO: make this work with period subseconds
+	p.nanoseconds = int(duration.Nanoseconds() / 1000000)
 	p.negative = t1GTt2 == false
+
+	// Do not estimate years, months, days
+	p = *p.Normalise(true)
 
 	return
 }
 
+// TODO: This is inaccurate
 // get year, month, day, hour, min, sec, hundredth of second diff between two times
 func partsDiff(t1, t2 time.Time) (year, month, day, hour, min, sec, subsecond int64) {
 	duration := t2.Sub(t1)
@@ -133,7 +149,9 @@ func partsDiff(t1, t2 time.Time) (year, month, day, hour, min, sec, subsecond in
 	min = int64(mm2 - mm1)
 	sec = int64(ss2 - ss1)
 	// TODO: Make sure this is really subseconds
-	subsecond = int64(t2.Nanosecond()-t1.Nanosecond()) / 1000000
+	// subsecond = int64(t2.Nanosecond()-t1.Nanosecond()) / 1000000
+	// number of nanoseconds as milliseconds
+	subsecond = int64(t2.Nanosecond()-t1.Nanosecond()) * 1000000
 
 	// Normalize negative values
 	if sec < 0 {
@@ -314,7 +332,7 @@ func (p Period) IsZero() bool {
 		p.Hours() == 0 &&
 		p.Minutes() == 0 &&
 		p.Seconds() == 0 &&
-		p.subseconds == 0
+		p.nanoseconds == 0
 }
 
 func (p *Period) validate() (err error) {
@@ -362,7 +380,7 @@ func hmsDuration(p Period) (time.Duration, error) {
 	hourDuration := time.Duration(p.hours) * nsOneHour
 	minuteDuration := time.Duration(p.minutes) * nsOneMinute
 	secondDuration := time.Duration(p.seconds) * nsOneSecond
-	subSecondDuration := time.Duration(p.subseconds) * nsOneMillisecond
+	subSecondDuration := time.Duration(p.nanoseconds) * nsOneMillisecond
 
 	_, ok := timestamp.DurationOverflows(hourDuration, minuteDuration, secondDuration, subSecondDuration)
 	if ok == false {
@@ -415,7 +433,10 @@ func hmsMS(p Period) (int64, error) {
 	hoursMS := p.hours * int64(msOneHour)
 	minutesMS := p.minutes * int64(msOneMinute)
 	secondsMS := p.seconds * int64(msOneSecond)
-	subSecondsMS := int64(p.subseconds) * int64(msOneMillisecond)
+	subSecondsMS := int64(p.nanoseconds) * int64(msOneMillisecond)
+	// if p.subseconds > 0 {
+	// 	fmt.Println(p.subseconds)
+	// }
 
 	_, ok := timestamp.Int64Overflows(hoursMS, minutesMS, secondsMS, subSecondsMS)
 	if ok == false {
@@ -441,10 +462,12 @@ func (p *Period) rippleUp(precise bool) *Period {
 		remainder = int64(hourminutesecondDuration % int64(msOneMinute))
 
 		secondNumber := remainder / int64(msOneSecond)
+		remainder = remainder % int64(msOneSecond)
 
 		p.hours = hourNumber
 		p.minutes = minuteNumber
 		p.seconds = secondNumber
+		// p.subseconds = int(remainder)
 	}
 
 	if !precise {
@@ -461,7 +484,6 @@ func (p *Period) rippleUp(precise bool) *Period {
 			p.years = yearNumber
 			p.months = monthNumber
 			p.days = dayNumber
-
 		}
 	}
 	return p
@@ -511,18 +533,29 @@ func (p *Period) AdjustToRight(precise bool) *Period {
 
 // AdditionsFromDecimalSection break down decimal section and get allocations to
 // various parts
-func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
-	years, months, days, hours, minutes, seconds int64, subseconds int, err error) {
+func AdditionsFromDecimalSection(part rune, whole int64, fractional float64) (
+	years, months, days, hours, minutes, seconds int64, nanoseconds int, err error) {
 
+	// fmt.Println("part", string(part), "whole", whole, "fractional", fractional)
 	// Count digits in an integer
-	var digitCount = func(number int64) int64 {
-		var count int64 = 0
-		for number != 0 {
-			number /= 10
-			count++
-		}
-		return count
-	}
+	// var digitCount = func(number int64) int64 {
+	// 	var count int64 = 0
+	// 	for number != 0 {
+	// 		number /= 10
+	// 		count++
+	// 	}
+	// 	return count
+	// }
+	// var digitCount = func(number int64) int64 {
+	// 	s := fmt.Sprint(number)
+	// 	return int64(len(s))
+	// 	// var count int64 = 0
+	// 	// for number != 0 {
+	// 	// 	number /= 10
+	// 	// 	count++
+	// 	// }
+	// 	// return count
+	// }
 
 	// Check for whether a rune is a time part
 	var isTimePart = func(r rune) bool {
@@ -553,7 +586,7 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 	// Exit with invalid characters
 	if isTime == false {
 		err := fmt.Errorf("Invalid time part %v to float", part)
-		return years, months, days, hours, minutes, seconds, subseconds, err
+		return years, months, days, hours, minutes, seconds, nanoseconds, err
 	}
 
 	// Tested to work with up to 15 billion years. Max for each part is
@@ -711,10 +744,15 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 
 	// On a fraction of even a year this will not overflow so it is safe to use
 	// built-in types
-	var fractionalFloat = float64(fractional) / math.Pow(10, float64(digitCount(fractional))) // decimal value of post
+	// var fractionalFloat = float64(fractional) / math.Pow(10, float64(digitCount(fractional))) // decimal value of post
+	// var fractionalFloat = float64(fractional) / math.Pow(10, float64(digitCount(fractional))) // decimal value of post
+	// if fractional > 0 {
+	// 	fmt.Println("fractional", fractional)
+	// 	fmt.Println("fractionalFloat", fractionalFloat)
+	// }
 
 	// We have already figured out the multiplier so don't need to do that again
-	var postMS = int64(fractionalFloat * float64(msMultiplier)) // nanosecond value for fractional part
+	var postMS = int64(fractional * float64(msMultiplier)) // nanosecond value for fractional part
 
 	// Go through successive stages of division and obtainin of a remainder to
 	// get the portions for a time part and to set up the next division and
@@ -746,9 +784,13 @@ func AdditionsFromDecimalSection(part rune, whole, fractional int64) (
 	// 	// subseconds += int(remainder)
 	// } else {
 	// }
-	subseconds += int(remainder)
+	nanoseconds += int(remainder)
+	if nanoseconds > 0 {
+		nanoseconds *= 1000000
+		// fmt.Println("nanoseconds", nanoseconds)
+	}
 
-	return years, months, days, hours, minutes, seconds, subseconds, nil
+	return years, months, days, hours, minutes, seconds, nanoseconds, nil
 }
 
 // MustParse is as per Parse except that it panics if the string cannot be parsed.
@@ -1153,12 +1195,16 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 		if err != nil {
 			return Period{}, err
 		}
-		fractional, err := strconv.Atoi(parts[1])
+		fractional, err := strconv.ParseFloat("."+parts[1], 64)
 		if err != nil {
 			return Period{}, err
 		}
-		years, months, days, hours, minutes, seconds, subseconds, err := AdditionsFromDecimalSection(
-			decimalSection, int64(whole), int64(fractional))
+		if decimalSection == secondChar {
+			// fractional *= 1000000
+		}
+		// fmt.Println("fractional", fractional)
+		years, months, days, hours, minutes, seconds, nanoseconds, err := AdditionsFromDecimalSection(
+			decimalSection, int64(whole), fractional)
 		if err != nil {
 			return Period{}, err
 		}
@@ -1169,7 +1215,10 @@ func parse(input string, normalise bool, precise bool) (Period, error) {
 		period.minutes += minutes
 		period.seconds += seconds
 		// Subseconds are to the level of millisecond
-		period.subseconds += subseconds
+		nanoseconds = nanoseconds / 1000000
+		// nanoStr := fmt.Sprintf("%03d", nanoseconds)
+		// fmt.Println("nanoseconds", nanoseconds, "nanoStr", nanoStr)
+		period.nanoseconds += nanoseconds
 	}
 
 	period.days += period.weeks * 7

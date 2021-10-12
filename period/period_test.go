@@ -55,6 +55,16 @@ func execute() {
 	time.Sleep(3 * time.Second)
 }
 
+func TestSum(t *testing.T) {
+	is := is.New(t)
+	var sum float64 = 0
+	for i := 1; i <= 100; i++ {
+		sum += float64(i) / 2
+	}
+	t.Log("sum", sum)
+	is.True(sum == 2525)
+}
+
 func TestPeriodParser(t *testing.T) {
 	tests := []string{
 		"P12Y1WT1H14M5S",
@@ -97,6 +107,7 @@ func TestParsePeriod(t *testing.T) {
 		"P1MT1H31M",
 		"PT1M5S",
 		"PT1000S",
+		"PT0.1S",
 		"P3Y1W",
 		"P4W",
 		"P2Y3M4W5D",
@@ -146,6 +157,7 @@ func TestParsePeriodWithFractionalParts(t *testing.T) {
 		"PT1.5H",
 		"PT1.5M",
 		"PT1.5S",
+		"PT1.05S",
 		"PT1.500S",
 		"PT1.567S",
 		"PT1H14M",
@@ -211,8 +223,9 @@ func TestGetFractionalParts(t *testing.T) {
 	is := is.New(t)
 
 	type periodParts struct {
-		part      rune
-		pre, post int64
+		part rune
+		pre  int64
+		post float64
 	}
 
 	parts := []periodParts{
@@ -228,7 +241,7 @@ func TestGetFractionalParts(t *testing.T) {
 	for _, part := range parts {
 		years, months, days, hours, minutes, seconds, subseconds, err := period.AdditionsFromDecimalSection(part.part, part.pre, part.post)
 		is.NoErr(err)
-		t.Logf("part %s pre %d post %d years %d, months %d, days %d, hours %d, minutes %d, seconds %d, subseconds %d, err %v",
+		t.Logf("part %s pre %d post %f years %d, months %d, days %d, hours %d, minutes %d, seconds %d, subseconds %d, err %v",
 			string(part.part), part.pre, part.post, years, months, days, hours, minutes, seconds, subseconds, err)
 	}
 }
