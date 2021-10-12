@@ -7,6 +7,9 @@ import (
 
 	"github.com/imarsman/datetime/period"
 	"github.com/matryer/is"
+
+	// "golang.org/x/text/language"
+	"golang.org/x/text/message"
 )
 
 const bechmarkBytesPerOp int64 = 10
@@ -229,20 +232,23 @@ func TestGetFractionalParts(t *testing.T) {
 	}
 
 	parts := []periodParts{
-		{'S', 1, 1},           // 1.1 seconds - should give 100 ms
-		{'S', 13, 1575},       // 13.1575 seconds - should give 157 ms
-		{'I', 13, 575},        // 13.575 minutes - should give 575 ms
-		{'H', 200, 5},         // 200 hours and 30 minutes
-		{'Y', 260, 5},         // 260 years and 6 months
-		{'W', 260, 5},         // 260 weeks and .5 week
-		{'Y', 15000000000, 5}, // 15 billion years (and 6 months) - over threshold
+		{'S', 1, .1},           // 1.1 seconds - should give 100 ms
+		{'S', 13, .1575},       // 13.1575 seconds - should give 157 ms
+		{'I', 13, .575},        // 13.575 minutes - should give 575 ms
+		{'H', 200, .5},         // 200 hours and 30 minutes
+		{'Y', 260, .5},         // 260 years and 6 months
+		{'W', 260, .5},         // 260 weeks and .5 week
+		{'Y', 15000000000, .5}, // 15 billion years (and 6 months) - over threshold
 	}
+
+	p := message.NewPrinter(message.MatchLanguage("en"))
+	// p.Println(123456.78) // Prints 123,456.78
 
 	for _, part := range parts {
 		years, months, days, hours, minutes, seconds, subseconds, err := period.AdditionsFromDecimalSection(part.part, part.pre, part.post)
 		is.NoErr(err)
-		t.Logf("part %s pre %d post %f years %d, months %d, days %d, hours %d, minutes %d, seconds %d, subseconds %d, err %v",
-			string(part.part), part.pre, part.post, years, months, days, hours, minutes, seconds, subseconds, err)
+		t.Log(p.Sprintf("part %s pre %d post %f years %d, months %d, days %d, hours %d, minutes %d, seconds %d, subseconds %d, err %v",
+			string(part.part), part.pre, part.post, years, months, days, hours, minutes, seconds, subseconds, err))
 	}
 }
 
@@ -356,7 +362,7 @@ func BenchmarkParsePeriodFractional(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			p, err = period.Parse("PT1.5S", true)
+			p, err = period.Parse("PT1H1.05S", true)
 		}
 	})
 
@@ -380,7 +386,7 @@ func BenchmarkParsePeriodShort(b *testing.B) {
 	b.SetParallelism(30)
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			p, err = period.Parse("P1M", true)
+			p, err = period.Parse("P1M1S", true)
 		}
 	})
 
