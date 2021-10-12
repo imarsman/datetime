@@ -150,25 +150,21 @@ func (p *Period) String() string {
 	if p.minutes != 0 {
 		xfmt.D64(p.minutes).C(minuteMonthChar)
 	}
+
 	// With seconds
 	if p.seconds != 0 {
 		if p.nanoseconds != 0 {
-			// reduced := reduce(int64(p.nanoseconds))
 			nanoStr := fmt.Sprintf("%03d", p.nanoseconds)
-			// fmt.Println("nanoseconds!", nanoStr)
+			nanoStr = strings.TrimRight(nanoStr, "0")
+			fmt.Println("trim zeros", nanoStr)
 			xfmt.D64(p.seconds).C(dotChar).S(nanoStr).C(secondChar)
-			// reduced := reduce(int64(p.nanoseconds))
-			// // fmt.Println("reduced", reduced)
-			// xfmt.D64(p.seconds).C(dotChar).D64(reduced).C(secondChar)
 		} else {
 			xfmt.D64(p.seconds).C(secondChar)
 		}
 		// If no seconds but subsection values
 	} else if p.nanoseconds != 0 {
-		// fmt.Println("nanoseconds", p.nanoseconds, "nanoStr", nanoStr)
-		// reduced := reduce(int64(p.nanoseconds))
 		nanoStr := fmt.Sprintf("%03d", p.nanoseconds)
-		// fmt.Println("nanoseconds!", nanoStr)
+		nanoStr = strings.TrimRight(nanoStr, "0")
 		xfmt.C('0').C(dotChar).S(nanoStr).C(secondChar)
 	}
 
