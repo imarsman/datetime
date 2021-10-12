@@ -156,7 +156,6 @@ func (p *Period) String() string {
 		if p.nanoseconds != 0 {
 			nanoStr := fmt.Sprintf("%03d", p.nanoseconds)
 			nanoStr = strings.TrimRight(nanoStr, "0")
-			fmt.Println("trim zeros", nanoStr)
 			xfmt.D64(p.seconds).C(dotChar).S(nanoStr).C(secondChar)
 		} else {
 			xfmt.D64(p.seconds).C(secondChar)
