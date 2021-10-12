@@ -10,9 +10,8 @@ import (
 
 // Period a struct to define a period
 type Period struct {
-	negative                                            bool
-	years, months, weeks, days, hours, minutes, seconds int64
-	nanoseconds                                         int
+	negative                                                         bool
+	years, months, weeks, days, hours, minutes, seconds, nanoseconds int64
 }
 
 const daysPerMonthE6 = 30436875 // 30.436875 days per month

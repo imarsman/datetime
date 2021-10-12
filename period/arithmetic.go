@@ -104,7 +104,7 @@ func (p Period) ScaleWithOverflowCheck(factor float64) (*Period, error) {
 	subsec := int64(float64(p.nanoseconds) * factor)
 
 	newPeriod := NewPeriod(y, m, d, hh, mm, ss)
-	newPeriod.nanoseconds = int(subsec)
+	newPeriod.nanoseconds = subsec
 	newPeriod.negative = p.IsNegative()
 
 	return newPeriod.Normalise(true), nil

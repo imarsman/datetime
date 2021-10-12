@@ -200,7 +200,7 @@ func BenchmarkGetAdditions(b *testing.B) {
 
 	var err error
 	var years, months, days, hours, minutes, seconds int64
-	var subseconds int
+	var subseconds int64
 
 	b.ResetTimer()
 	b.SetBytes(bechmarkBytesPerOp)
@@ -254,7 +254,7 @@ func BenchmarkGetAdditionsLong(b *testing.B) {
 
 	var err error
 	var years, months, days, hours, minutes, seconds int64
-	var subseconds int
+	var subseconds int64
 
 	b.ResetTimer()
 	b.SetBytes(bechmarkBytesPerOp)
@@ -278,7 +278,7 @@ func BenchmarkGetAdditionsSubThreshold(b *testing.B) {
 
 	var err error
 	var years, months, days, hours, minutes, seconds int64
-	var subseconds int
+	var subseconds int64
 
 	b.ResetTimer()
 	b.SetBytes(bechmarkBytesPerOp)

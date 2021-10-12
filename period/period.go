@@ -126,7 +126,7 @@ func Between(t1, t2 time.Time) (p Period) {
 	sec := duration.Seconds()
 	p = NewPeriod(year, month, day, int64(hour), int64(min), int64(sec))
 	// TODO: make this work with period subseconds
-	p.nanoseconds = int(duration.Nanoseconds() / 1000000)
+	p.nanoseconds = int64(duration.Nanoseconds() / 1000000)
 	p.negative = t1GTt2 == false
 
 	// Do not estimate years, months, days
@@ -534,7 +534,7 @@ func (p *Period) AdjustToRight(precise bool) *Period {
 // AdditionsFromDecimalSection break down decimal section and get allocations to
 // various parts
 func AdditionsFromDecimalSection(part rune, whole int64, fractional float64) (
-	years, months, days, hours, minutes, seconds int64, nanoseconds int, err error) {
+	years, months, days, hours, minutes, seconds, nanoseconds int64, err error) {
 
 	// fmt.Println("part", string(part), "whole", whole, "fractional", fractional)
 	// Count digits in an integer
@@ -784,7 +784,7 @@ func AdditionsFromDecimalSection(part rune, whole int64, fractional float64) (
 	// 	// subseconds += int(remainder)
 	// } else {
 	// }
-	nanoseconds += int(remainder)
+	nanoseconds += remainder
 	if nanoseconds > 0 {
 		nanoseconds *= 1000000
 		// fmt.Println("nanoseconds", nanoseconds)
