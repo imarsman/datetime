@@ -242,7 +242,6 @@ func TestGetFractionalParts(t *testing.T) {
 	}
 
 	p := message.NewPrinter(message.MatchLanguage("en"))
-	// p.Println(123456.78) // Prints 123,456.78
 
 	for _, part := range parts {
 		years, months, days, hours, minutes, seconds, subseconds, err := period.AdditionsFromDecimalSection(part.part, part.pre, part.post)
