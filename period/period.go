@@ -366,17 +366,11 @@ func (p *Period) validate() (err error) {
 
 // Normalise normalise period
 func (p *Period) Normalise(precise bool) *Period {
-	// fmt.Printf("normalise years %d months %d days %d, hours %d minutes %d seconds %d nanoseconds %d\n", p.years, p.months, p.days, p.hours, p.minutes, p.seconds, p.nanoseconds)
-	n := p.normalise(precise)
-	return n
+	return p.normalise(precise)
 }
 
 func (p *Period) normalise(precise bool) *Period {
-	// fmt.Printf("ripple 1 normalise years %d months %d days %d, hours %d minutes %d seconds %d nanoseconds %d\n", p.years, p.months, p.days, p.hours, p.minutes, p.seconds, p.nanoseconds)
-	// fmt.Printf("ripple 2 normalise years %d months %d days %d, hours %d minutes %d seconds %d nanoseconds %d\n", p.years, p.months, p.days, p.hours, p.minutes, p.seconds, p.nanoseconds)
-
 	return p.rippleUp(precise).AdjustToRight(precise)
-	// return p.rippleUp(precise)
 }
 
 // This can overflow with very large input values
@@ -438,10 +432,7 @@ func hmsMS(p Period) (int64, error) {
 	hoursMS := p.hours * int64(msOneHour)
 	minutesMS := p.minutes * int64(msOneMinute)
 	secondsMS := p.seconds * int64(msOneSecond)
-	subSecondsMS := int64(p.nanoseconds) * int64(msOneMillisecond)
-	// if p.subseconds > 0 {
-	// 	fmt.Println(p.subseconds)
-	// }
+	subSecondsMS := int64(p.nanoseconds) / 1000000
 
 	_, ok := timestamp.Int64Overflows(hoursMS, minutesMS, secondsMS, subSecondsMS)
 	if ok == false {
@@ -449,7 +440,6 @@ func hmsMS(p Period) (int64, error) {
 	}
 
 	hoursMinuteSecondsMS := (hoursMS + minutesMS + secondsMS + subSecondsMS)
-	// fmt.Println("hours", p.hours, "hours", hoursMS, "hoursMinuteSecondsMS", hoursMinuteSecondsMS)
 
 	return hoursMinuteSecondsMS, nil
 }
@@ -460,17 +450,19 @@ func hmsMS(p Period) (int64, error) {
 // Precise as true will result in no adjustment for years, months, and days.
 func (p *Period) rippleUp(precise bool) *Period {
 	// fmt.Printf("ripple 1 normalise years %d months %d days %d, hours %d minutes %d seconds %d nanoseconds %d\n", p.years, p.months, p.days, p.hours, p.minutes, p.seconds, p.nanoseconds)
-	hourminutesecondDuration, err := hmsMS(*p)
-	// fmt.Println("hourminutesecondDuration", hourminutesecondDuration)
+	hms, err := hmsMS(*p)
+	if err != nil {
+		fmt.Println("error", err)
+	}
 	if err == nil {
-		hourNumber := int64(hourminutesecondDuration / int64(nsOneHour))
-		remainder := int64(hourminutesecondDuration % int64(nsOneHour))
+		hourNumber := int64(hms / int64(msOneHour))
+		remainder := int64(hms % int64(msOneHour))
 
-		minuteNumber := remainder / int64(nsOneMinute)
-		remainder = int64(hourminutesecondDuration % int64(nsOneMinute))
+		minuteNumber := remainder / int64(msOneMinute)
+		remainder = int64(hms % int64(msOneMinute))
 
-		secondNumber := remainder / int64(nsOneSecond)
-		remainder = remainder % int64(nsOneSecond)
+		secondNumber := remainder / int64(msOneSecond)
+		remainder = remainder % int64(msOneSecond)
 
 		p.hours = hourNumber
 		p.minutes = minuteNumber
@@ -776,7 +768,7 @@ func AdditionsFromDecimalSection(part rune, whole int64, fractional float64) (
 // By default, the value is normalised.
 // Normalisation can be disabled using the optional flag.
 func MustParse(value string, normalise bool, precise ...bool) Period {
-	d, err := Parse(value, normalise, precise...)
+	d, err := Parse(value, precise...)
 	if err != nil {
 		panic(err)
 	}
@@ -798,12 +790,12 @@ func MustParse(value string, normalise bool, precise ...bool) Period {
 // are equivalent: "P0Y", "P0M", "P0W", "P0D", "PT0H", PT0M", PT0S", and "P0".
 // The canonical zero is "P0D".
 // Note that this will end up flagging precise in AjustRight.
-func Parse(period string, normalize bool, precise ...bool) (p Period, err error) {
+func Parse(period string, precise ...bool) (p Period, err error) {
 	usePrecise := false
 	if len(precise) > 0 {
 		usePrecise = precise[0]
 	}
-	p, err = ParseWithNormalise(period, normalize, usePrecise)
+	p, err = ParseWithNormalise(period, usePrecise)
 
 	return
 }
@@ -813,7 +805,7 @@ func Parse(period string, normalize bool, precise ...bool) (p Period, err error)
 //
 // This method is deprecated and should not be used. It may be removed in a
 // future version.
-func ParseWithNormalise(period string, normalise bool, precise bool) (Period, error) {
+func ParseWithNormalise(period string, precise bool) (Period, error) {
 	if period == "" || period == "-" || period == "+" {
 		return Period{}, fmt.Errorf("period.ParseWithNormalise: cannot parse a blank string as a period")
 	}
@@ -823,7 +815,7 @@ func ParseWithNormalise(period string, normalise bool, precise bool) (Period, er
 		return *p, nil
 	}
 
-	p, err := parse(period, normalise, precise)
+	p, err := parse(period, precise)
 	if err != nil {
 		return Period{}, err
 	}
@@ -832,7 +824,7 @@ func ParseWithNormalise(period string, normalise bool, precise bool) (Period, er
 }
 
 // GetParts get the parts of a period
-func parse(input string, normalise bool, precise bool) (Period, error) {
+func parse(input string, precise bool) (Period, error) {
 
 	var period = Period{}
 

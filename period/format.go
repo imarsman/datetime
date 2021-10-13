@@ -141,7 +141,7 @@ func (p *Period) String() string {
 	}
 
 	// If time section(s)
-	if p.hours != 0 || p.minutes != 0 || p.seconds != 0 {
+	if p.hours != 0 || p.minutes != 0 || p.seconds != 0 || p.nanoseconds != 0 {
 		xfmt.C(timeChar)
 	}
 
