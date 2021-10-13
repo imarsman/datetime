@@ -88,6 +88,9 @@ func appendNonBlank(parts []string, s string) []string {
 }
 
 func (p *Period) String() string {
+
+	// fmt.Printf("years %d months %d days %d, hours %d minutes %d seconds %d nanoseconds %d\n", p.years, p.months, p.days, p.hours, p.minutes, p.seconds, p.nanoseconds)
+
 	// reduce := func(input int64) int64 {
 	// 	// hasRemainder := false
 	// 	var output int64

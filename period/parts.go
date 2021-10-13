@@ -189,11 +189,13 @@ func (p Period) Duration() (time.Duration, bool, error) {
 	if err != nil {
 		return time.Duration(0), false, err
 	}
+	// fmt.Println("ymdDuration", ymdDuration)
 
 	hmsDuration, err := hmsDuration(p)
 	if err != nil {
 		return time.Duration(0), false, err
 	}
+	// fmt.Println("hmsDuration", hmsDuration)
 
 	_, ok := timestamp.DurationOverflows(ymdDuration, hmsDuration)
 	if ok == false {
