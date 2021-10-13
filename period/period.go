@@ -387,7 +387,6 @@ func hmsDuration(p Period) (time.Duration, error) {
 
 	hourminutesecondDuration := (hourDuration + minuteDuration + secondDuration + subSecondDuration)
 
-	// fmt.Println("hourminutesecondDuration", hourminutesecondDuration, hourDuration, minuteDuration, secondDuration, subSecondDuration)
 	return hourminutesecondDuration, nil
 }
 
@@ -449,7 +448,6 @@ func hmsMS(p Period) (int64, error) {
 // nanoseconds will overflow at about 292.471208677536 years.
 // Precise as true will result in no adjustment for years, months, and days.
 func (p *Period) rippleUp(precise bool) *Period {
-	// fmt.Printf("ripple 1 normalise years %d months %d days %d, hours %d minutes %d seconds %d nanoseconds %d\n", p.years, p.months, p.days, p.hours, p.minutes, p.seconds, p.nanoseconds)
 	hms, err := hmsMS(*p)
 	if err != nil {
 		fmt.Println("error", err)
@@ -470,8 +468,6 @@ func (p *Period) rippleUp(precise bool) *Period {
 		// p.subseconds = int(remainder)
 	}
 
-	// fmt.Printf("ripple 2 normalise years %d months %d days %d, hours %d minutes %d seconds %d nanoseconds %d\n", p.years, p.months, p.days, p.hours, p.minutes, p.seconds, p.nanoseconds)
-
 	if !precise {
 		yearMonthDayDuration, err := ymdApproxMS(*p)
 		if err == nil {
@@ -488,7 +484,6 @@ func (p *Period) rippleUp(precise bool) *Period {
 			p.days = dayNumber
 		}
 	}
-	// fmt.Printf("ripple 3 normalise years %d months %d days %d, hours %d minutes %d seconds %d nanoseconds %d\n", p.years, p.months, p.days, p.hours, p.minutes, p.seconds, p.nanoseconds)
 
 	return p
 }
@@ -795,17 +790,17 @@ func Parse(period string, precise ...bool) (p Period, err error) {
 	if len(precise) > 0 {
 		usePrecise = precise[0]
 	}
-	p, err = ParseWithNormalise(period, usePrecise)
+	p, err = ParseWithPrecise(period, usePrecise)
 
 	return
 }
 
-// ParseWithNormalise parses strings that specify periods using ISO-8601 rules
+// ParseWithPrecise parses strings that specify periods using ISO-8601 rules
 // with an option to specify whether to normalise parsed period components.
 //
 // This method is deprecated and should not be used. It may be removed in a
 // future version.
-func ParseWithNormalise(period string, precise bool) (Period, error) {
+func ParseWithPrecise(period string, precise bool) (Period, error) {
 	if period == "" || period == "-" || period == "+" {
 		return Period{}, fmt.Errorf("period.ParseWithNormalise: cannot parse a blank string as a period")
 	}
@@ -1197,15 +1192,6 @@ func parse(input string, precise bool) (Period, error) {
 	period.days += period.weeks * 7
 	// Zero out weeks as we have put them in days
 	period.weeks = 0
-
-	// if normalise == true {
-	// 	period = *period.Normalise(precise)
-	// }
-	// fmt.Printf("2 years %d months %d days %d, hours %d minutes %d seconds %d nanoseconds %d\n", period.years, period.months, period.days, period.hours, period.minutes, period.seconds, period.nanoseconds)
-
-	// Prints Size of period.Period struct: 64 bytes
-	// for P130Y200D
-	// fmt.Printf("Size of %T struct: %d bytes\n", *period, unsafe.Sizeof(*period))
 
 	return period, nil
 }
